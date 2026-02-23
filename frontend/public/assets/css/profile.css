@@ -1,0 +1,51 @@
+
+  .profile-header {
+    background: linear-gradient(135deg, #4e73df, #6f42c1);
+    border-radius: 12px;
+    padding: 20px;
+    color: #fff;
+    position: relative;
+    padding-bottom: 80px; /* extra space for overlap */
+  }
+
+  .profile-img {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 4px solid #fff;
+  }
+
+  .camera-btn {
+    position: absolute;
+    right: 30px;
+    top: 40px;
+    background: #ebe4e4;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+  }
+
+  /* 🔥 Overlapping Stats Section */
+  .stats-wrapper {
+    margin-top: -120px;  /* controls overlap depth */
+    position: relative;
+    z-index: 10;
+  }
+
+  .stat-card {
+    border: none;
+    border-radius: 2px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-icon {
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
