@@ -1,8 +1,73 @@
 import Chart from "react-apexcharts";
 
-
-
 const Dashboard=()=>{
+
+	  // ----- Visitors Chart -----
+  const visitorSeries = [
+    {
+      name: "Visitors",
+      data: [30, 40, 35, 50, 49, 60, 70], // example data
+    },
+  ];
+  const visitorOptions = {
+    chart: {
+      id: "visitors-chart",
+      toolbar: { show: false },
+    },
+    xaxis: {
+      categories: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    },
+    stroke: { curve: "smooth" },
+    colors: ["#FF4560"],
+  };
+
+  // ----- Sales Chart -----
+  const salesSeries = [
+    {
+      name: "Sales",
+      data: [10, 20, 15, 25, 20, 30, 40], // example data
+    },
+  ];
+  const salesOptions = {
+    chart: {
+      id: "sales-chart",
+      toolbar: { show: false },
+    },
+    xaxis: {
+      categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
+    },
+    stroke: { curve: "smooth" },
+    colors: ["#008FFB"],
+  };
+
+  // ----- Tasks Chart (Pie example) -----
+  const tasksSeries = [7, 9, 12]; // Ongoing, Pending, Completed
+  const tasksOptions = {
+    chart: { type: "donut" },
+    labels: ["Ongoing", "Pending", "Completed"],
+    colors: ["#FFC107", "#008FFB", "#FF4560"],
+    legend: { position: "bottom" },
+  };
+
+  // ----- Income Chart (Bar example) -----
+  const incomeSeries = [
+    {
+      name: "Income",
+      data: [1600, 1200], // Income, Expenses
+    },
+  ];
+  const incomeOptions = {
+    chart: { id: "income-chart", toolbar: { show: false } },
+    xaxis: {
+      categories: ["Income", "Expenses"],
+    },
+    colors: ["#00E396", "#FF4560"],
+    plotOptions: {
+      bar: { borderRadius: 4 },
+    },
+  };
+
+
     return (
 <>
 	
@@ -76,45 +141,46 @@ const Dashboard=()=>{
 									</div>
 									<div className="card-body">
 										
-										<div className="row gx-3">
-											<div className="col-lg-5 col-sm-12 col-12">
-												<h6 className="text-center mb-3">Visitors</h6>
-												<div id="visitors"></div>
-												<div className="my-3 text-center">
-													<div className="badge bg-danger bg-opacity-10 text-danger">
-														10% higher than last month
-													</div>
-												</div>
-											</div>
-											<div className="col-lg-2 col-sm-12 col-12">
-												<div className="border px-2 py-4 rounded-5 h-100 text-center">
-													<h6 className="mt-3 mb-5">Monthly Average</h6>
-													<div className="mb-5">
-														<h2 className="text-primary">9600</h2>
-														<h6 className="text-secondary fw-light">Visitors</h6>
-													</div>
-													<div className="mb-4">
-														<h2 className="text-danger">$450<sup>k</sup></h2>
-														<h6 className="text-secondary fw-light">Sales</h6>
-													</div>
-												</div>
-											</div>
-											<div className="col-lg-5 col-sm-12 col-12">
-												<h6 className="text-center mb-3">Sales</h6>
-												<div id="sales"></div>
-												<div className="my-3 text-center">
-													<div className="badge bg-primary bg-opacity-10 text-primary">
-														12% higher than last month
-													</div>
-												</div>
-											</div>
-										</div>
-										
+										 {/* Visitors & Sales Charts */}
+      <div className="row gx-3 mb-3">
+        <div className="col-lg-5 col-sm-12 mb-3">
+          <h6 className="text-center mb-3">Visitors</h6>
+          <Chart
+            options={visitorOptions}
+            series={visitorSeries}
+            type="line"
+            height={250}
+          />
+        </div>
+		<div className="col-lg-2 col-sm-12 mb-3">
+          <div className="border px-2 py-4 rounded-5 h-100 text-center">
+            <h6 className="mt-3 mb-5">Monthly Average</h6>
+            <div className="mb-5">
+              <h2 className="text-primary">9600</h2>
+              <h6 className="text-secondary fw-light">Visitors</h6>
+            </div>
+            <div className="mb-4">
+              <h2 className="text-danger">$450<sup>k</sup></h2>
+              <h6 className="text-secondary fw-light">Sales</h6>
+            </div>
+          </div>
+        </div>
+        <div className="col-lg-5 col-sm-12 mb-3">
+          <h6 className="text-center mb-3">Sales</h6>
+          <Chart
+            options={salesOptions}
+            series={salesSeries}
+            type="line"
+            height={250}
+          />
+        </div>
+      </div>
+
 									</div>
 								</div>
 							</div>
 						</div>
-
+						
 
 						<div className="row gx-3">
 							<div className="col-xl-8 col-lg-12">
@@ -320,3 +386,4 @@ const Dashboard=()=>{
     );
 }
 export default Dashboard;
+
