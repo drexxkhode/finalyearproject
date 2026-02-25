@@ -1,8 +1,28 @@
-import Chart from "react-apexcharts";
-
-
+import { useRef, useEffect } from "react";
 
 const PaymentHistory=()=>{
+
+	const tableRef=useRef(null);
+	
+useEffect(() => {
+    const $table = window.$(tableRef.current)
+
+    // Initialize DataTable
+    $table.DataTable({
+      destroy: true, // avoids re-initialization errors
+      paging: true,
+      searching: true,
+    })
+
+    // Cleanup on unmount
+    return () => {
+      if (window.$.fn.DataTable.isDataTable(tableRef.current)) {
+        $table.DataTable().destroy()
+      }
+    }
+  }, [])
+  
+
     return (
 <>
 						<div class="col-xxl-12">
@@ -15,7 +35,7 @@ const PaymentHistory=()=>{
 									</div>
 									<div class="card-body">
 										<div class="table-responsive">
-											<table class="table table-bordered m-0">
+											<table class="table align-middle table-hover m-0" ref={tableRef} >
 												<thead>
 													<tr>
 														<th>#</th>

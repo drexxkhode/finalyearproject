@@ -34,7 +34,7 @@ function Sidebar() {
 
           <li className={location.pathname === "/" ? "active current-page" : ""}>
             <NavLink to="/">
-              <i className="bi bi-pie-chart"></i>
+              <i className="bi bi-house text-info"></i>
               <span className="menu-text">Dashboard</span>
             </NavLink>
           </li>
@@ -65,7 +65,7 @@ function Sidebar() {
               onClick={() => handleToggle("invoices")}
               style={{ cursor: "pointer" }}>
                 <i className="bi bi-window-sidebar"></i>
-    <span className="menu-text">Invoices</span>
+    <span className="menu-text">History</span>
     
   </a>
   <ul className="treeview-menu">
@@ -73,19 +73,13 @@ function Sidebar() {
       <NavLink 
         to="/history/bookings"
         className={({ isActive }) => isActive ? "active-sub" : ""}
-      >Create Invoice</NavLink>
+      >Bookings History</NavLink>
     </li>
     <li>
       <NavLink 
         to="/history/payments"
         className={({ isActive }) => isActive ? "active-sub" : ""}
-      >View Invoice</NavLink>
-    </li>
-    <li>
-      <NavLink 
-        to="/history/list"
-        className={({ isActive }) => isActive ? "active-sub" : ""}
-      >Invoice List</NavLink>
+      >Payment History</NavLink>
     </li>
   </ul>
 </li>
@@ -93,8 +87,8 @@ function Sidebar() {
   <a 
               onClick={() => handleToggle("reports")}
               style={{ cursor: "pointer" }}>
-                <i className="bi bi-window-sidebar"></i>
-    <span className="menu-text">Invoices</span>
+                <i className="bi bi-bar-chart-line text-warning"></i>
+    <span className="menu-text">Report</span>
     
   </a>
   <ul className="treeview-menu">
@@ -112,6 +106,13 @@ function Sidebar() {
     </li>
   </ul>
 </li>
+<li className={location.pathname === "/administrators" ? "active current-page" : ""}>
+            <NavLink to="/administrators">
+              <i className="bi bi-person text-info"></i>
+              <span className="menu-text">Administrators</span>
+            </NavLink>
+          </li>
+
         </ul>
       </div>
     </nav>

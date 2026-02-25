@@ -3,6 +3,7 @@ import Navbar from './partials/Navbar';
 import Sidebar from './partials/Sidebar';
 import Hero from './partials/Hero';
 import Dashboard from './pages/Dashboard';
+import Administrators from './pages/Administrators';
 import Footer from './partials/Footer';
 import Profile from './pages/Profile';
 import Enquiries from './pages/Enquires';
@@ -30,10 +31,11 @@ function App() {
 <Route path='/' element={<Dashboard/>}  />
 <Route  path='/enquiries' element={<Enquiries />} />
 <Route  path='/bookings' element={<Bookings />} />
-<Route path="/history/booking" element={<BookingHistory />} />
-<Route path="/history/payment" element={<PaymentHistory />} />
-<Route path="/report/booking" element={<BookingReport />} />
-<Route path="/report/payment" element={<PaymentReport />} />
+<Route path="/history/bookings" element={<BookingHistory />} />
+<Route path="/history/payments" element={<PaymentHistory />} />
+<Route path="/report/bookings" element={<BookingReport />} />
+<Route path="/report/payments" element={<PaymentReport />} />
+<Route path='/administrators' element={< Administrators/>}  />
 <Route  path='/events' element={<Events />} />
 <Route  path='/profile' element={<Profile />} />
 
