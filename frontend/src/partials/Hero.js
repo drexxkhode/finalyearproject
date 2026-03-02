@@ -15,6 +15,9 @@ function Hero() {
     '/history/payments': 'Payment History',
     '/report/payments': 'Payment Report',
     '/report/bookings': 'Booking Report',
+    '/register': 'Register',
+    '/edit-details': 'Edit Details',
+    '/settings': 'Settings',
     // add more routes as needed
   };
 

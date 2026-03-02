@@ -11,6 +11,6 @@ const pool =mysql.createPool({
     waitForConnections: true
     
 });
-console.log(pool);
 
-module.exports= pool;
+
+module.exports= pool.promise();

@@ -17,7 +17,7 @@ export default function Events() {
 
       events: [
         { title: 'Meeting', date: '2026-02-25',color:'#fd7e14' },
-        { title: 'Demo', date: '2026-02-27', color: "#ffff" }
+        { title: 'Demo', date: '2026-02-27', color: "#da0202" }
       ],
 
       dateClick(info) {

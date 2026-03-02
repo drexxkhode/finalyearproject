@@ -1,30 +1,37 @@
-import React, { useState, useEffect } from "react";
-import TurfMap from "./components/TurfMap";
-import DistrictSelector from "./components/DistrictSelector";
-import "./App.css";
-
-// Dummy data for two districts
-const turfs = [
-  { id: 1, name: "Pressec Turf", district: "District A", lat: 5.650, lng: -0.205 },
-  { id: 2, name: "Legon Turf", district: "District A", lat: 5.652, lng: -0.210 },
-  { id: 3, name: "East District Turf", district: "District B", lat: 5.670, lng: -0.220 },
-  { id: 4, name: "West District Turf", district: "District B", lat: 5.680, lng: -0.225 },
-];
-
+import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
+import Home from "./pages/Home";
+import Footer from "./partials/Footer";
+import Navbar from "./partials/Navbar";
+import Turfs from "./pages/Turfs";
+import Map from "./pages/Map";
+import ViewTurf from "./pages/ViewTurf";
 function App() {
-  const [selectedDistrict, setSelectedDistrict] = useState("District A");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setTimeout(() => setLoading(false), 800);
+  }, []);
 
+  if (loading) {
+    return <div id="preloader" className="preloader"></div>;
+  }
   return (
-    <div className="App">
-      <h1>Astro Turf Booking System</h1>
-      <DistrictSelector
-        districts={["District A", "District B"]}
-        selected={selectedDistrict}
-        onSelect={setSelectedDistrict}
-      />
-      <TurfMap turfs={turfs} selectedDistrict={selectedDistrict} />
+      <BrowserRouter>
+    <div className="index-page">
+        <Navbar />
+        <main className="main">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/all-turfs" element={<Turfs />} />
+            <Route path="/map" element={<Map />} />
+            <Route path="/view-turf" element={<ViewTurf />} />
+          </Routes>
+        </main>
+        <Footer />
     </div>
+      </BrowserRouter>
   );
 }
-
 export default App;

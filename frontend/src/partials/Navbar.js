@@ -1,7 +1,13 @@
 import{Link} from 'react-router-dom';
-
+const logout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  window.location.href = "/login"; // OR use navigate()
+};
 function Navbar() {
+	const user = JSON.parse(localStorage.getItem("user"));
   return (
+
 		<>
         	<div className="app-header d-flex align-items-center">
 
@@ -26,83 +32,6 @@ function Navbar() {
                 
 				<div className="header-actions col">
 					<div className="d-lg-flex d-none">
-						<div className="dropdown">
-							<a className="dropdown-toggle d-flex px-3 py-4 position-relative" href="#!" role="button"
-								data-bs-toggle="dropdown" aria-expanded="false">
-								<i className="bi bi-grid fs-4 lh-1 text-secondary"></i>
-							</a>
-							<div className="dropdown-menu dropdown-menu-end shadow-lg">
-								
-								<div className="d-flex gap-2 m-2">
-									<a href="javascript:void(0)" className="g-col-4 p-2 border rounded-2">
-										<img src="assets/images/brand-behance.svg" className="img-3x" alt="Admin Themes" />
-									</a>
-									<a href="javascript:void(0)" className="g-col-4 p-2 border rounded-2">
-										<img src="assets/images/brand-gatsby.svg" className="img-3x" alt="Admin Themes" />
-									</a>
-									<a href="javascript:void(0)" className="g-col-4 p-2 border rounded-2">
-										<img src="assets/images/brand-google.svg" className="img-3x" alt="Admin Themes" />
-									</a>
-									<a href="javascript:void(0)" className="g-col-4 p-2 border rounded-2">
-										<img src="assets/images/brand-bitcoin.svg" className="img-3x" alt="Admin Themes" />
-									</a>
-									<a href="javascript:void(0)" className="g-col-4 p-2 border rounded-2">
-										<img src="assets/images/brand-dribbble.svg" className="img-3x" alt="Admin Themes" />
-									</a>
-								</div>
-							</div>
-						</div>
-						<div className="dropdown border-start">
-							<a className="dropdown-toggle d-flex px-3 py-4 position-relative" href="#!" role="button"
-								data-bs-toggle="dropdown" aria-expanded="false">
-								<i className="bi bi-exclamation-triangle fs-4 lh-1 text-secondary"></i>
-								<span className="count-label warning"></span>
-							</a>
-							<div className="dropdown-menu dropdown-menu-end shadow-lg">
-								<h5 className="fw-semibold px-3 py-2 text-primary">
-									Notifications
-								</h5>
-								<div className="dropdown-item">
-									<div className="d-flex py-2 border-bottom">
-										<div className="icon-box md bg-success rounded-circle me-3">
-											<i className="bi bi-exclamation-triangle text-white fs-4"></i>
-										</div>
-										<div className="m-0">
-											<h6 className="mb-1 fw-semibold">Rosalie Deleon</h6>
-											<p className="mb-1">You have new order.</p>
-											<p className="small m-0 text-secondary">30 mins ago</p>
-										</div>
-									</div>
-								</div>
-								<div className="dropdown-item">
-									<div className="d-flex py-2 border-bottom">
-										<div className="icon-box md bg-danger rounded-circle me-3">
-											<i className="bi bi-exclamation-octagon text-white fs-4"></i>
-										</div>
-										<div className="m-0">
-											<h6 className="mb-1 fw-semibold">Donovan Stuart</h6>
-											<p className="mb-1">Membership has been expired.</p>
-											<p className="small m-0 text-secondary">2 days ago</p>
-										</div>
-									</div>
-								</div>
-								<div className="dropdown-item">
-									<div className="d-flex py-2">
-										<div className="icon-box md bg-warning rounded-circle me-3">
-											<i className="bi bi-exclamation-square text-white fs-4"></i>
-										</div>
-										<div className="m-0">
-											<h6 className="mb-1 fw-semibold">Roscoe Richards</h6>
-											<p className="mb-1">Payment pending. Pay now.</p>
-											<p className="small m-0 text-secondary">3 days ago</p>
-										</div>
-									</div>
-								</div>
-								<div className="d-grid mx-3 my-1">
-									<a href="javascript:void(0)" className="btn btn-primary">View all</a>
-								</div>
-							</div>
-						</div>
 						<div className="dropdown border-start">
 							<a className="dropdown-toggle d-flex px-3 py-4 position-relative" href="#!" role="button"
 								data-bs-toggle="dropdown" aria-expanded="false">
@@ -212,16 +141,15 @@ function Navbar() {
 						<a id="userSettings" className="dropdown-toggle d-flex py-2 align-items-center text-decoration-none" href="#!"
 							role="button" data-bs-toggle="dropdown" aria-expanded="false">
 							<img src="assets/images/user.png" className="rounded-2 img-3x" alt="Bootstrap Gallery" />
-							<span className="ms-2 text-truncate d-lg-block d-none">Anne Santiago</span>
+							<span className="ms-2 text-truncate d-lg-block d-none">{user ? user.firstName + " " + user.lastName : "Guest"}</span>
 						</a>
 						<div className="dropdown-menu dropdown-menu-end shadow-lg">
 							<div className="header-action-links mx-3 gap-2">
 								<Link className="dropdown-item" to={'/profile'}><i className="bi bi-person text-primary"></i>Profile</Link>
-								<a className="dropdown-item" href="settings.html"><i className="bi bi-gear text-danger"></i>Settings</a>
-								<a className="dropdown-item" href="widgets.html"><i className="bi bi-box text-success"></i>Widgets</a>
-							</div>
+								<Link to={"/settings"} className="dropdown-item" ><i className="bi bi-gear text-danger"></i>Settings</Link>
+								</div>
 							<div className="mx-3 mt-2 d-grid">
-								<a href="login.html" className="btn btn-primary btn-sm">Logout</a>
+								<button onClick={logout} className="btn btn-danger btn-sm">Logout <i class="bi bi-power"></i></button>
 							</div>
 						</div>
 					</div>

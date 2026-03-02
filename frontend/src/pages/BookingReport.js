@@ -11,6 +11,29 @@ useEffect(() => {
       destroy: true, // avoids re-initialization errors
       paging: true,
       searching: true,
+	  dom: 'Bfrtip',
+  buttons: [
+  {
+    extend: 'copy',
+    className: 'btn btn-primary btn-sm',
+    text: '<i class="bi bi-clipboard"></i> Copy'
+  },
+  {
+    extend: 'excel',
+    className: 'btn btn-success btn-sm',
+    text: '<i class="bi bi-file-earmark-excel"></i> Excel'
+  },
+  {
+    extend: 'pdf',
+    className: 'btn btn-danger btn-sm',
+    text: '<i class="bi bi-filetype-pdf"></i> PDF'
+  },
+  {
+    extend: 'print',
+    className: 'btn btn-info btn-sm',
+    text: '<i class="bi bi-printer"></i> Print'
+  }
+],
     })
 
     // Cleanup on unmount
@@ -34,7 +57,7 @@ useEffect(() => {
 									</div>
 									<div class="card-body">
 										<div class="table-responsive">
-											<table class="table table-bordered m-0" ref={tableRef} >
+											<table class="table align-middle table-hover m-0" ref={tableRef} >
 												<thead>
 													<tr>
 														<th>#</th>

@@ -1,7 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
-
 function Sidebar() {
   const location = useLocation();
 
@@ -11,9 +10,9 @@ function Sidebar() {
   useEffect(() => {
     if (location.pathname.startsWith("/history")) {
       setOpenTree("invoices");
-    } else if (location.pathname.startsWith("/report")){
+    } else if (location.pathname.startsWith("/report")) {
       setOpenTree("reports");
-    }else{
+    } else {
       setOpenTree("");
     }
   }, [location.pathname]);
@@ -31,88 +30,130 @@ function Sidebar() {
 
       <div className="sidebarMenuScroll">
         <ul className="sidebar-menu">
-
-          <li className={location.pathname === "/" ? "active current-page" : ""}>
+          <li
+            className={location.pathname === "/" ? "active current-page" : ""}
+          >
             <NavLink to="/">
               <i className="bi bi-house text-info"></i>
               <span className="menu-text">Dashboard</span>
             </NavLink>
           </li>
 
-          <li className={location.pathname === "/bookings" ? "active current-page" : ""}>
+          <li
+            className={
+              location.pathname === "/bookings" ? "active current-page" : ""
+            }
+          >
             <NavLink to="/bookings">
-              <i className="bi bi-bar-chart-line"></i>
+              <i class="bi bi-journal-check text-dark"></i>
               <span className="menu-text">Bookings</span>
             </NavLink>
           </li>
 
-          <li className={location.pathname === "/enquiries" ? "active current-page" : ""}>
+          <li
+            className={
+              location.pathname === "/enquiries" ? "active current-page" : ""
+            }
+          >
             <NavLink to="/enquiries">
-              <i className="bi bi-calendar2"></i>
+              <i class="bi bi-wechat text-success"></i>
               <span className="menu-text">Enquiries</span>
             </NavLink>
           </li>
 
-          <li className={location.pathname === "/events" ? "active current-page" : ""}>
+          <li
+            className={
+              location.pathname === "/events" ? "active current-page" : ""
+            }
+          >
             <NavLink to="/events">
-              <i className="bi bi-calendar2"></i>
+              <i className="bi bi-calendar-event text-danger"></i>
               <span className="menu-text">Events</span>
             </NavLink>
           </li>
 
-          <li className={`treeview ${openTree === "invoices" ? "active current-page open" : ""}`}>
-  <a 
+          <li
+            className={`treeview ${openTree === "invoices" ? "active current-page open" : ""}`}
+          >
+            <a
               onClick={() => handleToggle("invoices")}
-              style={{ cursor: "pointer" }}>
-                <i className="bi bi-window-sidebar"></i>
-    <span className="menu-text">History</span>
-    
-  </a>
-  <ul className="treeview-menu">
-    <li>
-      <NavLink 
-        to="/history/bookings"
-        className={({ isActive }) => isActive ? "active-sub" : ""}
-      >Bookings History</NavLink>
-    </li>
-    <li>
-      <NavLink 
-        to="/history/payments"
-        className={({ isActive }) => isActive ? "active-sub" : ""}
-      >Payment History</NavLink>
-    </li>
-  </ul>
-</li>
-  <li className={`treeview ${openTree === "reports" ? "active current-page open" : ""}`}>
-  <a 
+              style={{ cursor: "pointer" }}
+            >
+<i class="bi bi-clock-history text-primary"></i>
+              <span className="menu-text">History</span>
+            </a>
+            <ul className="treeview-menu">
+              <li>
+                <NavLink
+                  to="/history/bookings"
+                  className={({ isActive }) => (isActive ? "active-sub" : "")}
+                >
+                  Bookings History
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/history/payments"
+                  className={({ isActive }) => (isActive ? "active-sub" : "")}
+                >
+                  Payment History
+                </NavLink>
+              </li>
+            </ul>
+          </li>
+          <li
+            className={`treeview ${openTree === "reports" ? "active current-page open" : ""}`}
+          >
+            <a
               onClick={() => handleToggle("reports")}
-              style={{ cursor: "pointer" }}>
-                <i className="bi bi-bar-chart-line text-warning"></i>
-    <span className="menu-text">Report</span>
-    
-  </a>
-  <ul className="treeview-menu">
-    <li>
-      <NavLink 
-        to="/report/bookings"
-        className={({ isActive }) => isActive ? "active-sub" : ""}
-      >Booking Report</NavLink>
-    </li>
-    <li>
-      <NavLink 
-        to="/report/payments"
-        className={({ isActive }) => isActive ? "active-sub" : ""}
-      >Payment Report</NavLink>
-    </li>
-  </ul>
-</li>
-<li className={location.pathname === "/administrators" ? "active current-page" : ""}>
+              style={{ cursor: "pointer" }}
+            >
+              <i className="bi bi-bar-chart-line text-warning"></i>
+              <span className="menu-text">Report</span>
+            </a>
+            <ul className="treeview-menu">
+              <li>
+                <NavLink
+                  to="/report/bookings"
+                  className={({ isActive }) => (isActive ? "active-sub" : "")}
+                >
+                  Booking Report
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/report/payments"
+                  className={({ isActive }) => (isActive ? "active-sub" : "")}
+                >
+                  Payment Report
+                </NavLink>
+              </li>
+            </ul>
+          </li>
+          <li
+            className={
+              location.pathname === "/administrators"
+                ? "active current-page"
+                : ""
+            }
+          >
             <NavLink to="/administrators">
-              <i className="bi bi-person text-info"></i>
+              <i class="bi bi-person-fill-lock text-info" ></i>
               <span className="menu-text">Administrators</span>
             </NavLink>
           </li>
-
+          <li
+            className={
+              location.pathname === "/settings"
+                ? "active current-page"
+                : ""
+            }
+          >
+            <NavLink to="/settings">
+              <i class="bi bi-gear text-danger" ></i>
+              <span className="menu-text">Settings</span>
+            </NavLink>
+          </li>
         </ul>
       </div>
     </nav>
