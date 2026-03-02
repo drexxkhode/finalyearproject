@@ -30,7 +30,10 @@ const Update = () => {
   const [errors, setErrors] = useState({});
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-
+const formatDateForInput = (dateValue) => {
+  if (!dateValue) return "";
+  return new Date(dateValue).toISOString().split("T")[0];
+};
   // ------------------- Fetch Admin Details -------------------
   const fetchDetail = async (adminId) => {
     try {
@@ -47,7 +50,7 @@ const Update = () => {
         firstName: data.firstName || "",
         middleName: data.middleName || "",
         lastName: data.lastName || "",
-        dob: data.birthDay || "",
+        dob: formatDateForInput(data.dob) || "",
         contact: data.contact || "",
         gender: data.gender || "",
         address: data.address || "",
@@ -186,12 +189,12 @@ const Update = () => {
       payload.append("firstName", formData.firstName);
       payload.append("middleName", formData.middleName);
       payload.append("lastName", formData.lastName);
-      payload.append("birthDay", formData.birthDay);
+      payload.append("dob", formData.dob);
       payload.append("gender", formData.gender);
       payload.append("contact", formData.contact);
       payload.append("address", formData.address);
       payload.append("nationalId", formData.nationalId);
-      payload.append("nextOfKin", formData.nextOfKin);
+      payload.append("email", formData.email);
       payload.append("maritalStatus", formData.maritalStatus);
       payload.append("role", formData.role);
 
