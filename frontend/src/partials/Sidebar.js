@@ -24,7 +24,7 @@ function Sidebar() {
   return (
     <nav id="sidebar" className="sidebar-wrapper">
       <div className="shop-profile">
-        <p className="mb-1 fw-bold text-primary">Walmart</p>
+        <p className="mb-1 fw-bold text-primary">Admin Dashboad</p>
         <p className="m-0">Los Angeles, California</p>
       </div>
 

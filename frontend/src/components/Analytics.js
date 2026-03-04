@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
+import ClipLoader from "react-spinners/ClipLoader";
 import { io } from "socket.io-client";
 
 const socket = io("http://localhost:5000"); // adjust if needed
@@ -84,7 +85,12 @@ const Analytics = () => {
     legend: { position: "bottom" },
   };
 
-  if (!categories.length) return <div className="text-center py-5">Loading analytics…</div>;
+  if (!categories.length)
+  return (
+    <div className="text-center py-5">
+      <ClipLoader color="#3641d7" size={30} />
+    </div>
+  );
 
   return <Chart options={options} series={series} type="line" height={350} />;
 };

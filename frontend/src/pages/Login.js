@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {toast,ToastContainer} from "react-toastify";
 const Login = () => {
@@ -76,6 +76,7 @@ const Login = () => {
                       required
                     />
                   </div>
+                  
                   <div className="mb-3">
                     <label htmlFor="password" className="form-label">
                      Your Password
@@ -113,7 +114,11 @@ const Login = () => {
                       {error}
                     </p>
                   )}
-                  <div className="d-grid py-3 mt-4">
+                  <div className="d-flex align-items-center justify-content-end">
+									
+									<Link to={'/forgot-password'} className="text-blue text-decoration-underline">Lost password?</Link>
+								</div>
+                  <div className="d-grid py-3 mt-2">
                     <button type="submit" className="btn btn-lg btn-primary">
                       Login
                     </button>

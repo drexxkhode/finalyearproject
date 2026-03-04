@@ -16,8 +16,9 @@ function Hero() {
     '/report/payments': 'Payment Report',
     '/report/bookings': 'Booking Report',
     '/register': 'Register',
-    '/edit-details': 'Edit Details',
+    '/edit-details/:id': 'Edit Details',
     '/settings': 'Settings',
+    '/reset-password': 'Reset Password',
     // add more routes as needed
   };
 

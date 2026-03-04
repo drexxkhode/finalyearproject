@@ -5,7 +5,8 @@ const http = require("http");
 const { Server } = require("socket.io");
 const db = require("./config/db"); // PostgreSQL
 const authRoutes = require("./routes/admin/authRoute");
-
+const turfRoutes = require("./routes/turf/turfData");
+const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -18,9 +19,12 @@ app.use(cors(
   }
 ));
 app.use(express.json());
+// Serve uploads folder as static
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/turf", turfRoutes);
 
 app.get("/", (req, res) => {
   res.send("Astro Turf API running");

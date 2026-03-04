@@ -5,7 +5,9 @@ const generateToken = (user) => {
     {
        id: user.id,
       role: user.role,
-      turf_id: user.turf_id
+      turf_id: user.turf_id,
+      photo: user.photo
+
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES }

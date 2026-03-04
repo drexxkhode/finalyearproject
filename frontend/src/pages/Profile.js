@@ -37,7 +37,7 @@ const Profile = () => {
 
         <div className="d-flex align-items-center gap-4">
           <img
-            src={admin.photo || "/default-profile.png"}
+            src={admin.photo || "/assets/images/admin/avatar.wepb"}
             className="profile-img"
             alt="Profile Image"
           />
@@ -102,7 +102,7 @@ const Profile = () => {
           <h5 className="card-title fw-bold">
             <i className="bi bi-person-lines-fill text-primary"></i> Personal Information
           </h5>
-          <Link to={`/edit-details/${admin.id}`} className="btn btn-outline-primary btn-sm ms-auto">
+          <Link to={`/edit-details/${admin.id}`} className="btn btn-primary btn-sm ms-auto">
             Edit Details
           </Link>
         </div>

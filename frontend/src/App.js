@@ -18,16 +18,22 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Update from './pages/ViewAdministrator';
 import Settings from './pages/Settings';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import ProtectedRoute from './services/ProtectedRoute';
+import { ToastContainer } from 'react-toastify';
+import ClipLoader from "react-spinners/ClipLoader";
 
 function App() {
   return (
     <BrowserRouter>
+<ToastContainer />
       <Routes>
 
         {/* PUBLIC ROUTE */}
         <Route path="/login" element={<Login />} />
-
+        <Route path='/forgot-password' element={<ForgotPassword/>} />
+        <Route path='/reset-password/:token' element={<ResetPassword/>} />
         {/* PROTECTED ROUTES */}
         <Route
           path="/*"

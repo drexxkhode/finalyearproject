@@ -205,6 +205,7 @@ const Register = () => {
     }
 
     try {
+      console.log(formData);
     
       const response = await axios.post(
         "http://localhost:5000/api/auth/register",
@@ -217,8 +218,7 @@ const Register = () => {
         },
       );
 
-      console.log("User registered:", response.data);
-      toast.success("Login successfully!", {
+      toast.success("Registration successfully!", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
@@ -228,10 +228,10 @@ const Register = () => {
       });
     } catch (error) {
       console.error(error.response?.data || error.message);
-      toast.error("Registration failed!", {
+      toast.error(error?.response?.message || "Registration failed!", {
         position: "top-right",
         autoClose: 3000,
-        hideProgressBar: false,
+        hideProgressBar: true,
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
@@ -552,7 +552,7 @@ const Register = () => {
                                 onChange={handleChange}
                                 type="email"
                               />
-                              {errors.nextOfKin && (
+                              {errors.email && (
                                 <div className="invalid-feedback">
                                   {errors.email}
                                 </div>
@@ -577,6 +577,7 @@ const Register = () => {
                                 <option value="Married">Married</option>
                                 <option value="Single">Single</option>
                                 <option value="Widow">Widow</option>
+                                <option value="Divorced">Divorced</option>
                               </select>
                               {errors.maritalStatus && (
                                 <div className="invalid-feedback">
@@ -661,7 +662,7 @@ const Register = () => {
                                 onChange={handleChange}
                               >
                                 <option value="">-- Select Role --</option>
-                                <option value="General">General</option>
+                                <option value="Staff">Staff</option>
                                 <option value="Manager">Manager</option>
                               </select>
                               {errors.role && (

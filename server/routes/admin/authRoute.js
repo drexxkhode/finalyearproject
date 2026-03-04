@@ -5,9 +5,14 @@ const {
   updateUser,
   deleteUser,
   getAdminDetails,
-  getAllAdmins
+  getAllAdmins,
+  getMe,
+  changePassword,
+  forgotPassword,
+  resetPassword
 } = require("../../controllers/authController");
 const protect = require("../../middleware/auth");
+const passwordResetRateLimit  = require("../../middleware/passwordResetRateLimit");
 const router = express.Router();
 
 router.post("/register",protect, register);
@@ -16,5 +21,9 @@ router.put("/update/:id", protect, updateUser);
 router.delete("/delete/:id", protect, deleteUser);
 router.get("/details/:id", protect, getAdminDetails);
 router.get("/admins", protect, getAllAdmins);
+router.get("/me", protect, getMe);
+router.put("/change-password", protect, changePassword);
+router.post("/forgot-password", passwordResetRateLimit , forgotPassword);
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

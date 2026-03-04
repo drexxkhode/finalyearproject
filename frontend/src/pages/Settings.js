@@ -1,5 +1,163 @@
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import '../components/Spinner.css';
+import ClipLoader from "react-spinners/ClipLoader";
+
 const Settings = () => {
+  const [activeTab, setActiveTab] = useState("oneA");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const [formData, setFormData] = useState({
+    turfName: "",
+    location: "",
+    district: "",
+    longitude: "",
+    latitude: "",
+    email: "",
+    about: "",
+    price: "",
+  });
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Required fields
+    const requiredFields = [
+      "turfName",
+      "location",
+      "district",
+      "longitude",
+      "latitude",
+      "price",
+    ];
+    requiredFields.forEach((field) => {
+      if (!formData[field] || formData[field].toString().trim() === "") {
+        newErrors[field] = "This field is required";
+        toast.warning("Some field is empty");
+      }
+    });
+
+    // Contact number validation
+    if (formData.contact && !/^\d{10,15}$/.test(formData.contact)) {
+      newErrors.contact = "Enter a valid phone number";
+      toast.warning("Please enter a phone number");
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ------------------- Input Change -------------------
+
+  const fetchDetail = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(
+        "http://localhost:5000/api/turf/turf-details",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      // Map backend fields to frontend formData
+      setFormData({
+        turfName: res.data.name || "",
+        email: res.data.email || "",
+        district: res.data.district || "",
+        latitude: res.data.latitude || "",
+        longitude: res.data.longitude || "",
+        location: res.data.location || "",
+        price: res.data.price_per_hour || "",
+        about: res.data.about || "",
+        contact: res.data.contact || "", // if available
+      });
+    } catch (err) {
+      console.error("Fetch failed:", err);
+      toast.error("Failed to fetch turf details!");
+    }
+  };
+
+  useEffect(() => {
+    fetchDetail();
+  }, []);
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await axios.put(
+        "http://localhost:5000/api/auth/change-password",
+        { oldPassword, newPassword },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      toast.success(response?.data?.message || "Password updated!");
+      setNewPassword("");
+      setOldPassword("");
+    } catch (err) {
+      console.log("Password Change Error", err);
+      toast.error(err.response?.data?.message || "Password Update Failed!");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+  // ------------------- Submit -------------------
+  const handleTurfDetailSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      // Map frontend fields to backend expected fields
+      const payload = {
+        name: formData.turfName,
+        email: formData.email,
+        district: formData.district,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        location: formData.location,
+        price_per_hour: formData.price,
+        about: formData.about,
+      };
+
+      const res = await axios.put(
+        "http://localhost:5000/api/turf/update-turf",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      console.log(payload);
+
+      toast.success(res.data.message || "Turf updated successfully!");
+    } catch (error) {
+      console.error(error.response?.data || error.message);
+      toast.error("Update failed!");
+    }
+  };
+
   return (
     <>
       <div className="row gx-3">
@@ -7,306 +165,362 @@ const Settings = () => {
           <div className="card mb-3">
             <div className="card-body">
               <div className="custom-tabs-container">
-                <ul className="nav nav-tabs" id="customTab2" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <a
-                      className="nav-link active"
-                      id="tab-oneA"
-                      data-bs-toggle="tab"
-                      href="#oneA"
-                      role="tab"
-                      aria-controls="oneA"
-                      aria-selected="true"
+                <ul className="nav nav-tabs">
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeTab === "oneA" ? "active" : ""}`}
+                      onClick={() => setActiveTab("oneA")}
                     >
                       General
-                    </a>
+                    </button>
                   </li>
-                  <li className="nav-item" role="presentation">
-                    <a
-                      className="nav-link"
-                      id="tab-twoA"
-                      data-bs-toggle="tab"
-                      href="#twoA"
-                      role="tab"
-                      aria-controls="twoA"
-                      aria-selected="false"
+
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeTab === "twoA" ? "active" : ""}`}
+                      onClick={() => setActiveTab("twoA")}
                     >
-                      Settings
-                    </a>
+                      GIS & Other Info
+                    </button>
                   </li>
-                  <li className="nav-item" role="presentation">
-                    <a
-                      className="nav-link"
-                      id="tab-threeA"
-                      data-bs-toggle="tab"
-                      href="#threeA"
-                      role="tab"
-                      aria-controls="threeA"
-                      aria-selected="false"
+
+                  <li className="nav-item">
+                    <button
+                      type="button"
+                      className={`nav-link ${activeTab === "threeA" ? "active" : ""}`}
+                      onClick={() => setActiveTab("threeA")}
                     >
                       Turf Photos
-                    </a>
+                    </button>
                   </li>
                 </ul>
+
                 <div className="tab-content">
                   <div
-                    className="tab-pane fade show active"
-                    id="oneA"
-                    role="tabpanel"
+                    className={`tab-pane ${activeTab === "oneA" ? "show active" : "d-none"}`}
                   >
                     <div className="row gx-3 justify-content-between">
                       <div className="col-sm-8 col-12">
                         <div className="card mb-3">
                           <div className="card-header">
-                            <h5 className="card-title">Personal Details</h5>
+                            <h5 className="card-title">Astro Turf Details</h5>
                           </div>
                           <div className="card-body">
-                            <div className="row gx-3">
-                              <div className="col-6">
-                                <div className="mb-3">
-                                  <label for="fullName" className="form-label">
-                                    Full Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    id="fullName"
-                                    placeholder="Full Name"
-                                  />
-                                </div>
-
-                                <div className="mb-3">
-                                  <label
-                                    for="contactNumber"
-                                    className="form-label"
-                                  >
-                                    Contact
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    id="contactNumber"
-                                    placeholder="Contact"
-                                  />
-                                </div>
-                              </div>
-                              <div className="col-6">
-                                <div className="mb-3">
-                                  <label for="emailId" className="form-label">
-                                    Email
-                                  </label>
-                                  <input
-                                    type="email"
-                                    className="form-control"
-                                    id="emailId"
-                                    placeholder="Email ID"
-                                    value="info@email.com"
-                                  />
-                                </div>
-
-                                <div className="mb-3">
-                                  <label for="birthDay" className="form-label">
-                                    Birthday
-                                  </label>
-                                  <div className="input-group">
+                            <form>
+                              <div className="row gx-3">
+                                <div className="col-6">
+                                  <div className="mb-3">
+                                    <label
+                                      htmlFor="turfName"
+                                      className="form-label"
+                                    >
+                                      Astro Turf Name
+                                    </label>
                                     <input
                                       type="text"
-                                      className="form-control datepicker-opens-left"
-                                      id="birthDay"
-                                      placeholder="DD/MM/YYYY"
+                                      className="form-control"
+                                      id="turfName"
+                                      value={formData.turfName}
+                                      onChange={handleChange}
                                     />
-                                    <span className="input-group-text">
-                                      <i className="bi bi-calendar4"></i>
-                                    </span>
+                                  </div>
+
+                                  <div className="mb-3">
+                                    <label
+                                      for="contactNumber"
+                                      className="form-label"
+                                    >
+                                      Contact
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      id="contact"
+                                      value={formData.contact}
+                                      onChange={handleChange}
+                                    />
                                   </div>
                                 </div>
-                              </div>
-                              <div className="col-12">
-                                <div className="mb-3">
-                                  <label className="form-label">About</label>
-                                  <textarea
-                                    className="form-control"
-                                    rows="3"
-                                  ></textarea>
+                                <div className="col-6">
+                                  <div className="mb-3">
+                                    <label
+                                      htmlFor="email"
+                                      className="form-label"
+                                    >
+                                      Email
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="form-control"
+                                      id="email"
+                                      value={formData.email}
+                                      onChange={handleChange}
+                                    />
+                                  </div>
+
+                                  <div className="mb-3">
+                                    <label
+                                      htmlFor="location"
+                                      className="form-label"
+                                    >
+                                      Location
+                                    </label>
+                                    <div className="input-group">
+                                      <input
+                                        type="text"
+                                        className="form-control"
+                                        id="location"
+                                        value={formData.location}
+                                        onChange={handleChange}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="col-12">
+                                  <div className="mb-2">
+                                    <label className="form-label">About</label>
+                                    <textarea
+                                      className="form-control"
+                                      rows="3"
+                                      id="about"
+                                      value={formData.about || ""}
+                                      onChange={handleChange}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="d-flex gap-2 mt-2 justify-content-end">
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={handleTurfDetailSubmit}
+                                  >
+                                    Save Changes
+                                  </button>
                                 </div>
                               </div>
-                            </div>
+                            </form>
                           </div>
                         </div>
                       </div>
+
                       <div className="col-sm-4 col-12">
                         <div className="card mb-3">
                           <div className="card-header">
-                            <h5 className="card-title">Reset Password</h5>
+                            <h5 className="card-title">Change Password</h5>
                           </div>
                           <div className="card-body">
-                            <div className="row gx-3">
-                              <div className="col-12">
-                                <div className="mb-3">
-                                  <label
-                                    for="currentPassword"
-                                    className="form-label"
-                                  >
-                                    Current Password
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    id="currentPassword"
-                                    placeholder="Enter Current Password"
-                                  />
-                                </div>
+                            <form>
+                              <div className="row gx-3">
+                                <div className="col-12">
+                                  <div className="mb-3">
+                                    <label
+                                      htmlFor="Oldpassword"
+                                      className="form-label"
+                                    >
+                                      Curent Password
+                                    </label>
 
-                                <div className="mb-3">
-                                  <label
-                                    for="newPassword"
-                                    className="form-label"
-                                  >
-                                    New Password
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    id="newPassword"
-                                    placeholder="Enter New Password"
-                                  />
-                                </div>
+                                    <div className="input-group">
+                                      <input
+                                        type={
+                                          showPassword ? "text" : "password"
+                                        }
+                                        id="Oldpassword"
+                                        className="form-control"
+                                        placeholder="Enter Current Password"
+                                        value={oldPassword}
+                                        onChange={(e) =>
+                                          setOldPassword(e.target.value)
+                                        }
+                                        required
+                                      />
 
-                                <div className="mb-3">
-                                  <label
-                                    for="confirmNewPassword"
-                                    className="form-label"
-                                  >
-                                    Confirm New Password
-                                  </label>
-                                  <input
-                                    type="text"
-                                    className="form-control"
-                                    id="confirmNewPassword"
-                                    placeholder="Confirm New Password"
-                                  />
+                                      <span
+                                        className="input-group-text"
+                                        style={{ cursor: "pointer" }}
+                                        onClick={() =>
+                                          setShowPassword((prev) => !prev)
+                                        }
+                                      >
+                                        <i
+                                          className={`bi ${
+                                            showPassword
+                                              ? "bi-eye-slash"
+                                              : "bi-eye"
+                                          }`}
+                                        ></i>
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="mb-3">
+                                    <label
+                                      htmlFor="Newpassword"
+                                      className="form-label"
+                                    >
+                                      New Password
+                                    </label>
+
+                                    <div className="input-group">
+                                      <input
+                                        type={
+                                          showNewPassword ? "text" : "password"
+                                        }
+                                        id="Newpassword"
+                                        className="form-control"
+                                        placeholder="Enter New Password"
+                                        value={newPassword}
+                                        onChange={(e) =>
+                                          setNewPassword(e.target.value)
+                                        }
+                                        required
+                                      />
+
+                                      <span
+                                        className="input-group-text"
+                                        style={{ cursor: "pointer" }}
+                                        onClick={() =>
+                                          setShowNewPassword((prev) => !prev)
+                                        }
+                                      >
+                                        <i
+                                          className={`bi ${
+                                            showNewPassword
+                                              ? "bi-eye-slash"
+                                              : "bi-eye"
+                                          }`}
+                                        ></i>
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-3">
+                                    <button
+                                      type="button"
+                                      className=" form-control col-12 btn btn-primary"
+                                      onClick={handlePasswordChange}
+                                      disabled={isUpdating}
+                                    >
+                                      Save Changes
+                                    </button>
+                                    {isUpdating && (
+                                      <div className="spinner-overlay">
+                                        <ClipLoader color="#1d20e0" size={60} />
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ================= OTHER INFO ================= */}
+                  <div
+                    className={`tab-pane ${activeTab === "twoA" ? "show active" : "d-none"}`}
+                    id="twoA"
+                  >
+                    <div className="card mb-3">
+                      <div className="card-header">
+                        <h5 className="card-title">GIS & Other Details</h5>
+                      </div>
+                      <div className="card-body">
+                        <form>
+                          <div className="row gx-3">
+                            {/** log */}
+                            <div className="col-6">
+                              <label htmlFor="longitude" className="form-label">
+                                Longitude
+                              </label>
+                              <input
+                                id="longitude"
+                                className={`form-control ${errors.longitude ? "is-invalid" : ""}`}
+                                value={formData.longitude}
+                                onChange={handleChange}
+                              />
+                              {errors.longitude && (
+                                <div className="invalid-feedback">
+                                  {errors.longitude}
+                                </div>
+                              )}
+                            </div>
+
+                            {/** Latitude */}
+                            <div className="col-6">
+                              <label htmlFor="latitude" className="form-label">
+                                Latitude
+                              </label>
+                              <input
+                                id="latitude"
+                                className={`form-control ${errors.latitude ? "is-invalid" : ""}`}
+                                value={formData.latitude}
+                                onChange={handleChange}
+                              />
+                              {errors.latitude && (
+                                <div className="invalid-feedback">
+                                  {errors.latitude}
+                                </div>
+                              )}
+                            </div>
+
+                            {/** Next of Kin */}
+                            <div className="col-6">
+                              <label htmlFor="price" className="form-label">
+                                Price per hour
+                              </label>
+                              <input
+                                id="price"
+                                className={`form-control ${errors.price ? "is-invalid" : ""}`}
+                                value={formData.price}
+                                onChange={handleChange}
+                                type="text"
+                              />
+                              {errors.price && (
+                                <div className="invalid-feedback">
+                                  {errors.price}
+                                </div>
+                              )}
+                            </div>
+                            {/** Latitude */}
+                            <div className="col-6">
+                              <label htmlFor="district" className="form-label">
+                                district
+                              </label>
+                              <input
+                                id="district"
+                                className={`form-control ${errors.district ? "is-invalid" : ""}`}
+                                value={formData.district}
+                                onChange={handleChange}
+                              />
+                              {errors.district && (
+                                <div className="invalid-feedback">
+                                  {errors.district}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="d-flex gap-2 justify-content-end">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary"
-                      >
-                        Reset
-                      </button>
-                      <button type="button" className="btn btn-success">
-                        Update
-                      </button>
+                          <div className="d-flex gap-2 justify-content-end p-3">
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              onClick={handleTurfDetailSubmit}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </form>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="tab-pane fade" id="twoA" role="tabpanel">
-                    <div className="row gx-3">
-                      <div className="col-sm-6 col-12">
-                        <div className="card">
-                          <div className="card-body">
-                            <ul className="list-group">
-                              <li className="list-group-item d-flex justify-content-between align-items-center">
-                                Show desktop notifications
-                                <div className="form-check form-switch m-0">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    id="switchOne"
-                                  />
-                                </div>
-                              </li>
-                              <li className="list-group-item d-flex justify-content-between align-items-center">
-                                Show email notifications
-                                <div className="form-check form-switch m-0">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    id="switchTwo"
-                                    checked
-                                  />
-                                </div>
-                              </li>
-                              <li className="list-group-item d-flex justify-content-between align-items-center">
-                                Show chat notifications
-                                <div className="form-check form-switch m-0">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    id="switchThree"
-                                  />
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-sm-6 col-12">
-                        <div className="card">
-                          <div className="card-body">
-                            <ul className="list-group">
-                              <li className="list-group-item d-flex justify-content-between align-items-center">
-                                Show purchase history
-                                <div className="form-check form-switch m-0">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    id="switchFour"
-                                  />
-                                </div>
-                              </li>
-                              <li className="list-group-item d-flex justify-content-between align-items-center">
-                                Show orders
-                                <div className="form-check form-switch m-0">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    id="switchFive"
-                                  />
-                                </div>
-                              </li>
-                              <li className="list-group-item d-flex justify-content-between align-items-center">
-                                Show alerts
-                                <div className="form-check form-switch m-0">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    id="switchSix"
-                                  />
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="d-flex gap-2 mt-4 justify-content-end">
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary"
-                      >
-                        Cancel
-                      </button>
-                      <button type="button" className="btn btn-success">
-                        Update
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="tab-pane fade" id="threeA" role="tabpanel">
+                  <div
+                    className={`tab-pane ${activeTab === "threeA" ? "show active" : "d-none"}`}
+                  >
                     <div className="row gx-3">
                       <div className="col-12">
                         <div class="card mb-3">
@@ -425,6 +639,7 @@ const Settings = () => {
                   </div>
                 </div>
               </div>
+              <ToastContainer />
             </div>
           </div>
         </div>
