@@ -1,36 +1,38 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, matchPath } from 'react-router-dom';
 
 function Hero() {
   const location = useLocation();
 
-  // Map paths to breadcrumb names
-  const breadcrumbMap = {
-    '/': 'Dashboard',
-    '/events': 'Events Callendar',
-    '/profile': 'Profile',
-    '/bookings': 'Bookings',
-    '/enquiries': 'Enquiries',
-    '/administrators': 'Administrators',
-    '/history/bookings': 'Booking History',
-    '/history/payments': 'Payment History',
-    '/report/payments': 'Payment Report',
-    '/report/bookings': 'Booking Report',
-    '/register': 'Register',
-    '/edit-details/:id': 'Edit Details',
-    '/settings': 'Settings',
-    '/reset-password': 'Reset Password',
-    // add more routes as needed
-  };
+  const routes = [
+    { path: '/', name: 'Dashboard' },
+    { path: '/events', name: 'Events Calendar' },
+    { path: '/profile', name: 'My Profile' },
+    { path: '/profile/:id', name: 'User Profile' },
+    { path: '/bookings', name: 'Bookings' },
+    { path: '/enquiries', name: 'Enquiries' },
+    { path: '/administrators', name: 'Administrators' },
+    { path: '/history/bookings', name: 'Booking History' },
+    { path: '/history/payments', name: 'Payment History' },
+    { path: '/report/payments', name: 'Payment Report' },
+    { path: '/report/bookings', name: 'Booking Report' },
+    { path: '/register', name: 'Register' },
+    { path: '/edit-details/:id', name: 'Edit Details' },
+    { path: '/settings', name: 'Settings' },
+    { path: '/reset-password', name: 'Reset Password' },
+  ];
 
-  // Get the current page name, fallback to empty string
-  const currentPage = breadcrumbMap[location.pathname] || '';
+  const currentRoute = routes.find(route =>
+    matchPath({ path: route.path, end: true }, location.pathname)
+  );
+
+  const currentPage = currentRoute?.name || '';
 
   return (
     <div className="app-hero-header d-flex align-items-center">
       <ol className="breadcrumb">
         <li className="breadcrumb-item">
           <i className="bi bi-house lh-1 pe-3 me-3 border-end border-dark"></i>
-          <Link to={"/"} className="text-decoration-none">Home</Link>
+          <Link to="/" className="text-decoration-none">Home</Link>
         </li>
         <li className="breadcrumb-item text-secondary" aria-current="page">
           {currentPage}

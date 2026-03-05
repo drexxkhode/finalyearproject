@@ -20,10 +20,30 @@ const Profile = () => {
   };
 
   useEffect(() => {
-    if (id) {
-      fetchDetails(id);
-    }
-  }, [id]);
+  const token = localStorage.getItem("token");
+
+  if (id) {
+    // 🔎 Viewing another user
+    fetchDetails(id);
+  } else {
+    // 👤 Viewing logged-in user
+    const getMe = async () => {
+      try {
+        const { data } = await axios.get(
+          "http://localhost:5000/api/auth/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setAdmin(data);
+      } catch (err) {
+        console.error("Failed to fetch logged user:", err);
+      }
+    };
+
+    getMe();
+  }
+}, [id]);
 
   // Helper for full name
   const fullName = `${admin.firstName || ""} ${admin.middleName || ""} ${admin.lastName || ""}`;
@@ -37,7 +57,7 @@ const Profile = () => {
 
         <div className="d-flex align-items-center gap-4">
           <img
-            src={admin.photo || "/assets/images/admin/avatar.wepb"}
+            src={admin.photo || "/assets/images/admin/avatar.webp"}
             className="profile-img"
             alt="Profile Image"
           />
@@ -57,7 +77,7 @@ const Profile = () => {
           <div className="col-md-3">
             <div className="card stat-card">
               <div className="stat-icon text-primary">
-                <i class="bi bi-person-vcard"></i>
+                <i className="bi bi-person-vcard"></i>
               </div>
               <small className="text-muted">Nationa ID</small>
               <h6 className="fw-bold mt-2">{admin.nationalId  || "N/A"}</h6>

@@ -142,12 +142,19 @@ const Update = () => {
       "role",
     ];
 
-    requiredFields.forEach((field) => {
-      if (!formData[field] || formData[field].toString().trim() === "") {
-        newErrors[field] = "This field is required";
-        toast.warning("Some field is empty");
-      }
-    });
+    let hasError = false;
+
+requiredFields.forEach((field) => {
+  if (!formData[field] || formData[field].toString().trim() === "") {
+    newErrors[field] = "This field is required";
+    hasError = true;
+  }
+});
+
+if (hasError) {
+  toast.warning("Please fill in the highlighted fields.");
+  return;
+}
 
     // Contact number validation
     if (formData.contact && !/^\d{10,15}$/.test(formData.contact)) {
@@ -547,6 +554,7 @@ const Update = () => {
                             className="btn btn-success"
                             onClick={() => setActiveTab("oneA")}
                           >
+                            <i className="bi bi-arrow-left-circle" />
                             Prev
                           </button>
                           <button

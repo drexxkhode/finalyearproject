@@ -2,10 +2,12 @@ import "../components/PreviewGuide.css";
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
+import ClipLoader from "react-spinners/ClipLoader";
 
 const Register = () => {
   const [activeTab, setActiveTab] = useState("oneA");
   const [showPassword, setShowPassword] = useState(false);
+  const [save, setSave] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({
     score: 0,
     label: "Very Weak",
@@ -168,12 +170,18 @@ const Register = () => {
       "role",
       "password",
     ];
-
+    let hasError = false;
     requiredFields.forEach((field) => {
-      if (!formData[field] || formData[field].toString().trim() === "") {
-        newErrors[field] = "This field is required";
-      }
-    });
+  if (!formData[field] || formData[field].toString().trim() === "") {
+    newErrors[field] = "This field is required";
+    hasError = true;
+  }
+});
+
+if (hasError) {
+  toast.warning("Please fill in the highlighted fields.");
+  return;
+}
 
     // Contact number validation
     if (formData.contact && !/^\d{10,15}$/.test(formData.contact)) {
@@ -205,20 +213,19 @@ const Register = () => {
     }
 
     try {
-      console.log(formData);
-    
+      setSave(true);
       const response = await axios.post(
         "http://localhost:5000/api/auth/register",
         formData,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
+            "Content-Type": "multipart/form-data",
           },
         },
       );
 
-      toast.success("Registration successfully!", {
+      toast.success(response?.data?.message || "Registration successfully!", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
@@ -227,8 +234,8 @@ const Register = () => {
         draggable: true,
       });
     } catch (error) {
-      console.error(error.response?.data || error.message);
-      toast.error(error?.response?.message || "Registration failed!", {
+      console.error(error.response?.data?.message || error.message);
+      toast.error(error?.response?.data?.message || "Registration failed!", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -236,6 +243,8 @@ const Register = () => {
         pauseOnHover: true,
         draggable: true,
       });
+    }finally{
+      setSave(false);
     }
   };
 
@@ -729,8 +738,13 @@ const Register = () => {
                             <i className="bi bi-arrow-left-circle" />
                             Prev
                           </button>
-                          <button type="submit" className="btn btn-info">
-                            Submit <i className="bi bi-cloud-arrow-up"></i>
+                          <button type="submit" 
+                          className="btn btn-info">
+                            <i className="bi bi-cloud-arrow-up"
+                            disabled={save}
+                            ></i>
+                            {save && <ClipLoader color="#fff" size={18} />}
+                          {save ? "Saving..." : "Save"}
                           </button>
                         </div>
                       </div>

@@ -1,28 +1,37 @@
 import { useState } from "react";
 import axios from "axios";
-import { useParams } from "react-router-dom";
+import { useParams,useNavigate } from "react-router-dom";
 const ResetPassword = () => {
   const [newPassword, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { token } = useParams();
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    try {
-      const res = await axios.post("http://localhost:5000/api/auth/reset-password", {
+  try {
+    const res = await axios.post(
+      "http://localhost:5000/api/auth/reset-password",
+      {
         token,
         newPassword,
-      });
+      }
+    );
 
-      setMessage(res.data.message);
-    } catch (err) {
-      setMessage(err?.data?.message || "Something went wrong");
-      console.log(err);
-    }
-  };
+    setMessage(res?.data?.message);
+    setPassword("");
 
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
+
+  } catch (err) {
+    setMessage(err?.response?.data?.message || "Something went wrong");
+    console.log(err);
+  }
+};
   return (
     <>
       <div className="container">
@@ -31,9 +40,9 @@ const ResetPassword = () => {
             <div  className="my-5">
               <div className="border rounded-2 p-4 mt-5">
                 <div className="login-form">
-                  <a href="index.html" className="mb-4 d-flex">
+                  <a href="#" className="mb-4 d-flex">
                     <img
-                      src="assets/images/logo.svg"
+                      src="/assets/images/logo.svg"
                       className="img-fluid login-logo"
                       alt="Earth Admin Dashboard"
                     />
@@ -80,7 +89,7 @@ const ResetPassword = () => {
                         </button>
                       </div>
                     </form>
-                    <p>{message}</p>
+                    <p className="text-success">{message}</p>
                   </div>
                 </div>
               </div>

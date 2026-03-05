@@ -2,7 +2,7 @@
 const db = require("../config/db"); // MySQL connection
 
 // Set your cooldown period here (in seconds)
-const RESET_COOLDOWN = 5 * 60; // 5 minutes
+const RESET_COOLDOWN = 1 * 60; // 5 minutes
 
 const passwordResetRateLimit = async (req, res, next) => {
   try {

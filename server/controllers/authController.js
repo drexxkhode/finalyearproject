@@ -251,7 +251,13 @@ exports.getMe = async (req, res) => {
         lastName,
         email,
         role,
-        photo
+        photo,
+        address,
+        dob,
+        contact,
+        gender,
+        maritalStatus,
+        nationalId
        FROM admins
        WHERE id = ?`,
       [userId]
@@ -294,7 +300,9 @@ exports.changePassword = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+  message: "We couldn't find an account associated with this user."
+});
     }
 
     const user = rows[0];
@@ -330,7 +338,6 @@ exports.changePassword = async (req, res) => {
   }
 };
 
-
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -341,8 +348,9 @@ exports.forgotPassword = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
+     return res.status(404).json({
+        message: "We couldn't find an account associated with that email."});
+       }
 
     const user = rows[0];
 
@@ -354,14 +362,105 @@ exports.forgotPassword = async (req, res) => {
       "UPDATE admins SET reset_token = ?, reset_token_expiry = ?, reset_request_time = NOW() WHERE id = ? AND email= ?",
       [resetToken, expiry, user.id, email]
     );
+const [findOne] = await db.execute(
+"SELECT lastName FROM admins WHERE id = ? AND email = ?",
+[user.id, email]
+);
+const lastName = findOne[0].lastName;
 
-    const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
-   
-     await sendEmail(
-      email,
-      "Password Reset",
-      `<p>Click here to reset password:</p><a href="${resetLink}">${resetLink}</a><p>This link expires in 15 minutes.</p>`
-    );
+  const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+
+await sendEmail(
+  email,
+  "Reset Your Password",
+  `
+  <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 40px 0;">
+    <table align="center" width="100%" cellpadding="0" cellspacing="0" 
+           style="max-width: 600px; background: #ffffff; border-radius: 8px; overflow: hidden;">
+
+      <!-- LOGO SECTION -->
+      <tr>
+        <td style="text-align: center; padding: 30px 20px 10px 20px;">
+          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1/turfArena_oogeyt.png" 
+               alt="Company Logo" 
+               width="120"
+               style="display: block; margin: 0 auto;" />
+        </td>
+      </tr>
+
+      <!-- HEADER -->
+      <tr>
+        <td style="background-color: #1e88e5; padding: 20px; text-align: center;">
+          <h2 style="color: #ffffff; margin: 0;">Password Reset Request</h2>
+        </td>
+      </tr>
+
+      <!-- BODY -->
+      <tr>
+        <td style="padding: 30px 30px 15px 30px; color: #333333;">
+          <p style="font-size: 16px; margin: 0 0 15px 0;">Hello, <span style="color: #2563eb;font-weight: bold">${lastName}!</span></p>
+
+          <p style="font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
+            We received a request to reset your password. Click the button below to set a new password.
+          </p>
+          
+          <!-- INFO CARD -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #ffffff; border-radius: 12px; border: 1px solid #e6edf5; margin: 20px 0;">
+            <tr>
+              <td style="padding: 15px;">
+                <p style="font-size: 14px; color: #1a1f36; margin: 0 0 8px 0; font-weight: bold;">🔐 Password requirements:</p>
+                <table cellpadding="0" cellspacing="0" border="0">
+                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• Minimum 8 characters</td></tr>
+                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• At least one uppercase letter</td></tr>
+                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• At least one number</td></tr>
+                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• At least one special character</td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <div style="text-align: center; margin: 20px 0;">
+            <a href="${resetLink}" 
+               style="
+                 background-color: #1e88e5;
+                 color: #ffffff;
+                 padding: 12px 25px;
+                 text-decoration: none;
+                 border-radius: 5px;
+                 font-size: 16px;
+                 display: inline-block;
+               ">
+              Reset Password
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #666; margin: 0 0 10px 0;">
+           ⏱️ This link will expire in <strong>15 minutes</strong>.
+          </p>
+
+          <p style="font-size: 14px; color: #666; margin: 0;">
+            If you did not request this, please ignore this email.
+          </p>
+        </td>
+      </tr>
+
+      <!-- FOOTER - No border-top to reduce visual gap -->
+      <tr>
+        <td style="background: #f8fafd; padding: 20px 20px; text-align: center;">
+          <p style="font-size: 13px; color: #8a9bb5; margin: 0 0 8px 0;">
+            © ${new Date().getFullYear()} <span style="color:#15803d;font-weight: bold">Turf</span><span style="color:#2563eb;font-weight: bold">Arena</span>. All rights reserved.
+          </p>
+          <p style="font-size: 12px; color: #a0b3cc; margin: 0;">
+            <a href="#" style="color: #8a9bb5; text-decoration: underline; margin: 0 5px;">Privacy Policy</a> | 
+            <a href="#" style="color: #8a9bb5; text-decoration: underline; margin: 0 5px;">Unsubscribe</a>
+          </p>
+        </td>
+      </tr>
+
+    </table>
+  </div>
+  `
+);
 
     res.json({ message: "Password reset email sent" });
 
@@ -374,6 +473,8 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
+    if (!validatePassword(newPassword))
+       return res.status(400).json({ message: "Password must be at least 8 characters long and include uppercase, lowercase, and a number." });
 
     const [rows] = await db.execute(
       "SELECT id FROM admins WHERE reset_token = ? AND reset_token_expiry > NOW()",

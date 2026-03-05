@@ -1,10 +1,35 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 function Sidebar() {
   const location = useLocation();
 
   const [openTree, setOpenTree] = useState("");
+  const [name, setName] = useState(""); // ✅ Added state
+
+const getTurfName = async () =>{
+  try {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(
+        "http://localhost:5000/api/turf/turf-name",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+     // ✅ Correct axios response structure
+      setName(res?.data?.name || "");
+    } catch (err) {
+      console.log("Turf name Error", err);
+    }
+  };
+
+   // ✅ Fetch turf name on mount
+  useEffect(() => {
+    getTurfName();
+  }, []);
+
 
   // Auto-open the treeview based on route
   useEffect(() => {
@@ -25,7 +50,7 @@ function Sidebar() {
     <nav id="sidebar" className="sidebar-wrapper">
       <div className="shop-profile">
         <p className="mb-1 fw-bold text-primary">Admin Dashboad</p>
-        <p className="m-0">Los Angeles, California</p>
+        <p className="m-0">{name}</p>
       </div>
 
       <div className="sidebarMenuScroll">
@@ -45,7 +70,7 @@ function Sidebar() {
             }
           >
             <NavLink to="/bookings">
-              <i class="bi bi-journal-check text-dark"></i>
+              <i className="bi bi-journal-check text-dark"></i>
               <span className="menu-text">Bookings</span>
             </NavLink>
           </li>
@@ -56,7 +81,7 @@ function Sidebar() {
             }
           >
             <NavLink to="/enquiries">
-              <i class="bi bi-wechat text-success"></i>
+              <i className="bi bi-wechat text-success"></i>
               <span className="menu-text">Enquiries</span>
             </NavLink>
           </li>
@@ -79,7 +104,7 @@ function Sidebar() {
               onClick={() => handleToggle("invoices")}
               style={{ cursor: "pointer" }}
             >
-<i class="bi bi-clock-history text-primary"></i>
+<i className="bi bi-clock-history text-primary"></i>
               <span className="menu-text">History</span>
             </a>
             <ul className="treeview-menu">
@@ -138,7 +163,7 @@ function Sidebar() {
             }
           >
             <NavLink to="/administrators">
-              <i class="bi bi-person-fill-lock text-info" ></i>
+              <i className="bi bi-person-fill-lock text-info" ></i>
               <span className="menu-text">Administrators</span>
             </NavLink>
           </li>
@@ -150,7 +175,7 @@ function Sidebar() {
             }
           >
             <NavLink to="/settings">
-              <i class="bi bi-gear text-danger" ></i>
+              <i className="bi bi-gear text-danger" ></i>
               <span className="menu-text">Settings</span>
             </NavLink>
           </li>

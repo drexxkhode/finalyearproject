@@ -21,6 +21,7 @@ const Settings = () => {
     longitude: "",
     latitude: "",
     email: "",
+    contact: "",
     about: "",
     price: "",
   });
@@ -37,12 +38,19 @@ const Settings = () => {
       "latitude",
       "price",
     ];
-    requiredFields.forEach((field) => {
-      if (!formData[field] || formData[field].toString().trim() === "") {
-        newErrors[field] = "This field is required";
-        toast.warning("Some field is empty");
-      }
-    });
+    let hasError = false;
+
+requiredFields.forEach((field) => {
+  if (!formData[field] || formData[field].toString().trim() === "") {
+    newErrors[field] = "This field is required";
+    hasError = true;
+  }
+});
+
+if (hasError) {
+  toast.warning("Please fill in the highlighted fields.");
+  return;
+}
 
     // Contact number validation
     if (formData.contact && !/^\d{10,15}$/.test(formData.contact)) {
@@ -116,7 +124,7 @@ const Settings = () => {
       setOldPassword("");
     } catch (err) {
       console.log("Password Change Error", err);
-      toast.error(err.response?.data?.message || "Password Update Failed!");
+      toast.error(err?.response?.data?.message || "Password Update Failed!");
     } finally {
       setIsUpdating(false);
     }
@@ -134,6 +142,7 @@ const Settings = () => {
       const payload = {
         name: formData.turfName,
         email: formData.email,
+        contact: formData.contact,
         district: formData.district,
         latitude: formData.latitude,
         longitude: formData.longitude,
@@ -149,8 +158,6 @@ const Settings = () => {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      console.log(payload);
-
       toast.success(res.data.message || "Turf updated successfully!");
     } catch (error) {
       console.error(error.response?.data || error.message);
@@ -229,7 +236,7 @@ const Settings = () => {
 
                                   <div className="mb-3">
                                     <label
-                                      for="contactNumber"
+                                      htmlFor="contact"
                                       className="form-label"
                                     >
                                       Contact
