@@ -1,5 +1,5 @@
-server/.env
+server/.env/
+client/ node_modules/
 server/node_modules/
 frontend/node_modules/
-client/node_modules/
 backend/
