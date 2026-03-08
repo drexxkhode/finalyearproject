@@ -12,7 +12,7 @@ const Administrators = () => {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(
-        "http://localhost:5000/api/auth/admins",
+        "https://finalyearproject-fjo8.onrender.com/api/auth/admins",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
