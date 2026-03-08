@@ -3,9 +3,8 @@ import Chart from "react-apexcharts";
 import ClipLoader from "react-spinners/ClipLoader";
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:5000"); // adjust if needed
-
 const Analytics = () => {
+
   const [categories, setCategories] = useState([]);
   const [series, setSeries] = useState([
     { name: "Accepted", type: "column", data: [], yAxisIndex: 0 },
@@ -14,16 +13,44 @@ const Analytics = () => {
   ]);
 
   useEffect(() => {
-    socket.on("booking-analytics-monthly", (data) => {
-      setCategories(data.map((d) => d.month));
-      setSeries([
-        { name: "Accepted", type: "column", data: data.map(d => d.accepted), yAxisIndex: 0 },
-        { name: "Rejected", type: "column", data: data.map(d => d.rejected), yAxisIndex: 0 },
-        { name: "Payments", type: "line", data: data.map(d => d.payments), yAxisIndex: 1 },
-      ]);
+
+    const socket = io("http://localhost:5000", {
+      auth: {
+        token: localStorage.getItem("token") // send JWT
+      }
     });
 
-    return () => socket.off("booking-analytics-monthly");
+    socket.on("booking-analytics-monthly", (data) => {
+
+      setCategories(data.map((d) => d.month));
+
+      setSeries([
+        {
+          name: "Accepted",
+          type: "column",
+          data: data.map((d) => d.accepted),
+          yAxisIndex: 0
+        },
+        {
+          name: "Rejected",
+          type: "column",
+          data: data.map((d) => d.rejected),
+          yAxisIndex: 0
+        },
+        {
+          name: "Payments",
+          type: "line",
+          data: data.map((d) => d.payments),
+          yAxisIndex: 1
+        }
+      ]);
+
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+
   }, []);
 
   // SAFE MAX RANGES
@@ -52,14 +79,12 @@ const Analytics = () => {
 
     yaxis: [
       {
-        // LEFT: Bookings (Accepted + Rejected)
         min: 0,
         max: bookingMax,
         title: { text: "Bookings" },
         labels: { formatter: (val) => val },
       },
       {
-        // RIGHT: Payments
         opposite: true,
         min: 0,
         max: paymentMax * 1.2,
@@ -73,8 +98,8 @@ const Analytics = () => {
       intersect: false,
       y: {
         formatter: (val, { seriesIndex }) => {
-          if (seriesIndex === 0 || seriesIndex === 1) return val;       // bookings
-          if (seriesIndex === 2) return `₡${(val / 1000).toFixed(1)}k`; // payments
+          if (seriesIndex === 0 || seriesIndex === 1) return val;
+          if (seriesIndex === 2) return `₡${(val / 1000).toFixed(1)}k`;
           return val;
         },
       },
@@ -86,13 +111,20 @@ const Analytics = () => {
   };
 
   if (!categories.length)
-  return (
-    <div className="text-center py-5">
-      <ClipLoader color="#3641d7" size={30} />
-    </div>
-  );
+    return (
+      <div className="text-center py-5">
+        <ClipLoader color="#3641d7" size={30} />
+      </div>
+    );
 
-  return <Chart options={options} series={series} type="line" height={350} />;
+  return (
+    <Chart
+      options={options}
+      series={series}
+      type="line"
+      height={350}
+    />
+  );
 };
 
 export default Analytics;

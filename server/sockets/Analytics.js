@@ -1,22 +1,45 @@
-const db = require("../config/db");
+const db  = require("../config/db");
+const jwt = require("jsonwebtoken");
 
 function setupAnalyticsSocket(io) {
 
-  io.on("connection", (socket) => {
-    console.log("Client connected");
+  // ── Global auth middleware — runs for ALL socket connections ────────────
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth.token;
+      if (!token) return next(new Error("Authentication error"));
 
-    emitMonthlyAnalytics(io);
-
-    socket.on("disconnect", () => {
-      console.log("Client disconnected");
-    });
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.user = decoded;
+      next();
+    } catch (err) {
+      next(new Error("Invalid token"));
+    }
   });
 
-  // Emit every minute
-  setInterval(() => emitMonthlyAnalytics(io), 60000);
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id, "| role:", socket.user?.role ?? "user");
+
+    const turfId = socket.user?.turf_id;
+
+    // Analytics only apply to turf admin/owner accounts that have a turf_id.
+    // Regular booking users connect here too (for slot locking) — skip analytics for them.
+    if (!turfId) return;
+
+    emitMonthlyAnalytics(socket, turfId);
+
+    const interval = setInterval(() => {
+      emitMonthlyAnalytics(socket, turfId);
+    }, 60000);
+
+    socket.on("disconnect", () => {
+      clearInterval(interval);
+      console.log("Client disconnected:", socket.id);
+    });
+  });
 }
 
-async function emitMonthlyAnalytics(io) {
+async function emitMonthlyAnalytics(socket, turfId) {
   try {
     const [rows] = await db.query(`
       SELECT
@@ -25,24 +48,23 @@ async function emitMonthlyAnalytics(io) {
         SUM(CASE WHEN b.status = 'cancelled' THEN 1 ELSE 0 END) AS rejected,
         COALESCE(SUM(p.amount), 0) AS payments
       FROM bookings b
-      LEFT JOIN payments p 
-        ON b.id = p.booking_id 
+      LEFT JOIN payments p
+        ON b.id = p.booking_id
         AND p.payment_status = 'completed'
+      WHERE b.turf_id = ?
       GROUP BY YEAR(b.booking_date), MONTH(b.booking_date)
-      ORDER BY YEAR(b.booking_date), MONTH(b.booking_date);
-    `);
+      ORDER BY YEAR(b.booking_date), MONTH(b.booking_date)
+    `, [turfId]);
 
-    const data = rows.map((row) => ({
-      month: row.month,
-      accepted: parseInt(row.accepted),
-      rejected: parseInt(row.rejected),
-      payments: parseFloat(row.payments),
-    }));
+    socket.emit("booking-analytics-monthly", rows.map((row) => ({
+      month:    row.month,
+      accepted: Number(row.accepted),
+      rejected: Number(row.rejected),
+      payments: Number(row.payments),
+    })));
 
-    io.emit("booking-analytics-monthly", data);
-
-  } catch (err) {
-    console.error("Error fetching monthly analytics:", err);
+  } catch (error) {
+    console.error("Analytics error:", error);
   }
 }
 

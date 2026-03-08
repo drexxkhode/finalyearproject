@@ -5,20 +5,31 @@
   "description": "Geo-Based Astro Turf Booking & Management System — Accra Metropolitan Assembly",
   "author": "Your Name <you@email.com>",
   "license": "MIT",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "bootstrap": "^5.3.3",
+    "axios": "^1.13.6",
+    "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.11.3",
+    "dot-env": "^0.0.1",
+    "leaflet": "^1.9.4",
+    "leaflet-routing-machine": "^3.2.12",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "react-responsive": "^10.0.1",
+    "react-router-dom": "^7.13.1",
+    "react-spinners": "^0.17.0",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.1"
+    "vite": "^7.3.1"
   }
 }

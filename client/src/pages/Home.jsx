@@ -1,246 +1,188 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import TurfCard from '../components/TurfCard'
-import { TURFS, TURF_PHOTOS } from '../data/turfs'
+import MapView from './MapView';
+import axios from 'axios';
+const API = import.meta.env.VITE_API_URL ?? 'http://192.168.43.99:5000';
 
-const TABS = [
-  { key: 'turfs',     icon: 'bi-grid-fill',        label: 'Browse Turfs' },
-  { key: 'map',       icon: 'bi-map-fill',          label: 'Map View' },
-  { key: 'recommend', icon: 'bi-stars',             label: 'For You' },
+const FALLBACK_PHOTOS = [
+  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80',
+  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80',
+  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
+  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80',
 ]
 
-export default function Home({ slots, onOpenTurf, activeTab, onTabChange }) {
-  const [search, setSearch] = useState('')
-  const [fCap,   setFCap]   = useState('All')
-  const [sort,   setSort]   = useState('distance')
+const PAGE_SIZE = 12;
 
-  const filtered = TURFS
+
+
+export default function Home({ slots = {}, onOpenTurf, activeTab }) {
+  const [search,  setSearch]  = useState('')
+  const [fCap,    setFCap]    = useState('All')
+  const [sort,    setSort]    = useState('distance')
+  const [page,    setPage]    = useState(1)
+  const [turfs,   setTurfs]   = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    axios.get(`${API}/map/turf-data`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(res => {
+      setTurfs(res.data.data.map(t => ({
+        ...t,
+        pricePerHour: t.price_per_hour,
+        location:     t.district || t.location,
+        address:      t.location,
+        image:        FALLBACK_PHOTOS[t.id % FALLBACK_PHOTOS.length],
+        distance:     t.distance ?? 0,
+        rating:       t.rating   ?? 4.5,
+        capacity:     t.capacity ?? '5',
+        surface:      t.surface  ?? 'Astro Turf',
+        amenities:    t.amenities ? t.amenities.split(',').map(a => a.trim()) : [],
+        about:        t.about    ?? '',
+      })))
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  const filtered = turfs
     .filter(t =>
-      (fCap === 'All' || t.capacity.includes(fCap)) &&
-      (search === '' ||
-        t.name.toLowerCase().includes(search.toLowerCase()) ||
-        t.location.toLowerCase().includes(search.toLowerCase()))
+      (fCap === 'All' || t.capacity?.includes(fCap)) &&
+      (!search ||
+        t.name?.toLowerCase().includes(search.toLowerCase()) ||
+        t.location?.toLowerCase().includes(search.toLowerCase()))
     )
     .sort((a, b) =>
       sort === 'price'  ? a.pricePerHour - b.pricePerHour :
       sort === 'rating' ? b.rating - a.rating :
-      parseFloat(a.distance) - parseFloat(b.distance)
+      parseFloat(a.distance ?? 0) - parseFloat(b.distance ?? 0)
     )
 
-  const rec = [...TURFS].sort((a, b) => b.rating - a.rating)
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  useEffect(() => { setPage(1) }, [search, fCap, sort])
+
+  const rec = [...turfs].sort((a, b) => b.rating - a.rating)
+
+  if (loading) return (
+    <div className="text-center py-5">
+      <div className="spinner-border text-primary"></div>
+      <p className="mt-3 text-muted">Loading turfs...</p>
+    </div>
+  )
+
+  if (!turfs.length) return <p className="text-center py-5 text-muted">No turfs available</p>
 
   return (
     <div className="tf-animate-in">
 
-      {/* ── Tab Bar (desktop only — mobile uses bottom nav) ── */}
-      <div className="d-none d-md-flex gap-4 border-bottom pb-0 mb-4">
-        {TABS.map(t => (
-          <button
-            key={t.key}
-            className={`tf-nav-link pb-2${activeTab === t.key ? ' active' : ''}`}
-            onClick={() => onTabChange(t.key)}
-          >
-            <i className={`bi ${t.icon}`}></i>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {/* ── TURFS TAB ── */}
       {activeTab === 'turfs' && (
         <>
-          {/* Filters */}
-          <div className="row g-2 mb-3">
-            <div className="col-12">
-              <input
-                className="form-control"
-                placeholder="🔍  Search turfs in Accra…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+          <div className="tf-filter-bar">
+            <div className="tf-filter-search">
+              <input className="form-control" placeholder="🔍 Search turfs in Accra…"
+                value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <div className="col-6">
-              <select className="form-select" value={fCap} onChange={e => setFCap(e.target.value)}>
-                <option value="All">All Sizes</option>
-                <option value="5">5-a-side</option>
-                <option value="7">7-a-side</option>
-                <option value="11">11-a-side</option>
-              </select>
-            </div>
-            <div className="col-6">
-              <select className="form-select" value={sort} onChange={e => setSort(e.target.value)}>
-                <option value="distance">Nearest</option>
-                <option value="rating">Top Rated</option>
-                <option value="price">Cheapest</option>
-              </select>
+            <select className="form-select tf-filter-select" value={fCap} onChange={e => setFCap(e.target.value)}>
+              <option value="All">All Sizes</option>
+              <option value="5">5-a-side</option>
+              <option value="7">7-a-side</option>
+              <option value="11">11-a-side</option>
+            </select>
+            <select className="form-select tf-filter-select" value={sort} onChange={e => setSort(e.target.value)}>
+              <option value="distance">Nearest</option>
+              <option value="rating">Top Rated</option>
+              <option value="price">Cheapest</option>
+            </select>
+            <div className="d-flex align-items-center gap-2 ms-auto">
+              <span className="tf-live-dot"></span>
+              <small className="text-muted">Live updates</small>
             </div>
           </div>
 
-          {/* Live badge */}
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <span className="tf-live-dot"></span>
-            <small className="text-muted">Live slot availability · updates every 5 s</small>
-          </div>
+          {filtered.length === 0 && <p className="text-center text-muted py-5">No turfs match your search.</p>}
 
-          {/* Grid */}
-          {filtered.length === 0 && (
-            <p className="text-center text-muted py-5">No turfs match your search.</p>
-          )}
-          <div className="row g-3">
-            {filtered.map(t => (
-              <div key={t.id} className="col-12 col-sm-6 col-xl-4">
+          <div className="row g-4">
+            {paginated.map(t => (
+              <div key={t.id} className="col-12 col-sm-6 col-xl-4 col-xxl-3">
                 <TurfCard turf={t} slots={slots} onOpen={onOpenTurf} />
               </div>
             ))}
           </div>
+
+          {totalPages > 1 && (
+            <div className="d-flex justify-content-center align-items-center gap-3 mt-5">
+              <button className="btn btn-outline-primary px-3" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+                <i className="bi bi-chevron-left"></i> Prev
+              </button>
+              <div className="d-flex align-items-center gap-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1))
+                  .reduce((acc, p, idx, arr) => {
+                    if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...')
+                    acc.push(p); return acc
+                  }, [])
+                  .map((p, idx) =>
+                    p === '...'
+                      ? <span key={`e${idx}`} className="text-muted px-1">…</span>
+                      : <button key={p}
+                          className={`btn btn-sm px-3 ${page === p ? 'btn-primary' : 'btn-outline-secondary'}`}
+                          onClick={() => setPage(p)}>{p}</button>
+                  )}
+              </div>
+              <button className="btn btn-outline-primary px-3" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
+                Next <i className="bi bi-chevron-right"></i>
+              </button>
+            </div>
+          )}
+          <div className="text-center mt-2 text-muted small">
+            Showing {Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} turfs
+          </div>
         </>
       )}
 
-      {/* ── MAP TAB ── */}
+      {/* ── MAP TAB — real Leaflet with clustering ── */}
       {activeTab === 'map' && (
-        <>
-          <div className="tf-map-bg mb-3" style={{ height: 320 }}>
-            {[...Array(8)].map((_,i) => (
-              <div key={i} className="tf-map-grid-h" style={{ top: `${i * 42}px` }} />
-            ))}
-            {[...Array(12)].map((_,i) => (
-              <div key={i} className="tf-map-grid-v" style={{ left: `${i * 42}px` }} />
-            ))}
-            <div className="tf-map-label">ACCRA METROPOLITAN</div>
-            {TURFS.map((t, i) => {
-              const pos = [
-                { left: '36%', top: '40%' },
-                { left: '59%', top: '60%' },
-                { left: '77%', top: '53%' },
-                { left: '25%', top: '67%' },
-              ]
-              return (
-                <div
-                  key={t.id}
-                  className="tf-map-pin"
-                  style={{ left: pos[i].left, top: pos[i].top }}
-                  onClick={() => onOpenTurf(t)}
-                >
-                  <div className="tf-map-pin-inner">
-                    <span>⚽</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="d-flex flex-column gap-2">
-            {TURFS.map(t => (
-              <div
-                key={t.id}
-                className="card border-0 shadow-sm rounded-3 p-3 d-flex flex-row align-items-center gap-3"
-                role="button"
-                onClick={() => onOpenTurf(t)}
-              >
-                <img
-                  src={TURF_PHOTOS[t.id][0]}
-                  alt={t.name}
-                  className="rounded-3 object-fit-cover flex-shrink-0"
-                  width={56} height={56}
-                  onError={e => { e.target.style.display = 'none' }}
-                />
-                <div className="flex-grow-1">
-                  <div className="fw-bold">{t.name}</div>
-                  <small className="text-muted">{t.location} · {t.distance}</small>
-                  <div className="text-primary fw-bold small mt-1">₵{t.pricePerHour}/hr</div>
-                </div>
-                <i className="bi bi-chevron-right text-muted"></i>
-              </div>
-            ))}
-          </div>
-        </>
+        <MapView turfs={turfs} onOpenTurf={onOpenTurf} />
       )}
 
       {/* ── RECOMMEND TAB ── */}
-      {activeTab === 'recommend' && (
-        <>
-          <div className="mb-3">
-            <div className="tf-section-title">🎯 Recommended For You</div>
-            <small className="text-muted">Based on ratings, proximity &amp; availability</small>
+      {activeTab === 'recommend' && rec.length > 0 && (
+        <div className="row g-4">
+          <div className="col-12 col-lg-7">
+            <div className="tf-rec-highlight">
+              <span className="tf-badge tf-badge-yellow">⭐ TOP PICK</span>
+              <img src={rec[0].image} alt={rec[0].name} className="img-fluid rounded mb-3"
+                onError={e => { e.target.src = FALLBACK_PHOTOS[0] }} />
+              <div className="fw-bold fs-4">{rec[0].name}</div>
+              <small className="text-muted">{rec[0].location}</small>
+              <div className="mt-3">
+                <span className="tf-info-price-big">₵{rec[0].pricePerHour}</span>
+                <span className="tf-info-label"> /hr</span>
+              </div>
+              <button className="btn btn-primary mt-3" onClick={() => onOpenTurf(rec[0])}>Book Now</button>
+            </div>
           </div>
-
-          {/* Top pick */}
-          <div className="tf-rec-highlight">
-            <span className="tf-badge tf-badge-yellow d-inline-block mb-2">⭐ TOP PICK</span>
-            <div className="d-flex gap-1 mb-3 rounded-3 overflow-hidden" style={{ height: 64 }}>
-              {TURF_PHOTOS[rec[0].id].slice(0, 3).map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  alt=""
-                  className="object-fit-cover"
-                  style={{
-                    flex: 1,
-                    height: '100%',
-                    borderRadius: i === 0 ? '10px 0 0 10px' : i === 2 ? '0 10px 10px 0' : 0,
-                  }}
-                  onError={e => { e.target.style.display = 'none' }}
-                />
+          <div className="col-12 col-lg-5">
+            <div className="card border-0 shadow-sm rounded-4 p-3">
+              <div className="fw-bold mb-3">🏆 All Turfs Ranked</div>
+              {rec.map((t, i) => (
+                <div key={t.id} className="d-flex align-items-center gap-3 py-2 border-bottom" style={{ cursor: 'pointer' }}
+                  onClick={() => onOpenTurf(t)}>
+                  <div className="fw-bold">{i + 1}</div>
+                  <img src={t.image} alt={t.name} width={44} height={44} className="rounded"
+                    onError={e => { e.target.src = FALLBACK_PHOTOS[0] }} />
+                  <div className="flex-grow-1">
+                    <div className="fw-bold small">{t.name}</div>
+                    <small className="text-muted">⭐ {t.rating}</small>
+                  </div>
+                  <div className="text-primary fw-bold">₵{t.pricePerHour}</div>
+                </div>
               ))}
             </div>
-            <div className="font-condensed fw-bolder fs-5">{rec[0].name}</div>
-            <small className="text-muted d-block mb-3">
-              <i className="bi bi-geo-alt-fill me-1"></i>{rec[0].location}
-            </small>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <span className="tf-info-price-big">₵{rec[0].pricePerHour}</span>
-                <span className="tf-info-label ms-1">/hr</span>
-                <div>
-                  <small className="text-muted">
-                    {slots[rec[0].id]?.filter(s => s.status === 'available').length} slots open today
-                  </small>
-                </div>
-              </div>
-              <button className="btn btn-primary fw-bold" onClick={() => onOpenTurf(rec[0])}>
-                Book Now
-              </button>
-            </div>
           </div>
-
-          {/* Why section */}
-          <div className="card border-0 shadow-sm rounded-4 p-3 mb-3">
-            <div className="fw-bold mb-3 text-primary">🤖 Why We Recommend</div>
-            {[
-              { ic: '⭐', tx: `Highest rated in Accra (${rec[0].rating}/5.0)` },
-              { ic: '💰', tx: 'Competitive pricing for premium facilities' },
-              { ic: '🏟️', tx: `${rec[0].amenities.length} amenities incl. floodlights` },
-              { ic: '⚡', tx: 'High availability — book before it fills up' },
-            ].map((r, i) => (
-              <div key={i} className="d-flex gap-2 mb-2 small text-secondary">
-                <span>{r.ic}</span><span>{r.tx}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Best times */}
-          <div className="card border-0 shadow-sm rounded-4 p-3">
-            <div className="fw-bold mb-3">🕐 Best Times to Book</div>
-            {[['6–9 AM', 85], ['12–2 PM', 40], ['4–6 PM', 30], ['7–9 PM', 15]].map(([label, pct]) => (
-              <div key={label} className="mb-3">
-                <div className="d-flex justify-content-between small mb-1">
-                  <span className="text-muted">{label}</span>
-                  <span
-                    className="fw-bold"
-                    style={{ color: pct < 40 ? '#198754' : pct < 70 ? '#ffc107' : '#dc3545' }}
-                  >
-                    {pct}% full
-                  </span>
-                </div>
-                <div className="tf-progress-track">
-                  <div
-                    className={`tf-progress-fill ${pct < 40 ? 'tf-progress-low' : pct < 70 ? 'tf-progress-medium' : 'tf-progress-high'}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+        </div>
       )}
     </div>
   )

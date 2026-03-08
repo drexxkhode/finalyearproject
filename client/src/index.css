@@ -121,7 +121,20 @@ body { font-family:'Barlow','Segoe UI',sans-serif; background:#fff; color:var(--
 
 /* AUTH OVERLAY */
 .tf-auth-overlay { position:fixed; inset:0; background:rgba(255,255,255,.88); backdrop-filter:blur(6px); z-index:1050; display:flex; align-items:center; justify-content:center; padding:20px; }
-.tf-auth-logo { width:64px; height:64px; background:var(--tf-blue); border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 14px; box-shadow:0 8px 24px rgba(13,110,253,.28); }
+.tf-auth-logo{
+  width: 180px;
+  height: 80px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:auto;
+}
+
+.tf-auth-logo img{
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+}
 .tf-auth-toggle { display:flex; background:#f0f4ff; border-radius:12px; padding:4px; margin-bottom:1.25rem; }
 .tf-auth-toggle-btn { flex:1; padding:9px 0; border:none; border-radius:9px; font-weight:700; font-size:13px; cursor:pointer; font-family:'Barlow',sans-serif; transition:background .2s,color .2s; background:transparent; color:var(--tf-muted); }
 .tf-auth-toggle-btn.active { background:var(--tf-blue); color:#fff; }
@@ -159,3 +172,95 @@ body { font-family:'Barlow','Segoe UI',sans-serif; background:#fff; color:var(--
 /* Bootstrap overrides */
 .form-control:focus,.form-select:focus { border-color:var(--tf-blue); box-shadow:0 0 0 .2rem rgba(13,110,253,.15); outline:none; }
 .nav-link:focus { box-shadow:none; }
+
+/* ── Full-width layout fixes ───────────────────────────── */
+
+/* Navbar inner always full-width */
+.tf-navbar .container-fluid {
+  max-width: 100%;
+}
+
+/* Home page (Browse/Map/Recommend) — fill the full width */
+.tf-page-home {
+  width: 100%;
+}
+
+/* Detail / Booking / Directions pages — readable centered column */
+.tf-page-detail {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* Map view fill full width */
+.tf-map-full {
+  width: 100%;
+}
+
+/* ── Recommend photo strip ─────────────────────────────── */
+.tf-rec-photo-strip {
+  display: flex;
+  gap: 4px;
+  height: 80px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tf-rec-photo {
+  flex: 1;
+  height: 100%;
+  object-fit: cover;
+}
+.tf-rec-photo-first { border-radius: 10px 0 0 10px; }
+.tf-rec-photo-last  { border-radius: 0 10px 10px 0; }
+
+/* ── Ranked turf row ────────────────────────────────────── */
+.tf-ranked-row {
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.tf-ranked-row:hover { background: var(--tf-blue-light); }
+.tf-ranked-row:last-child { border-bottom: none !important; }
+
+.tf-rank-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--tf-blue-light);
+  color: var(--tf-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* ── Filter bar — single inline row ─────────────────────── */
+.tf-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.tf-filter-search {
+  flex: 1 1 240px;
+  min-width: 180px;
+}
+.tf-filter-select {
+  width: 140px !important;
+  flex-shrink: 0;
+}
+
+/* ── Force 4-col grid on large screens ──────────────────── */
+@media (min-width: 1200px) {
+  .tf-grid-4 > .col-xl-4 {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+}
+
+/* ── Remove duplicate secondary tab bar ────────────────── */
+/* The nav tabs live ONLY in the navbar now */

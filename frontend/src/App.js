@@ -21,6 +21,7 @@ import Settings from './pages/Settings';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ProtectedRoute from './services/ProtectedRoute';
+import SearchBox from './services/Meilisearch';
 import { ToastContainer } from 'react-toastify';
 import ClipLoader from "react-spinners/ClipLoader";
 
@@ -34,6 +35,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path='/forgot-password' element={<ForgotPassword/>} />
         <Route path='/reset-password/:token' element={<ResetPassword/>} />
+        <Route path='/search' element={<SearchBox/>} />
         {/* PROTECTED ROUTES */}
         <Route
           path="/*"

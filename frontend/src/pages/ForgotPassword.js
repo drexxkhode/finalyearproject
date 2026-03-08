@@ -34,10 +34,10 @@ const ForgotPassword = () => {
         "http://localhost:5000/api/auth/forgot-password",
         { email },
       );
-      setMessage(res.data?.message);
+      setMessage(res?.data?.message);
 
       // Start timer after sending email
-      const cooldownMinutes = res.data?.minutesLeft || 1; // you can have server return this
+      const cooldownMinutes = res?.data?.minutesLeft || 1; // you can have server return this
       setTimer(cooldownMinutes * 60);
       setDisabled(true);
     } catch (err) {

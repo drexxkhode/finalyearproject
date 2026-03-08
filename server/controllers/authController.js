@@ -286,7 +286,7 @@ exports.getMe = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req?.user?.id;
     const { oldPassword, newPassword } = req.body;
 
     if (!oldPassword || !newPassword) {
@@ -368,7 +368,7 @@ const [findOne] = await db.execute(
 );
 const lastName = findOne[0].lastName;
 
-  const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+  const resetLink = `http://localhost:3001/reset-password/${resetToken}`;
 
 await sendEmail(
   email,

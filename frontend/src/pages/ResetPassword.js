@@ -25,7 +25,7 @@ const ResetPassword = () => {
 
     setTimeout(() => {
       navigate("/login");
-    }, 1000);
+    }, 2500);
 
   } catch (err) {
     setMessage(err?.response?.data?.message || "Something went wrong");
@@ -89,7 +89,7 @@ const ResetPassword = () => {
                         </button>
                       </div>
                     </form>
-                    <p className="text-success">{message}</p>
+                    <p className="text-info fw-bold">{message}</p>
                   </div>
                 </div>
               </div>

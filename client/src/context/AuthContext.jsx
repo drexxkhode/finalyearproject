@@ -1,44 +1,44 @@
 import { createContext, useContext, useState } from 'react'
+import { loginRequest, registerRequest } from '../api/authApi'
 
-const AuthContext = createContext(null)
+const AuthContext = createContext()
 
-const USERS_KEY = '__turfUsers'
+export const AuthProvider = ({ children }) => {
+  const [user, setUserState] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('user')) } catch { return null }
+  })
 
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]') } catch { return [] }
-}
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-}
-
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
-
-  const register = ({ name, email, phone, password }) => {
-    const users = getUsers()
-    if (users.find(u => u.email === email)) throw new Error('Email already registered.')
-    const newUser = { id: `U${Date.now()}`, name, email, phone, password }
-    saveUsers([...users, newUser])
-    return newUser
+  const setUser = (u) => {
+    if (u) { localStorage.setItem('user', JSON.stringify(u)); setUserState(u) }
+    else   { localStorage.removeItem('user'); setUserState(null) }
   }
 
-  const login = ({ email, password }) => {
-    const users = getUsers()
-    const found = users.find(u => u.email === email && u.password === password)
-    if (!found) throw new Error('Invalid email or password.')
-    setUser(found)
-    return found
+  const login = async (data) => {
+    const res = await loginRequest(data)
+    localStorage.setItem('token', res.token)
+    localStorage.setItem('user',  JSON.stringify(res.user))
+    setUserState(res.user)
+    return res.user
   }
 
-  const logout = () => setUser(null)
+  const register = async (data) => {
+    return await registerRequest({
+      name: data.name, email: data.email,
+      contact: data.phone, password: data.password,
+    })
+  }
+
+  const logout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setUserState(null)
+  }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth() {
-  return useContext(AuthContext)
-}
+export const useAuth = () => useContext(AuthContext)
