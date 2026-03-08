@@ -29,8 +29,10 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:3001",
     "http://192.168.43.99:3000",
+    "https://turfarena.onrender.com",
+    "https://admindashboard-c220.onrender.com",
     /\.ngrok-free\.app$/,
-    /\.trycloudflare\.com$/
+    /\.trycloudflare\.com$/,
   ],
   credentials: true,
   methods: ["GET","POST","PUT","DELETE"]
