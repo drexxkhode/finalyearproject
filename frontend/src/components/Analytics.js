@@ -14,7 +14,7 @@ const Analytics = () => {
 
   useEffect(() => {
 
-    const socket = io("http://localhost:5000", {
+    const socket = io("https://finalyearproject-fjo8.onrender.com", {
       auth: {
         token: localStorage.getItem("token") // send JWT
       }
