@@ -10,7 +10,7 @@ const Profile = () => {
   const fetchDetails = async (adminId) => {
     try {
       const token = localStorage.getItem("token");
-      const { data } = await axios.get(`http://localhost:5000/api/auth/details/${adminId}`, {
+      const { data } = await axios.get(`https://finalyearproject-fjo8.onrender.com/api/auth/details/${adminId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAdmin(data);
@@ -30,7 +30,7 @@ const Profile = () => {
     const getMe = async () => {
       try {
         const { data } = await axios.get(
-          "http://localhost:5000/api/auth/me",
+          "https://finalyearproject-fjo8.onrender.com/api/auth/me",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
