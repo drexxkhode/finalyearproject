@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import TurfCard from '../components/TurfCard'
-import MapView from './MapView';
+import MapView from './Mapview';
 import axios from 'axios';
 const API = import.meta.env.VITE_API_URL ?? 'http://192.168.43.99:5000';
 
