@@ -31,7 +31,7 @@ const ForgotPassword = () => {
     setIsSending(true);
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/forgot-password",
+        "https://finalyearproject-fjo8.onrender.com/api/auth/forgot-password",
         { email },
       );
       setMessage(res?.data?.message);
