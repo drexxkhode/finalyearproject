@@ -1,142 +1,105 @@
+import { useEffect, useRef, useState } from "react";
+import axios from "axios";
 
-import { useEffect, useRef } from 'react';
-const Bookings=()=>{
+const API = process.env.REACT_APP_API;
 
-  const tableRef = useRef(null)
-
+const Bookings = () => {
+  const tableRef = useRef(null);
+  const [bookings, setBookings] = useState([]);
+const formatDateForInput = (date) =>
+    date ? new Date(date).toISOString().split("T")[0] : "";
+//time format function
+const formatTime = (time) => {
+  const date = new Date(`1970-01-01T${time}`);
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
+};
+  // Fetch bookings
   useEffect(() => {
-    const $table = window.$(tableRef.current)
+    const fetchBookings = async () => {
+      try {
+        const res = await axios.get(`${API}/api/admin/get-bookings`,{
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+        });
+        setBookings(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
 
-    // Initialize DataTable
-    $table.DataTable({
-      destroy: true, // avoids re-initialization errors
-      paging: true,
-      searching: true,
-    })
+    fetchBookings();
+  }, []);
 
-    // Cleanup on unmount
+  // Initialize DataTable AFTER data loads
+  useEffect(() => {
+    if (bookings.length === 0) return;
+
+    const $table = window.$(tableRef.current);
+
+    if (!window.$.fn.DataTable.isDataTable(tableRef.current)) {
+      $table.DataTable({
+        paging: true,
+        searching: true,
+      });
+    }
+
     return () => {
       if (window.$.fn.DataTable.isDataTable(tableRef.current)) {
-        $table.DataTable().destroy()
+        $table.DataTable().destroy();
       }
-    }
-  }, [])
-    return (
-<>
-						<div class="col-xxl-12">
-								<div class="card mb-3">
-									<div className="card-header d-flex justify-content-between align-items-center">
-										<h5 className="card-title">Bookings</h5>
-										<button className="btn btn-outline-primary btn-sm ms-auto">
-											Download
-										</button>
-									</div>
-									<div class="card-body">
-										<div class="table-responsive">
-											<table class="table align-middle table-hover m-0" ref={tableRef} >
-												<thead>
-													<tr>
-														<th>#</th>
-														<th>Title</th>
-														<th>Module</th>
-														<th>Reporter</th>
-														<th>Status</th>
-														<th>Owner</th>
-														<th>Severity</th>
-														<th>Created</th>
-														<th>Updated</th>
-														<th>Due</th>
-													</tr>
-												</thead>
-												<tbody>
-													<tr>
-														<td>1</td>
-														<td>App crashes</td>
-														<td>Main App</td>
-														<td>Lewis</td>
-														<td>
-															<span class="badge border border-danger text-danger">Open</span>
-														</td>
-														<td>Micheal</td>
-														<td>
-															<span class="badge border border-success text-success">High</span>
-														</td>
-														<td>Aug-10, 2022</td>
-														<td>Sep-14, 2022</td>
-														<td>Oct-20, 2022</td>
-													</tr>
-													<tr>
-														<td>2</td>
-														<td>Saving file</td>
-														<td>Form Screen</td>
-														<td>James</td>
-														<td>
-															<span class="badge border border-success text-success">In Progress</span>
-														</td>
-														<td>Donald</td>
-														<td>
-															<span class="badge border border-danger text-danger">Low</span>
-														</td>
-														<td>Aug-10, 2022</td>
-														<td>Sep-14, 2022</td>
-														<td>Oct-20, 2022</td>
-													</tr>
-													<tr>
-														<td>3</td>
-														<td>Login fail</td>
-														<td>Main App</td>
-														<td>Powell</td>
-														<td>
-															<span class="badge border border-danger text-danger">Open</span>
-														</td>
-														<td>Glory</td>
-														<td>
-															<span class="badge border border-success text-success">High</span>
-														</td>
-														<td>Aug-10, 2022</td>
-														<td>Sep-14, 2022</td>
-														<td>Oct-20, 2022</td>
-													</tr>
-													<tr>
-														<td>4</td>
-														<td>Saving file</td>
-														<td>Form Screen</td>
-														<td>James</td>
-														<td>
-															<span class="badge border border-success text-success">In Progress</span>
-														</td>
-														<td>Donald</td>
-														<td>
-															<span class="badge border border-danger text-danger">Low</span>
-														</td>
-														<td>Aug-10, 2022</td>
-														<td>Sep-14, 2022</td>
-														<td>Oct-20, 2022</td>
-													</tr>
-													<tr>
-														<td>5</td>
-														<td>Login fail</td>
-														<td>Main App</td>
-														<td>Powell</td>
-														<td>
-															<span class="badge border border-success text-success">In Progress</span>
-														</td>
-														<td>Glory</td>
-														<td>
-															<span class="badge border border-success text-success">High</span>
-														</td>
-														<td>Aug-10, 2022</td>
-														<td>Sep-14, 2022</td>
-														<td>Oct-20, 2022</td>
-													</tr>
-												</tbody>
-											</table>
-										</div>
-									</div>
-								</div>
-							</div>
-					
-</>
-    );
-}
+    };
+  }, [bookings]);
+
+  return (
+    <div className="col-xxl-12">
+      <div className="card mb-3">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h5 className="card-title">Bookings</h5>
+        </div>
+
+        <div className="card-body">
+          <div className="table-responsive">
+            <table className="table align-middle table-hover m-0" ref={tableRef}>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>User</th>
+                  <th>Email</th>
+                  <th>Contact</th>
+                  <th>Date</th>
+                  <th>Time Slot</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {bookings.map((booking, index) => (
+                  <tr key={booking.id}>
+                    <td>{index + 1}</td>
+                    <td>{booking.name}</td>
+                    <td>{booking.email}</td>
+                    <td>{booking.contact}</td>
+                    <td>{formatDateForInput(booking.booking_date)}</td>
+                    <td>{formatTime(booking.start_time) + "-" + formatTime(booking.end_time)}</td>
+                    <td>${booking.amount}</td>
+                    <td>pending</td>
+                  </tr>
+                ))}
+              </tbody>
+
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default Bookings;

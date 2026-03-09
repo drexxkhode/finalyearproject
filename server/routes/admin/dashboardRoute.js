@@ -1,10 +1,10 @@
 const express = require("express");
 const {
-  getBookings,
+  getDashboardDetails,
   
-} = require("../../controllers/bookingController");
+} = require("../../controllers/turfController");
 const protect = require("../../middleware/auth");
 const router = express.Router();
 
-router.get("/get-bookings", protect,getBookings);
+router.get("/total", protect,getDashboardDetails);
 module.exports = router;

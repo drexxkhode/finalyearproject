@@ -1,52 +1,95 @@
-import { useEffect, useRef } from 'react'
+import 'react-big-calendar/lib/css/react-big-calendar.css'
+import { Calendar, dateFnsLocalizer } from "react-big-calendar"
 
-export default function Events() {
-  const calendarRef = useRef(null)
+import { format, parse, startOfWeek, getDay } from "date-fns"
+import enUS from "date-fns/locale/en-US";
+import '../components/Calendar.css';
 
-  useEffect(() => {
-    const calendar = new window.FullCalendar.Calendar(calendarRef.current, {
-      initialView: 'dayGridMonth',
-	  headerToolbar: {
-			left: "prevYear,prev,next,nextYear today",
-			center: "title",
-			right: "dayGridMonth,dayGridWeek,dayGridDay",
-		},
-      selectable: true,
-      draggable:true,
-	  
+import { useState } from "react"
 
-      events: [
-        { title: 'Meeting', date: '2026-02-25',color:'#fd7e14' },
-        { title: 'Demo', date: '2026-02-27', color: "#da0202" }
-      ],
+const locales = {
+  "en-US": enUS
+}
 
-      dateClick(info) {
-        alert(`Date clicked: ${info.dateStr}`)
-      },
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales
+})
 
-      eventClick(info) {
-        alert(`Event clicked: ${info.event.title}`)
-      }
-    })
+const events = [
+  {
+    title: "Football Match",
+    start: new Date(2026, 2, 10, 10, 0),
+    end: new Date(2026, 2, 10, 12, 0)
+  },
+  {
+    title: "Training",
+    start: new Date(2026, 2, 10, 14, 0),
+    end: new Date(2026, 2, 10, 16, 0)
+  },
+  {
+    title: "League Match",
+    start: new Date(2026, 2, 12, 18, 0),
+    end: new Date(2026, 2, 12, 20, 0)
+  }
+]
 
-    calendar.render()
+function CalendarComponent() {
 
-    return () => calendar.destroy()
-  }, [])
+  const [view, setView] = useState("month")
+  const [date, setDate] = useState(new Date())
+
+  const handleNavigate = (newDate) => {
+    setDate(newDate)
+  }
+
+  const handleView = (newView) => {
+    setView(newView)
+  }
+
+  const handleSelectSlot = (slotInfo) => {
+    setDate(slotInfo.start)
+    setView("day")
+  }
+
+  const handleSelectEvent = (event) => {
+    alert(event.title)
+  }
 
   return (
-    
-                <div className="row gx-3">
-							<div className="col-xxl-12">
-								
-								<div className="card">
-									<div className="card-body">
-										<div ref={calendarRef}></div>
-									</div>
-								</div>
-								
-							</div>
-							</div>
+    <div className="calendar-wrapper">
+      <Calendar
+        localizer={localizer}
+        events={events}
+        date={date}
+        view={view}
+        selectable
+        onNavigate={handleNavigate}
+        onView={handleView}
+        onSelectSlot={handleSelectSlot}
+        onSelectEvent={handleSelectEvent}
+        startAccessor="start"
+        endAccessor="end"
+        views={["month","week","day","agenda"]}
+        style={{ height: 600 }}
+      />
+    </div>
   )
 }
 
+export default function Events() {
+  return (
+    <div className="row gx-3">
+      <div className="col-xxl-12">
+        <div className="card calendar-card">
+          <div className="card-body">
+            <CalendarComponent />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

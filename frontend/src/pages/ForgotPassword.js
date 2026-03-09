@@ -33,7 +33,7 @@ const ForgotPassword = () => {
     setIsSending(true);
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/forgot-password",
+        `${API}/api/auth/forgot-password`,
         { email },
       );
       setMessage(res?.data?.message);

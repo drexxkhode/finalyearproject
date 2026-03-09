@@ -1,6 +1,27 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import Analytics from '../components/Analytics';
-
+const  API = process.env.REACT_APP_API;
 const Dashboard = () => {
+const [total, setTotal] = useState({});
+
+const getTotal = async () =>{
+  try {
+  const res = await axios.get(`${API}/api/admin/total`,{
+headers: {
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+  "Content-Type": 'application/json'
+}
+});
+setTotal(res.data);
+} catch (err) {
+  console.log(err.res?.data?.message || "Could not fetch dashboard total data");
+}
+};
+
+useEffect(()=>{
+getTotal();
+},[]);
 
   return (
     <>
@@ -9,11 +30,11 @@ const Dashboard = () => {
           <div className="card mb-3">
             <div className="card-body">
               <div className="mb-2">
-                <i className="bi bi-bar-chart fs-1 text-primary lh-1"></i>
+                <i className="bi bi-calendar-check fs-1 text-primary lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Sales</h5>
-                <h3 className="m-0 text-primary">3500</h3>
+                <h5 className="m-0 text-secondary fw-normal">Total Bookings</h5>
+                <h3 className="m-0 text-primary">{total.total_bookings}</h3>
               </div>
             </div>
           </div>
@@ -22,11 +43,11 @@ const Dashboard = () => {
           <div className="card mb-3">
             <div className="card-body">
               <div className="mb-2">
-                <i className="bi bi-bag-check fs-1 text-primary lh-1"></i>
+                <i className="bi bi-cash-stack fs-1 text-primary lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Orders</h5>
-                <h3 className="m-0 text-primary">2900</h3>
+                <h5 className="m-0 text-secondary fw-normal">Total Payments</h5>
+                <h3 className="m-0 text-primary">{total.total_payments}</h3>
               </div>
             </div>
           </div>
@@ -34,13 +55,12 @@ const Dashboard = () => {
         <div className="col-xl-3 col-sm-6 col-12">
           <div className="card mb-3">
             <div className="card-body">
-              <div className="arrow-label">+18%</div>
               <div className="mb-2">
-                <i className="bi bi-box-seam fs-1 text-primary lh-1"></i>
+                <i className="bi bi-people fs-1 text-primary lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Items</h5>
-                <h3 className="m-0 text-primary">6500</h3>
+                <h5 className="m-0 text-secondary fw-normal">Total Users</h5>
+                <h3 className="m-0 text-primary">{total.total_admins}</h3>
               </div>
             </div>
           </div>
@@ -48,13 +68,12 @@ const Dashboard = () => {
         <div className="col-xl-3 col-sm-6 col-12">
           <div className="card mb-3">
             <div className="card-body">
-              <div className="arrow-label">+24%</div>
               <div className="mb-2">
-                <i className="bi bi-bell fs-1 text-primary lh-1"></i>
+                <i className="bi bi-chat fs-1 text-primary lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Signups</h5>
-                <h3 className="m-0 text-primary">7200</h3>
+                <h5 className="m-0 text-secondary fw-normal">Total Enquiries</h5>
+                <h3 className="m-0 text-primary">{total.total_enquiries}</h3>
               </div>
             </div>
           </div>

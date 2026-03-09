@@ -136,15 +136,35 @@ const getMyBookings = async (req, res) => {
 
 
 //ADMIN DASHBOARD DATA FETCH.
-const getBookings= async(req, res)=> {
-const turf_id = req?.user?.turf_id;
+const getBookings = async (req, res) => {
+  try {
+    const turf_id = req.user?.turf_id;
 
-const [rows] = await db.execute(`
-  SELECT *
-  b.id, b.date,b.amount, u.name, u.email, u.contact ts.time_slot_id FROM bookings JOIN users ON bookings.id =u.users_id
-  JOIN time_slots ON 
-  `);
+    const [rows] = await db.execute(`
+      SELECT 
+        b.id,
+        b.booking_date,
+        b.amount,
+        u.name,
+        u.email,
+        u.contact,
+        ts.id AS time_slot_id,
+        ts.start_time,
+        ts.end_time
+      FROM bookings b
+      JOIN users u 
+        ON b.user_id = u.id
+      JOIN time_slots ts
+        ON b.time_slot_id = ts.id
+      WHERE b.turf_id = ?
+    `, [turf_id]);
 
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching bookings" });
+  }
 };
 
-module.exports = { createBooking, getMyBookings, getBookedSlots };
+module.exports = { createBooking, getMyBookings, getBookedSlots, getBookings };

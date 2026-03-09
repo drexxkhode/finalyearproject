@@ -114,7 +114,7 @@ exports.updateUser = [
   upload.single("photo"),
   async (req, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user?.id;
 
       const [rows] = await db.query("SELECT photo FROM users WHERE id = ?", [
         userId,
@@ -173,14 +173,15 @@ exports.deleteUser = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     // req.user comes from JWT middleware
-    const userId = req.user.id;
+    const userId = req.user?.id;
 
     const [rows] = await db.query(
       `SELECT 
         id,
         name,
         email,
-        contact
+        contact,
+        created_at
        FROM users
        WHERE id = ?`,
       [userId],

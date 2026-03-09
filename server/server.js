@@ -13,6 +13,8 @@ const mapRoutes = require("./routes/turf/mapRoute");
 const userRoutes = require("./routes/client/authRoute");
 const bookingRoute = require('./routes/client/bookingRoute');
 const timeslotRoute = require('./routes/turf/timeslotRoute');
+const bookingsRoute = require('./routes/admin/bookingsRoute');
+const dashbaordRoute = require('./routes/admin/dashboardRoute');
 const setupAnalyticsSocket = require("./sockets/Analytics");
 const registerSlotLockSocket = require('./sockets/slotLockSocket');
 
@@ -42,6 +44,7 @@ app.use(express.json());
 
 // Static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/images", express.static(path.join(__dirname, "images")));
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -51,6 +54,8 @@ app.use("/api/map", mapRoutes);
 app.use("/api/users", userRoutes);
 app.use('/api/bookings', bookingRoute);
 app.use('/api/slots', timeslotRoute);      
+app.use('/api/admin', bookingsRoute);  
+app.use('/api/admin', dashbaordRoute);  
 
 app.get("/", (req, res) => {
   res.send("Astro Turf API running");

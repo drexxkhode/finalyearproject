@@ -10,7 +10,7 @@ function setupAnalyticsSocket(io) {
       if (!token) return next(new Error("Authentication error"));
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket?.user = decoded;
+      socket.user = decoded;
       next();
     } catch (err) {
       next(new Error("Invalid token"));
