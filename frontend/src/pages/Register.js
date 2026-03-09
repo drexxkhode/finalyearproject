@@ -4,6 +4,8 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import ClipLoader from "react-spinners/ClipLoader";
 
+const API = process.env.REACT_APP_API || "http://localhost:5000";
+
 const Register = () => {
   const [activeTab, setActiveTab] = useState("oneA");
   const [showPassword, setShowPassword] = useState(false);
@@ -215,7 +217,7 @@ if (hasError) {
     try {
       setSave(true);
       const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
+        `${API}/api/auth/register`,
         formData,
         {
           headers: {

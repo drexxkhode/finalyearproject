@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import {toast,ToastContainer} from "react-toastify";
-const Login = () => {
+import { toast, ToastContainer } from "react-toastify";
 
+const API = process.env.REACT_APP_API || "http://localhost:5000";
+
+const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,7 +17,7 @@ const Login = () => {
     setError("");
 
     try {
-      const res = await axios.post(" http://localhost:5000/api/auth/login", {
+      const res = await axios.post(`${API}/api/auth/login`, {
         email,
         password,
       });
@@ -23,26 +25,18 @@ const Login = () => {
       // ✅ store token
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      toast.success("Login successfully!", {
-  position: "top-right",
-  autoClose: 3000,
-  hideProgressBar: false,
-  closeOnClick: true,
-  pauseOnHover: true,
-  draggable: true,
-});
       // ✅ redirect after login
       navigate("/", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err?.response?.data?.message || "Login failed");
       toast.error("Login failed!", {
-  position: "top-center",
-  autoClose: 3000,
-  hideProgressBar: false,
-  closeOnClick: true,
-  pauseOnHover: true,
-  draggable: true,
-});
+        position: "top-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   };
 
@@ -76,10 +70,10 @@ const Login = () => {
                       required
                     />
                   </div>
-                  
+
                   <div className="mb-3">
                     <label htmlFor="password" className="form-label">
-                     Your Password
+                      Your Password
                     </label>
 
                     <div className="input-group">
@@ -89,8 +83,8 @@ const Login = () => {
                         className="form-control"
                         placeholder="Password"
                         value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
                       />
 
                       <span
@@ -115,15 +109,19 @@ const Login = () => {
                     </p>
                   )}
                   <div className="d-flex align-items-center justify-content-end">
-									
-									<Link to={'/forgot-password'} className="text-blue text-decoration-underline">Lost password?</Link>
-								</div>
+                    <Link
+                      to={"/forgot-password"}
+                      className="text-blue text-decoration-underline"
+                    >
+                      Lost password?
+                    </Link>
+                  </div>
                   <div className="d-grid py-3 mt-2">
                     <button type="submit" className="btn btn-lg btn-primary">
                       Login
                     </button>
                   </div>
-                  <ToastContainer/>
+                  <ToastContainer />
                 </div>
               </div>
             </form>

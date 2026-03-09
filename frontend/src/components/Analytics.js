@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
 import ClipLoader from "react-spinners/ClipLoader";
 import { io } from "socket.io-client";
-
+const API = process.env.REACT_APP_API || "http://localhost:5000";
 const Analytics = () => {
 
   const [categories, setCategories] = useState([]);
@@ -14,7 +14,7 @@ const Analytics = () => {
 
   useEffect(() => {
 
-    const socket = io("http://localhost:5000", {
+    const socket = io(`${API}`, {
       auth: {
         token: localStorage.getItem("token") // send JWT
       }

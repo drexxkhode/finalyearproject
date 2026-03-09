@@ -2,6 +2,8 @@ import { useRef, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
+const API = process.env.REACT_APP_API || "http://localhost:5000"; 
+
 const Administrators = () => {
   const tableRef = useRef(null);
   const [admins, setAdmins] = useState([]);
@@ -12,7 +14,7 @@ const Administrators = () => {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(
-        "http://localhost:5000/api/auth/admins",
+        `${API}/api/auth/admins`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -67,7 +69,7 @@ const Administrators = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`/api/admins/${id}`, {
+      await axios.delete(`${API}/api/admins/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchAdmins();

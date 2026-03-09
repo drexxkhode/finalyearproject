@@ -109,7 +109,7 @@ const createBooking = async (req, res) => {
 // ── GET /api/bookings ──────────────────────────────────────────────────────
 const getMyBookings = async (req, res) => {
   try {
-    const user_id = req.user?.id;
+    const user_id = req?.user?.id;
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await db.query(
@@ -132,6 +132,19 @@ const getMyBookings = async (req, res) => {
     console.error('getMyBookings error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
+};
+
+
+//ADMIN DASHBOARD DATA FETCH.
+const getBookings= async(req, res)=> {
+const turf_id = req?.user?.turf_id;
+
+const [rows] = await db.execute(`
+  SELECT *
+  b.id, b.date,b.amount, u.name, u.email, u.contact ts.time_slot_id FROM bookings JOIN users ON bookings.id =u.users_id
+  JOIN time_slots ON 
+  `);
+
 };
 
 module.exports = { createBooking, getMyBookings, getBookedSlots };

@@ -4,6 +4,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import '../components/Spinner.css';
 import ClipLoader from "react-spinners/ClipLoader";
+const API = process.env.REACT_APP_API || "http://localhost:5000";
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("oneA");
@@ -69,7 +70,7 @@ if (hasError) {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(
-        "http://localhost:5000/api/turf/turf-details",
+        `${API}/api/turf/turf-details`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -113,7 +114,7 @@ if (hasError) {
       const token = localStorage.getItem("token");
 
       const response = await axios.put(
-        "http://localhost:5000/api/auth/change-password",
+        `${API}/api/auth/change-password`,
         { oldPassword, newPassword },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -152,15 +153,15 @@ if (hasError) {
       };
 
       const res = await axios.put(
-        "http://localhost:5000/api/turf/update-turf",
+        `${API}/api/turf/update-turf`,
         payload,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
-      toast.success(res.data.message || "Turf updated successfully!");
+      toast.success(res.data.message || "Turf details updated successfully!");
     } catch (error) {
-      console.error(error.response?.data || error.message);
+      console.error(error?.response?.data || error.message);
       toast.error("Update failed!");
     }
   };

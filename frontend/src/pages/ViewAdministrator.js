@@ -5,7 +5,7 @@ import { useParams,useNavigate } from "react-router-dom";
 import {toast, ToastContainer} from 'react-toastify';
 
 const Update = () => {
-  const BASE_URL = "http://localhost:5000";
+  const API = process.env.REACT_APP_API || "http://localhost:5000";
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -43,10 +43,11 @@ const Update = () => {
   const fetchDetail = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${BASE_URL}/api/auth/details/${id}`, {
+      const res = await axios.get(`${API}/api/auth/details/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = res.data;
+      
+      const data = res?.data;
 
       setFormData({
         firstName: data.firstName || "",
@@ -177,13 +178,13 @@ if (hasError) {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const res = await axios.get(`${BASE_URL}/api/auth/me`, {
+    const res = await axios.get(`${API}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     const freshUser = {
       ...res.data,
-      photo: res.data.photo ? `${res.data.photo}?t=${Date.now()}` : null,
+      photo: res?.data?.photo ? `${res?.data?.photo}?t=${Date.now()}` : null,
     };
 
     localStorage.setItem("user", JSON.stringify(freshUser));
@@ -203,7 +204,7 @@ if (hasError) {
         if (v !== null) payload.append(k, v);
       });
 
-   const res= await axios.put(`${BASE_URL}/api/auth/update/${id}`, payload, {
+   const res= await axios.put(`${API}/api/auth/update/${id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

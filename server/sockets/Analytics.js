@@ -6,11 +6,11 @@ function setupAnalyticsSocket(io) {
   // ── Global auth middleware — runs for ALL socket connections ────────────
   io.use((socket, next) => {
     try {
-      const token = socket.handshake.auth.token;
+      const token = socket?.handshake?.auth?.token;
       if (!token) return next(new Error("Authentication error"));
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.user = decoded;
+      socket?.user = decoded;
       next();
     } catch (err) {
       next(new Error("Invalid token"));
@@ -18,8 +18,6 @@ function setupAnalyticsSocket(io) {
   });
 
   io.on("connection", (socket) => {
-    console.log("Client connected:", socket.id, "| role:", socket.user?.role ?? "user");
-
     const turfId = socket.user?.turf_id;
 
     // Analytics only apply to turf admin/owner accounts that have a turf_id.
