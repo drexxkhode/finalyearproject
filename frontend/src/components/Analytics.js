@@ -14,7 +14,7 @@ const Analytics = () => {
 
   useEffect(() => {
 
-    const socket = io(`${API}`, {
+    const socket = io("http://localhost:5000", {
       auth: {
         token: localStorage.getItem("token") // send JWT
       }

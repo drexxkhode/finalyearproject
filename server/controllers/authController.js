@@ -368,7 +368,7 @@ const [findOne] = await db.execute(
 );
 const lastName = findOne[0].lastName;
 
-  const resetLink = `http://localhost:3001/reset-password/${resetToken}`;
+  const resetLink = `https://admindashboard-c220.onrender.com/reset-password/${resetToken}`;
 
 await sendEmail(
   email,

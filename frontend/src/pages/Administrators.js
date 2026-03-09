@@ -14,7 +14,7 @@ const Administrators = () => {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(
-        `${API}/api/auth/admins`,
+        "http://localhost:5000/api/auth/admins",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
