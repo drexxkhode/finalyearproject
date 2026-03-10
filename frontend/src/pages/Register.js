@@ -4,7 +4,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import ClipLoader from "react-spinners/ClipLoader";
 
-const API = process.env.REACT_APP_API || "http://localhost:5000";
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const Register = () => {
   const [activeTab, setActiveTab] = useState("oneA");

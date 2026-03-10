@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
-const API = process.env.REACT_APP_API || "http://localhost:5000";
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const Profile = () => {
   const { id } = useParams(); // Get the admin ID from the URL
@@ -11,7 +11,7 @@ const Profile = () => {
   const fetchDetails = async (adminId) => {
     try {
       const token = localStorage.getItem("token");
-      const { data } = await axios.get(`http://localhost:5000/api/auth/details/${adminId}`, {
+      const { data } = await axios.get(`${API}/api/auth/details/${adminId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAdmin(data);
@@ -31,7 +31,7 @@ const Profile = () => {
     const getMe = async () => {
       try {
         const { data } = await axios.get(
-          "http://localhost:5000/api/auth/me",
+          `${API}/api/auth/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

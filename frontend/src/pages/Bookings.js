@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 
-const API = process.env.REACT_APP_API;
+const API = process.env.REACT_APP_URL ?? 'http://localhost:5000';
 
 const Bookings = () => {
   const tableRef = useRef(null);

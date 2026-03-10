@@ -1,12 +1,12 @@
 import { useState } from "react";
-
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 function SearchBox() {
 
   const [results, setResults] = useState([]);
 
   const search = async (value) => {
 
-    const res = await fetch(`http://localhost:5000/api/turf/search?q=${value}`);
+    const res = await fetch(`${API}/api/turf/search?q=${value}`);
 
     const data = await res.json();
 

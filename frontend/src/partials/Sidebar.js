@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
-
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 function Sidebar() {
   const location = useLocation();
 
@@ -13,7 +13,7 @@ const getTurfName = async () =>{
       const token = localStorage.getItem("token");
 
       const res = await axios.get(
-        "http://localhost:5000/api/turf/turf-name",
+        `${API}/api/turf/turf-name`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },

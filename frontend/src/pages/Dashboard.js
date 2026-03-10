@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Analytics from '../components/Analytics';
-const  API = process.env.REACT_APP_API;
+const  API = process.env.REACT_APP_URL;
 const Dashboard = () => {
 const [total, setTotal] = useState({});
 

@@ -2,7 +2,7 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 import ClipLoader from "react-spinners/ClipLoader";
 
-const API = process.env.REACT_APP_API || "http://localhost:5000";
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");

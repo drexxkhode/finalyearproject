@@ -5,7 +5,7 @@ import { useParams,useNavigate } from "react-router-dom";
 import {toast, ToastContainer} from 'react-toastify';
 
 const Update = () => {
-  const API = process.env.REACT_APP_API || "http://localhost:5000";
+  const API = process.env.REACT_APP_URL ?? "http://localhost:5000";
   const { id } = useParams();
   const navigate = useNavigate();
 

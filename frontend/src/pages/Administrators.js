@@ -2,7 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-const API = process.env.REACT_APP_API || "http://localhost:5000"; 
+const API = process.env.REACT_APP_URL || "http://localhost:5000"; 
 
 const Administrators = () => {
   const tableRef = useRef(null);
@@ -14,7 +14,7 @@ const Administrators = () => {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(
-        "http://localhost:5000/api/auth/admins",
+        `${API}/api/auth/admins`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },

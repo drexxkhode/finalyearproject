@@ -6,7 +6,7 @@ import enUS from "date-fns/locale/en-US";
 import '../components/Calendar.css';
 
 import { useState } from "react"
-
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 const locales = {
   "en-US": enUS
 }

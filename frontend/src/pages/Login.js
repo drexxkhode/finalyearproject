@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 
-const API = process.env.REACT_APP_API || "http://localhost:5000";
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const Login = () => {
   const [email, setEmail] = useState("");
