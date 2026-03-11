@@ -4,19 +4,11 @@ const auth    = require('../../middleware/auth');
 const {
   getBookedSlots,
   initiateBooking,
-  paystackWebhook,
   cancelBooking,
   getMyBookings,
   getBookings
 } = require('../../controllers/bookingController');
 
-// ── Paystack webhook — MUST come before express.json() middleware ──────────
-// Raw body required for HMAC signature verification
-router.post(
-  '/webhook',
-  express.raw({ type: 'application/json' }),
-  paystackWebhook
-);
 
 // ── Authenticated routes ───────────────────────────────────────────────────
 router.post('/',              auth, initiateBooking);   // initiate (pending)

@@ -39,6 +39,13 @@ app.use(cors({
   credentials: true,
   methods: ["GET","POST","PUT","DELETE"]
 }));
+// ── 2. Webhook FIRST — raw body, before express.json() ────────────────────
+const { paystackWebhook } = require('./controllers/bookingController')
+app.post(
+  '/api/bookings/webhook',
+  express.raw({ type: 'application/json' }),  // keeps body as Buffer
+  paystackWebhook
+);
 
 app.use(express.json());
 
