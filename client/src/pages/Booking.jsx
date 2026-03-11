@@ -70,7 +70,8 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const [amountSnap, setAmountSnap] = useState(() => {
     return parseFloat(sessionStorage.getItem(SK_AMOUNT_SNAP) ?? '0')
   })
-  const payingRef = useRef(false)
+  const payingRef  = useRef(false)
+  const snapRef    = useRef({ slots: [], amount: 0 })  // sync snapshot for callback closure
 
   // Persist step + info across refreshes
   useEffect(() => { sessionStorage.setItem(SK_STEP, String(step)) }, [step])
@@ -146,6 +147,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
       sessionStorage.setItem(SK_AMOUNT_SNAP, String(snapAmount))
       setSlotsSnap(snapSlots)
       setAmountSnap(snapAmount)
+      snapRef.current = { slots: snapSlots, amount: snapAmount }  // sync ref for callback
 
       // ── Step 2: open Paystack with the BACKEND ref ─────────────────────
       // Mobile browsers (Safari/Chrome) require openIframe() to be called
@@ -201,9 +203,9 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
 
   // ── Confirmed ────────────────────────────────────────────────────────────
   // Use snapshots — lockedSlots may be empty by the time this renders
-  // Read directly from sessionStorage — state updates are async and may
-  // not be set yet on the first render after payment callback fires
+  // Priority: ref (sync) → sessionStorage → state → live props
   const displaySlots = (() => {
+    if (snapRef.current.slots.length > 0) return snapRef.current.slots
     try {
       const s = JSON.parse(sessionStorage.getItem(SK_SLOTS_SNAP))
       if (Array.isArray(s) && s.length > 0) return s
@@ -211,6 +213,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
     return slotsSnap.length > 0 ? slotsSnap : lockedSlots
   })()
   const displayAmount = (() => {
+    if (snapRef.current.amount > 0) return snapRef.current.amount
     const v = parseFloat(sessionStorage.getItem(SK_AMOUNT_SNAP))
     if (v > 0) return v
     return amountSnap > 0 ? amountSnap : totalAmount
