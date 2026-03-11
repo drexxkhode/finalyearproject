@@ -1,22 +1,20 @@
 /**
  * slotLockSocket.js  —  server/sockets/slotLockSocket.js
  *
- * KEY DESIGN DECISIONS:
- * - locked_by stores userId (from JWT), NOT socket.id
- *   → Locks survive page refresh/reconnect for the same user
- *   → Disconnect does NOT release locks (user may just be refreshing)
- * - Locks expire automatically via server setTimeout + DB expiry timestamp
- * - On turf:join, server sends all current locks from DB
- * - socketId is stored separately only for ownership checks during a session
+ * DESIGN:
+ * - Slot locks live in time_slots (lock_status, locked_by, lock_expires_at)
+ * - Bookings are NEVER written until charge.success webhook fires
+ * - On lock expiry: free the time_slot lock + delete any pending_payments row
+ *   so the slot is fully available for the next user
  */
 
 const db = require('../config/db')
 
-const LOCK_DURATION_MS = 5 * 60 * 1000
+const LOCK_DURATION_MS = 5 * 60 * 1000   // 5 minutes
 
 const timers = {}  // { `${turfId}:${slotId}`: timeoutHandle }
 
-function timerKey(t, s) { return `${t}:${s}` }
+function timerKey(t, s)  { return `${t}:${s}` }
 function clearTimer(t, s) {
   const k = timerKey(t, s)
   if (timers[k]) { clearTimeout(timers[k]); delete timers[k] }
@@ -38,26 +36,65 @@ async function dbLock(turfId, slotId, userId, socketId) {
 async function dbRelease(slotId) {
   await db.query(
     `UPDATE time_slots
-     SET lock_status = 'free', locked_by = NULL, lock_socket_id = NULL, lock_expires_at = NULL
+     SET lock_status = 'free', locked_by = NULL,
+         lock_socket_id = NULL, lock_expires_at = NULL
      WHERE id = ?`,
     [slotId]
   )
 }
 
-async function dbBook(slotId) {
+// On expiry: free the lock AND delete any orphaned pending_payments row
+// so the slot is immediately available for other users to lock and pay
+async function dbExpire(slotId) {
+  // 1. Get the user who held the lock (to target their pending_payment)
+  const [rows] = await db.query(
+    `SELECT locked_by, turf_id FROM time_slots WHERE id = ? LIMIT 1`,
+    [slotId]
+  )
+
+  // 2. Free the lock
   await db.query(
     `UPDATE time_slots
-     SET lock_status = 'booked', locked_by = NULL, lock_socket_id = NULL, lock_expires_at = NULL
+     SET lock_status = 'free', locked_by = NULL,
+         lock_socket_id = NULL, lock_expires_at = NULL
      WHERE id = ?`,
     [slotId]
   )
+
+  // 3. Delete their pending_payments row if it contains this slot
+  //    (pending_payment may cover multiple slots — only delete if
+  //     ALL of that user's locks have expired, otherwise leave it)
+  if (rows.length && rows[0].locked_by) {
+    const userId = rows[0].locked_by
+    const turfId = rows[0].turf_id
+
+    // Check if this user has any other active locks on this turf
+    const [otherLocks] = await db.query(
+      `SELECT id FROM time_slots
+       WHERE turf_id = ? AND locked_by = ?
+         AND lock_status = 'locked' AND lock_expires_at > NOW()
+         AND id != ?`,
+      [turfId, userId, slotId]
+    )
+
+    if (otherLocks.length === 0) {
+      // No other locks — safe to wipe their pending_payments for this turf
+      await db.query(
+        `DELETE FROM pending_payments
+         WHERE user_id = ? AND turf_id = ?`,
+        [userId, turfId]
+      )
+      console.log(`[slotLock] Cleaned pending_payments for user ${userId} turf ${turfId}`)
+    }
+  }
 }
 
-// Clear expired locks for a turf then return all active ones
+// Clear expired locks and return all active ones for a turf
 async function getActiveLocks(turfId) {
   await db.query(
     `UPDATE time_slots
-     SET lock_status = 'free', locked_by = NULL, lock_socket_id = NULL, lock_expires_at = NULL
+     SET lock_status = 'free', locked_by = NULL,
+         lock_socket_id = NULL, lock_expires_at = NULL
      WHERE turf_id = ? AND lock_status = 'locked' AND lock_expires_at < NOW()`,
     [turfId]
   )
@@ -70,17 +107,19 @@ async function getActiveLocks(turfId) {
   return rows
 }
 
-// ── Schedule auto-expiry ──────────────────────────────────────────────────
+// ── Auto-expiry timer ─────────────────────────────────────────────────────
+
 function scheduleExpiry(io, turfId, slotId, ms) {
   clearTimer(turfId, slotId)
   timers[timerKey(turfId, slotId)] = setTimeout(async () => {
-    await dbRelease(slotId)
+    await dbExpire(slotId)          // frees lock + cleans pending_payments
     clearTimer(turfId, slotId)
     io.to(`turf:${turfId}`).emit('slot:released', { turfId, slotId, reason: 'expired' })
+    console.log(`[slotLock] Slot ${slotId} expired and fully released`)
   }, ms)
 }
 
-// ── On server start: restore timers for locks still alive in DB ───────────
+// Restore timers on server restart
 async function restoreTimers(io) {
   try {
     const [rows] = await db.query(
@@ -93,6 +132,19 @@ async function restoreTimers(io) {
       if (ms > 0) scheduleExpiry(io, turfId, slotId, ms)
     })
     console.log(`[slotLock] Restored ${rows.length} active lock timer(s)`)
+
+    // Also clean up any locks that expired while server was down
+    await db.query(
+      `UPDATE time_slots
+       SET lock_status = 'free', locked_by = NULL,
+           lock_socket_id = NULL, lock_expires_at = NULL
+       WHERE lock_status = 'locked' AND lock_expires_at < NOW()`
+    )
+    // Clean orphaned pending_payments older than 10 minutes
+    await db.query(
+      `DELETE FROM pending_payments
+       WHERE created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)`
+    )
   } catch (e) {
     console.error('[slotLock] Could not restore timers:', e.message)
   }
@@ -104,17 +156,15 @@ module.exports = function registerSlotLockSocket(io) {
   restoreTimers(io)
 
   io.on('connection', (socket) => {
-    // userId comes from JWT decoded by Analytics.js middleware
     const userId = String(
       socket.user?.id ?? socket.user?.userId ?? socket.user?._id ?? socket.id
     )
 
-    // ── JOIN: send current DB locks so joining user sees correct state ────
+    // ── JOIN ───────────────────────────────────────────────────────────────
     socket.on('turf:join', async (turfId) => {
       socket.join(`turf:${turfId}`)
       try {
         const locks = await getActiveLocks(turfId)
-        // Always emit — even empty array resets stale state on client
         socket.emit('turf:current-locks', { turfId, locks })
       } catch (e) {
         console.error('[slotLock] turf:join error', e.message)
@@ -127,7 +177,6 @@ module.exports = function registerSlotLockSocket(io) {
     socket.on('slot:lock', async ({ turfId, slotId }) => {
       if (!turfId || !slotId) return
       try {
-        // Check if slot is locked by someone else
         const [rows] = await db.query(
           `SELECT locked_by, lock_expires_at FROM time_slots
            WHERE id = ? AND turf_id = ? AND lock_status = 'locked'
@@ -143,7 +192,6 @@ module.exports = function registerSlotLockSocket(io) {
           return
         }
 
-        // Lock it (or renew own lock)
         const expiresAt = await dbLock(turfId, slotId, userId, socket.id)
         scheduleExpiry(io, turfId, slotId, LOCK_DURATION_MS)
 
@@ -151,7 +199,6 @@ module.exports = function registerSlotLockSocket(io) {
           ok: true, turfId, slotId,
           expiresAt: expiresAt.getTime(),
         })
-        // Broadcast to everyone ELSE in the room
         socket.to(`turf:${turfId}`).emit('slot:locked', {
           turfId, slotId,
           expiresAt: expiresAt.getTime(),
@@ -168,22 +215,35 @@ module.exports = function registerSlotLockSocket(io) {
           `SELECT locked_by FROM time_slots WHERE id = ? AND turf_id = ?`,
           [slotId, turfId]
         )
-        // Only the user who locked it can release it
         if (!rows.length || rows[0].locked_by !== userId) return
 
         await dbRelease(slotId)
         clearTimer(turfId, slotId)
-        // Broadcast to ALL in room (including the releaser)
+
+        // Also clean their pending_payments if no other locks remain
+        const [otherLocks] = await db.query(
+          `SELECT id FROM time_slots
+           WHERE turf_id = ? AND locked_by = ?
+             AND lock_status = 'locked' AND lock_expires_at > NOW()`,
+          [turfId, userId]
+        )
+        if (otherLocks.length === 0) {
+          await db.query(
+            `DELETE FROM pending_payments WHERE user_id = ? AND turf_id = ?`,
+            [userId, turfId]
+          )
+        }
+
         io.to(`turf:${turfId}`).emit('slot:released', { turfId, slotId, reason: 'released' })
       } catch (e) {
         console.error('[slotLock] slot:release error', e.message)
       }
     })
 
-    // ── CONFIRM ────────────────────────────────────────────────────────────
+    // ── CONFIRM — called after successful payment (belt + suspenders) ──────
     socket.on('slot:confirm', async ({ turfId, slotId }) => {
       try {
-        await dbBook(slotId)
+        // Webhook already handles the DB write — this just clears the timer
         clearTimer(turfId, slotId)
         io.to(`turf:${turfId}`).emit('slot:booked', { turfId, slotId })
       } catch (e) {
@@ -191,12 +251,9 @@ module.exports = function registerSlotLockSocket(io) {
       }
     })
 
-    // ── DISCONNECT ─────────────────────────────────────────────────────────
-    // DO NOT release locks on disconnect — user may just be refreshing.
-    // Locks expire naturally via their server-side timer.
-    // On reconnect, turf:join will send them back their active locks.
+    // ── DISCONNECT — locks survive (user may be refreshing) ────────────────
     socket.on('disconnect', () => {
-      console.log(`[slotLock] ${userId} disconnected (locks preserved in DB)`)
+      console.log(`[slotLock] ${userId} disconnected (locks preserved)`)
     })
   })
 }

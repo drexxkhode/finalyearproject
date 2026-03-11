@@ -17,7 +17,6 @@ import Directions from '../pages/Directions'
 import Profile from '../pages/Profile'
 
 import { useState, useCallback, useEffect } from 'react'
-import ResetPassword from '../components/ResetPassword'
 
 const TABS = [
   { key: 'turfs',     icon: 'bi-grid-fill', label: 'Browse Turfs' },
@@ -25,7 +24,8 @@ const TABS = [
   { key: 'recommend', icon: 'bi-stars',     label: 'For You'      },
 ]
 
-const STORAGE_KEY = 'tf_active_turf'
+const STORAGE_KEY    = 'tf_active_turf'
+const SK_PAID        = 'tf_bk_paid'      // set by Booking.jsx on success
 
 export default function Inner() {
   const { user, logout, setUser } = useAuth()
@@ -56,7 +56,7 @@ export default function Inner() {
     confirmAll, leaveSlotRoom, fmtCountdown,
   } = useSlots(handleSlotExpired)
 
-  // Restore slot room on refresh
+  // Restore slot room on hard refresh
   useEffect(() => {
     const match = location.pathname.match(/^\/turf\/(\d+)/)
     if (match && activeTurf) ensureSlots(activeTurf.id)
@@ -79,7 +79,6 @@ export default function Inner() {
     navigate('/')
   }
 
-  // After payment, confirm locks + notify. MyBookings fetches from DB itself.
   const handleConfirmBooking = useCallback((info) => {
     if (!activeTurf) { notify('Invalid booking session', 'e'); return }
     confirmAll(activeTurf.id)
@@ -87,8 +86,19 @@ export default function Inner() {
     notify(`${count} slot${count > 1 ? 's' : ''} booked! 🎉`, 's')
   }, [activeTurf, confirmAll, notify])
 
-  const myLockedCount = Object.values(lockedSlots)
-    .filter(l => activeTurf && l.turfId === activeTurf.id).length
+  // ── Booking route guard — survives refresh ─────────────────────────────
+  // myLockedCount from React state is 0 after refresh (state lost).
+  // We allow /booking if:
+  //   (a) user has active locked slots in state (normal flow), OR
+  //   (b) sessionStorage has booking step saved (mid-checkout refresh), OR
+  //   (c) payment was just completed (show success screen)
+  const myLockedSlots = Object.values(lockedSlots)
+    .filter(l => activeTurf && l.turfId === activeTurf.id)
+
+  const bookingStepSaved = !!sessionStorage.getItem('tf_bk_step')
+  const bookingPaid      = sessionStorage.getItem(SK_PAID) === '1'
+  // activeTurf must exist — if it's null (e.g. localStorage cleared) we can't render Booking
+  const canAccessBooking = !!activeTurf && (myLockedSlots.length > 0 || bookingStepSaved || bookingPaid)
 
   /* ── Unauthenticated ── */
   if (!user) return (
@@ -99,7 +109,6 @@ export default function Inner() {
           <AuthScreen onSuccess={(u) => { setUser(u); notify(`Welcome, ${u.name}! 👋`) }} />
         } />
         <Route path="/lost-password" element={<LostPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
@@ -138,12 +147,17 @@ export default function Inner() {
           } />
 
           <Route path="/booking" element={
-            activeTurf && myLockedCount > 0
+            canAccessBooking
               ? <Booking
                   turf={activeTurf}
-                  lockedSlots={Object.values(lockedSlots).filter(l => l.turfId === activeTurf.id)}
-                  user={user} fmtCountdown={fmtCountdown}
-                  onBack={() => navigate(`/turf/${activeTurf.id}`)}
+                  lockedSlots={myLockedSlots}
+                  user={user}
+                  fmtCountdown={fmtCountdown}
+                  onBack={() => {
+                    // clear session so back button from booking goes to turf detail
+                    sessionStorage.removeItem('tf_bk_step')
+                    navigate(activeTurf ? `/turf/${activeTurf.id}` : '/')
+                  }}
                   onConfirm={handleConfirmBooking}
                 />
               : <Navigate to="/" replace />
