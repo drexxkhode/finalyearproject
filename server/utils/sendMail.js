@@ -1,10 +1,8 @@
-const { Resend } = require("resend");
+const axios = require("axios");
 const db = require("../config/db");
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const sendEmail = async (to, subject, html) => {
-  // 1️⃣ Get user + turf in ONE query
+  
   const [rows] = await db.execute(
     `SELECT 
         admins.email AS user_email,
@@ -21,15 +19,30 @@ const sendEmail = async (to, subject, html) => {
   }
 
   const { turf_name, turf_email } = rows[0];
+  console.log("BREVO KEY:", process.env.BREVO_API_KEY);
 
-  // 2️⃣ Send email using Resend
-  await resend.emails.send({
-    from: `${turf_name} <onboarding@resend.dev>`,
-    to: to,
-    reply_to: turf_email,
-    subject: subject,
-    html: html,
-  });
+  await axios.post(
+    "https://api.brevo.com/v3/smtp/email",
+    {
+      sender: {
+        email: process.env.SENDER_EMAIL,
+        name: turf_name,
+      },
+      to: [{ email: to }],
+      replyTo: {
+        email: turf_email,
+        name: turf_name,
+      },
+      subject: subject,
+      htmlContent: html,
+    },
+    {
+      headers: {
+        "api-key": process.env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 };
 
 module.exports = sendEmail;

@@ -1,19 +1,10 @@
-const nodemailer = require("nodemailer");
+const axios = require("axios");
 const db = require("../config/db");
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 const sendEmail = async (to, subject, html) => {
-  // 1️⃣ Get user + turf in ONE query
+  // 1️⃣ Get user in ONE query
   const [rows] = await db.execute(
-    `SELECT 
-        id, name FROM users WHERE email = ?`,
+    `SELECT id, name FROM users WHERE email = ?`,
     [to]
   );
 
@@ -21,13 +12,27 @@ const sendEmail = async (to, subject, html) => {
     throw new Error("User not found");
   }
 
-  // 2️⃣ Send email using turf info
-  await transporter.sendMail({
-    from: `"TURFARENA" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    html,
-  });
+  const { name } = rows[0];
+
+  // 2️⃣ Send email
+  await axios.post(
+    "https://api.brevo.com/v3/smtp/email",
+    {
+      sender: {
+        email: process.env.SENDER_EMAIL,
+        name: process.env.SENDER_NAME,
+      },
+      to: [{ email: to, name: name }],
+      subject: subject,
+      htmlContent: html,
+    },
+    {
+      headers: {
+        "api-key": process.env.BREVO_API_KEY,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 };
 
 module.exports = sendEmail;
