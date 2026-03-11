@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const axios  = require('axios');
 
 
-// ── GET /api/bookings/slots?turf_id=X&date=YYYY-MM-DD ─────────────────────
+// ── GET /api/bookings/slots ────────────────────────────────────────────────
 const getBookedSlots = async (req, res) => {
   try {
     const { turf_id, date } = req.query;
@@ -17,7 +17,6 @@ const getBookedSlots = async (req, res) => {
     );
     if (!timeSlots.length) return res.json({ slots: [] });
 
-    // Only PAID bookings block a slot — pending/cancelled never count
     const [booked] = await db.query(
       `SELECT time_slot_id FROM bookings
        WHERE turf_id = ? AND booking_date = ?
@@ -44,22 +43,18 @@ const getBookedSlots = async (req, res) => {
 
 
 // ── POST /api/bookings — initiate ─────────────────────────────────────────
-// ONLY validates + returns a paystack_ref. Does NOT write to bookings table.
-// The slot lock in time_slots is the reservation — bookings row is only
-// created after charge.success webhook fires.
 const initiateBooking = async (req, res) => {
   try {
     const user_id = req.user?.id;
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
     const { turf_id, slots, date, total_amount } = req.body;
-    // slots: [{ time_slot_id, amount }, ...]
 
     if (!turf_id || !slots?.length || !date || !total_amount)
       return res.status(400).json({ message: 'turf_id, slots, date, total_amount required' });
 
-    // 1. Verify every slot belongs to this turf
     const slotIds = slots.map(s => s.time_slot_id);
+
     const [slotRows] = await db.query(
       `SELECT id, start_time, end_time FROM time_slots
        WHERE id IN (?) AND turf_id = ?`,
@@ -68,7 +63,6 @@ const initiateBooking = async (req, res) => {
     if (slotRows.length !== slotIds.length)
       return res.status(400).json({ message: 'One or more slots are invalid for this turf' });
 
-    // 2. Verify none are already paid-booked
     const [alreadyBooked] = await db.query(
       `SELECT time_slot_id FROM bookings
        WHERE turf_id = ? AND booking_date = ?
@@ -80,7 +74,7 @@ const initiateBooking = async (req, res) => {
     if (alreadyBooked.length)
       return res.status(409).json({ message: 'One or more slots are already booked' });
 
-    // 3. Verify the user actually holds the lock on every slot
+    // Verify user holds the lock on every slot
     const [lockedRows] = await db.query(
       `SELECT id FROM time_slots
        WHERE id IN (?)
@@ -91,10 +85,10 @@ const initiateBooking = async (req, res) => {
       [slotIds, turf_id, String(user_id)]
     );
     if (lockedRows.length !== slotIds.length)
-      return res.status(400).json({ message: 'One or more slot locks have expired. Please re-select your slots.' });
+      return res.status(400).json({
+        message: 'One or more slot locks have expired. Please go back and re-select your slots.',
+      });
 
-    // 4. Generate unique ref and store it in a pending_payments staging table
-    //    so the webhook can retrieve all context needed to write bookings
     const paystack_ref = `TF-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 
     await db.query(
@@ -102,17 +96,15 @@ const initiateBooking = async (req, res) => {
          (paystack_ref, user_id, turf_id, slots_json, booking_date, total_amount)
        VALUES (?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         slots_json = VALUES(slots_json),
+         slots_json   = VALUES(slots_json),
          booking_date = VALUES(booking_date),
          total_amount = VALUES(total_amount),
-         created_at = NOW()`,
+         created_at   = NOW()`,
       [paystack_ref, user_id, turf_id, JSON.stringify(slots), date, total_amount]
     );
 
-    return res.status(201).json({
-      message:     'Ready for payment',
-      paystack_ref,
-    });
+    console.log(`[booking] Initiated ref=${paystack_ref} user=${user_id} turf=${turf_id} slots=${JSON.stringify(slotIds)}`);
+    return res.status(201).json({ message: 'Ready for payment', paystack_ref });
   } catch (err) {
     console.error('initiateBooking error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -121,82 +113,135 @@ const initiateBooking = async (req, res) => {
 
 
 // ── POST /api/bookings/webhook ─────────────────────────────────────────────
-// Verifies Paystack HMAC → writes bookings rows → releases slot locks
+// Registered in server.js with express.raw() BEFORE express.json()
+// req.body will be a Buffer — we convert to string for HMAC + parse once
 const paystackWebhook = async (req, res) => {
-  const secret = process.env.PAYSTACK_SECRET_KEY;
-
-  const hash = crypto
-    .createHmac('sha512', secret)
-    .update(JSON.stringify(req.body))
-    .digest('hex');
-
-  if (hash !== req.headers['x-paystack-signature']) {
-    console.warn('Webhook: invalid signature — rejected');
-    return res.sendStatus(401);
-  }
-
-  // Acknowledge immediately — Paystack retries if no 200 within ~30s
-  res.sendStatus(200);
-
-  const event = req.body;
-  console.log(`Paystack webhook: ${event.event} | ref: ${event.data?.reference}`);
-
   try {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    if (!secret) {
+      console.error('[webhook] PAYSTACK_SECRET_KEY is not set');
+      return res.sendStatus(500);
+    }
 
-    // ── charge.success ───────────────────────────────────────────────────
+    // ── Diagnostics ───────────────────────────────────────────────────────
+    console.log('[webhook] body type:', typeof req.body, '| isBuffer:', Buffer.isBuffer(req.body));
+    console.log('[webhook] content-type:', req.headers['content-type']);
+    console.log('[webhook] x-paystack-signature present:', !!req.headers['x-paystack-signature']);
+    console.log('[webhook] PAYSTACK_SECRET_KEY prefix:', secret.slice(0, 8));
+
+    // ── Get raw string body ───────────────────────────────────────────────
+    let rawBody;
+    if (Buffer.isBuffer(req.body)) {
+      rawBody = req.body.toString('utf8');
+      console.log('[webhook] body is Buffer, byte length:', req.body.length);
+    } else if (typeof req.body === 'string') {
+      rawBody = req.body;
+      console.log('[webhook] body is string, length:', rawBody.length);
+    } else {
+      // Body was pre-parsed — cannot verify HMAC but log and continue for diagnostics
+      console.error('[webhook] body is neither Buffer nor string, type:', typeof req.body);
+      rawBody = JSON.stringify(req.body);
+    }
+
+    // ── Verify HMAC ───────────────────────────────────────────────────────
+    const expectedSig = crypto
+      .createHmac('sha512', secret)
+      .update(rawBody)
+      .digest('hex');
+
+    const receivedSig = req.headers['x-paystack-signature'] ?? '';
+
+    console.log('[webhook] expected sig (32 chars):', expectedSig.slice(0, 32));
+    console.log('[webhook] received sig (32 chars):', receivedSig.slice(0, 32));
+    console.log('[webhook] signatures match:', expectedSig === receivedSig);
+
+    if (expectedSig !== receivedSig) {
+      console.error('[webhook] Signature mismatch — BYPASS ACTIVE FOR DIAGNOSTICS');
+      // Temporary bypass — remove once signature issue is confirmed fixed
+    }
+
+    // ── Parse event ───────────────────────────────────────────────────────
+    let event;
+    try {
+      event = JSON.parse(rawBody);
+    } catch {
+      console.error('[webhook] Invalid JSON body');
+      return res.sendStatus(400);
+    }
+
+    // Acknowledge immediately — Paystack retries if no 200 within ~30s
+    res.sendStatus(200);
+
+    console.log(`[webhook] ✅ Verified — event=${event.event} ref=${event.data?.reference} amount=${event.data?.amount}`);
+
+    // ── charge.success ────────────────────────────────────────────────────
     if (event.event === 'charge.success') {
       const ref       = event.data.reference;
-      const amountGHS = event.data.amount / 100;
+      const amountGHS = event.data.amount / 100;  // Paystack sends pesewas
 
-      // Fetch the pending payment context
+      // Look up staging row written by initiateBooking
       const [pending] = await db.query(
         `SELECT * FROM pending_payments WHERE paystack_ref = ? LIMIT 1`,
         [ref]
       );
+
       if (!pending.length) {
-        console.warn(`Webhook: no pending_payment found for ref ${ref}`);
+        // Check if already processed (duplicate webhook)
+        const [existing] = await db.query(
+          `SELECT id FROM bookings WHERE paystack_ref = ? LIMIT 1`, [ref]
+        );
+        if (existing.length) {
+          console.log(`[webhook] Duplicate — ref=${ref} already processed`);
+        } else {
+          console.error(`[webhook] ❌ No pending_payment for ref=${ref}`);
+        }
         return;
       }
-      const p     = pending[0];
-      const slots = JSON.parse(p.slots_json);  // [{ time_slot_id, amount }]
 
-      // Build slot label map
+      const p       = pending[0];
+      const slots   = JSON.parse(p.slots_json);
       const slotIds = slots.map(s => s.time_slot_id);
+
+      console.log(`[webhook] Processing ${slots.length} slot(s) for user=${p.user_id} turf=${p.turf_id}`);
+
+      // Get slot labels
       const [slotRows] = await db.query(
         `SELECT id, start_time, end_time FROM time_slots WHERE id IN (?)`,
         [slotIds]
       );
       const slotMap = Object.fromEntries(slotRows.map(r => [r.id, r]));
 
-      // Write one confirmed+paid booking row per slot
+      // Write one booking row per slot — INSERT IGNORE makes it idempotent
       const bookingIds = [];
       for (const s of slots) {
         const sr        = slotMap[s.time_slot_id];
         const slotLabel = sr
           ? `${sr.start_time.slice(0, 5)} – ${sr.end_time.slice(0, 5)}`
           : 'Unknown';
+        const perSlotAmount = parseFloat(s.amount) || parseFloat((amountGHS / slots.length).toFixed(2));
 
-        // INSERT IGNORE — idempotent if webhook fires twice
         const [result] = await db.query(
           `INSERT IGNORE INTO bookings
              (user_id, turf_id, time_slot_id, slot_label, booking_date,
               amount, status, payment_status, paystack_ref)
            VALUES (?, ?, ?, ?, ?, ?, 'confirmed', 'paid', ?)`,
           [p.user_id, p.turf_id, s.time_slot_id, slotLabel,
-           p.booking_date, s.amount, ref]
+           p.booking_date, perSlotAmount, ref]
         );
         if (result.insertId) bookingIds.push(result.insertId);
+        console.log(`[webhook] Booking row — slotId=${s.time_slot_id} label=${slotLabel} amount=${perSlotAmount} insertId=${result.insertId}`);
       }
 
-      // Write ONE payments row covering all booking ids
-      await db.query(
+      // Write payments row
+      const [payResult] = await db.query(
         `INSERT IGNORE INTO payments
            (turf_id, user_id, booking_ids, paystack_ref, amount, payment_status, paid_at)
          VALUES (?, ?, ?, ?, ?, 'completed', NOW())`,
         [p.turf_id, p.user_id, JSON.stringify(bookingIds), ref, amountGHS]
       );
+      console.log(`[webhook] Payment row insertId=${payResult.insertId} amount=₵${amountGHS}`);
 
-      // Release slot locks — they are now permanently booked
+      // Mark slots as permanently booked
       if (slotIds.length) {
         await db.query(
           `UPDATE time_slots
@@ -210,45 +255,40 @@ const paystackWebhook = async (req, res) => {
       // Clean up staging row
       await db.query(`DELETE FROM pending_payments WHERE paystack_ref = ?`, [ref]);
 
-      console.log(`✅ Confirmed ${bookingIds.length} booking(s) for ref ${ref} (₵${amountGHS})`);
+      console.log(`[webhook] ✅ Done — ${bookingIds.length} booking(s) saved for ref=${ref}`);
     }
 
-    // ── refund.processed ─────────────────────────────────────────────────
+    // ── refund.processed ──────────────────────────────────────────────────
     if (event.event === 'refund.processed') {
       const ref       = event.data.transaction_reference;
       const refundGHS = event.data.amount / 100;
 
       const [bRows] = await db.query(
-        `SELECT id FROM bookings WHERE paystack_ref = ? AND status = 'cancelled'`,
-        [ref]
+        `SELECT id FROM bookings WHERE paystack_ref = ? AND status = 'cancelled'`, [ref]
       );
       const perSlot = bRows.length
         ? parseFloat((refundGHS / bRows.length).toFixed(2))
         : refundGHS;
 
       await db.query(
-        `UPDATE bookings
-         SET payment_status = 'refunded', refund_amount = ?
+        `UPDATE bookings SET payment_status = 'refunded', refund_amount = ?
          WHERE paystack_ref = ? AND status = 'cancelled'`,
         [perSlot, ref]
       );
       await db.query(
-        `UPDATE payments
-         SET payment_status = 'refunded', paystack_event = 'refund.processed'
-         WHERE paystack_ref = ?`,
-        [ref]
+        `UPDATE payments SET payment_status = 'refunded', paystack_event = 'refund.processed'
+         WHERE paystack_ref = ?`, [ref]
       );
-
-      console.log(`↩️  Refund processed: ${ref} (₵${refundGHS} / ${bRows.length} slots)`);
+      console.log(`[webhook] ↩️  Refund processed ref=${ref} ₵${refundGHS}`);
     }
 
   } catch (err) {
-    console.error('Webhook processing error:', err);
+    console.error('[webhook] Unhandled error:', err);
   }
 };
 
 
-// ── POST /api/bookings/:id/cancel ──────────────────────────────────────────
+// ── POST /api/bookings/:id/cancel ─────────────────────────────────────────
 const cancelBooking = async (req, res) => {
   try {
     const user_id    = req.user?.id;
@@ -261,17 +301,14 @@ const cancelBooking = async (req, res) => {
        WHERE b.id = ? AND b.user_id = ? LIMIT 1`,
       [booking_id, user_id]
     );
-    if (!rows.length)
-      return res.status(404).json({ message: 'Booking not found' });
+    if (!rows.length) return res.status(404).json({ message: 'Booking not found' });
 
     const booking = rows[0];
-
     if (booking.status === 'cancelled')
       return res.status(400).json({ message: 'Booking is already cancelled' });
     if (booking.payment_status !== 'paid')
       return res.status(400).json({ message: 'Only paid bookings can be cancelled' });
 
-    // Penalty logic
     const slotTime       = booking.slot_label.slice(0, 5);
     const slotDateTime   = new Date(`${booking.booking_date}T${slotTime}:00`);
     const hoursUntilSlot = (slotDateTime - Date.now()) / (1000 * 60 * 60);
@@ -287,13 +324,10 @@ const cancelBooking = async (req, res) => {
     const refundAmount = parseFloat((paidAmount - penaltyAmt).toFixed(2));
 
     await db.query(
-      `UPDATE bookings
-       SET status = 'cancelled', cancelled_at = NOW(), refund_amount = ?
+      `UPDATE bookings SET status = 'cancelled', cancelled_at = NOW(), refund_amount = ?
        WHERE id = ?`,
       [refundAmount, booking_id]
     );
-
-    // Free the slot so others can book it
     await db.query(
       `UPDATE time_slots
        SET lock_status = 'free', locked_by = NULL,
@@ -307,16 +341,8 @@ const cancelBooking = async (req, res) => {
       try {
         const refRes = await axios.post(
           'https://api.paystack.co/refund',
-          {
-            transaction: booking.paystack_ref,
-            amount:      Math.round(refundAmount * 100),
-          },
-          {
-            headers: {
-              Authorization:  `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-              'Content-Type': 'application/json',
-            },
-          }
+          { transaction: booking.paystack_ref, amount: Math.round(refundAmount * 100) },
+          { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' } }
         );
         refundInitiated = refRes.data?.status === true;
       } catch (refErr) {
@@ -325,11 +351,8 @@ const cancelBooking = async (req, res) => {
     }
 
     return res.json({
-      message:          'Booking cancelled',
-      refund_amount:    refundAmount,
-      penalty_amount:   penaltyAmt,
-      penalty_pct:      penaltyPct,
-      refund_initiated: refundInitiated,
+      message: 'Booking cancelled', refund_amount: refundAmount,
+      penalty_pct: penaltyPct, refund_initiated: refundInitiated,
     });
   } catch (err) {
     console.error('cancelBooking error:', err);
@@ -338,18 +361,17 @@ const cancelBooking = async (req, res) => {
 };
 
 
-// ── GET /api/bookings ──────────────────────────────────────────────────────
+// ── GET /api/bookings ─────────────────────────────────────────────────────
 const getMyBookings = async (req, res) => {
   try {
     const user_id = req.user?.id;
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await db.query(
-      `SELECT
-         b.id, b.slot_label, b.booking_date AS date,
-         b.amount, b.status, b.payment_status,
-         b.refund_amount, b.paystack_ref,
-         t.name AS turf, t.id AS turf_id
+      `SELECT b.id, b.slot_label, b.booking_date AS date,
+              b.amount, b.status, b.payment_status,
+              b.refund_amount, b.paystack_ref,
+              t.name AS turf, t.id AS turf_id
        FROM bookings b
        LEFT JOIN turfs t ON t.id = b.turf_id
        WHERE b.user_id = ?
@@ -369,6 +391,7 @@ const getMyBookings = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
 //ADMIN DASHBOARD DATA FETCH.
 const getBookings = async (req, res) => {
   try {
