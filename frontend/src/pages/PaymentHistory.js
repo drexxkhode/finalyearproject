@@ -11,29 +11,6 @@ const PaymentHistory = () => {
       destroy: true, // avoids re-initialization errors
       paging: true,
       searching: true,
-      dom: "Bfrtip",
-      buttons: [
-        {
-          extend: "copy",
-          className: "btn btn-primary btn-sm",
-          text: '<i class="bi bi-clipboard"></i> Copy',
-        },
-        {
-          extend: "excel",
-          className: "btn btn-success btn-sm",
-          text: '<i class="bi bi-file-earmark-excel"></i> Excel',
-        },
-        {
-          extend: "pdf",
-          className: "btn btn-danger btn-sm",
-          text: '<i class="bi bi-filetype-pdf"></i> PDF',
-        },
-        {
-          extend: "print",
-          className: "btn btn-info btn-sm",
-          text: '<i class="bi bi-printer"></i> Print',
-        },
-      ],
     });
 
     // Cleanup on unmount
@@ -46,13 +23,66 @@ const PaymentHistory = () => {
 
   return (
     <>
+
+      <div className="row gx-3">
+        <div className="col-xl-3 col-sm-6 col-12">
+          <div className="card mb-3">
+            <div className="card-body">
+              <div className="mb-2">
+                <i className="bi bi-calendar-check fs-1 text-primary lh-1"></i>
+              </div>
+              <div className="d-flex align-items-center justify-content-between">
+                <h5 className="m-0 text-secondary fw-normal">Total Bookings</h5>
+                <h3 className="m-0 text-primary">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-xl-3 col-sm-6 col-12">
+          <div className="card mb-3">
+            <div className="card-body">
+              <div className="mb-2">
+                <i className="bi bi-cash-stack fs-1 text-danger lh-1"></i>
+              </div>
+              <div className="d-flex align-items-center justify-content-between">
+                <h5 className="m-0 text-secondary fw-normal">Refunded</h5>
+                <h3 className="m-0 text-primary">₡ 000.00</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-xl-3 col-sm-6 col-12">
+          <div className="card mb-3">
+            <div className="card-body">
+              <div className="mb-2">
+                <i className="bi bi-people fs-1 text-primary lh-1"></i>
+              </div>
+              <div className="d-flex align-items-center justify-content-between">
+                <h5 className="m-0 text-secondary fw-normal">Total</h5>
+                <h3 className="m-0 text-primary">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="col-xl-3 col-sm-6 col-12">
+          <div className="card mb-3">
+            <div className="card-body">
+              <div className="mb-2">
+                <i className="bi bi-chat fs-1 text-primary lh-1"></i>
+              </div>
+              <div className="d-flex align-items-center justify-content-between">
+                <h5 className="m-0 text-secondary fw-normal">Completed</h5>
+                <h3 className="m-0 text-primary">0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Row end */}
       <div class="col-xxl-12">
         <div class="card mb-3">
           <div className="card-header d-flex justify-content-between align-items-center">
             <h5 className="card-title">Payment History</h5>
-            <button className="btn btn-outline-primary btn-sm ms-auto">
-              Download
-            </button>
           </div>
           <div class="card-body">
             <div class="table-responsive">

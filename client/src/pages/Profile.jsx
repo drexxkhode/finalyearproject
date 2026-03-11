@@ -214,8 +214,8 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
       )
       // Controller returns { message } only — build updated user locally
       const updatedUser = { ...user, name: form.name, email: form.email, contact: form.contact }
-      localStorage.setItem('user', JSON.stringify(updatedUser))
-      onUserUpdate(updatedUser)
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      onUserUpdate(updatedUser);
       showSuccess('Profile updated successfully!')
     } catch (e) {
       showErr(e.response?.data?.message ?? 'Failed to update profile')

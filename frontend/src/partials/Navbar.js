@@ -19,20 +19,20 @@ function Navbar() {
         </div>
 
         <div className="app-brand py-2 ms-3">
-          <a href="index.html" className="d-sm-block d-none">
+          <Link  to={"/"} className="d-sm-block d-none">
             <img
-              src="assets/images/logo.svg"
+              src="/assets/images/logo.svg"
               className="logo"
-              alt="Bootstrap Gallery"
+              alt="LOGO"
             />
-          </a>
-          <a href="index.html" className="d-sm-none d-block">
+          </Link>
+          <Link to={"/"} className="d-sm-none d-block">
             <img
-              src="assets/images/logo-sm.svg"
+              src="/assets/images/logo-sm.svg"
               className="logo"
-              alt="Bootstrap Gallery"
+              alt="LOGO"
             />
-          </a>
+          </Link>
         </div>
 
         <div className="header-actions col">

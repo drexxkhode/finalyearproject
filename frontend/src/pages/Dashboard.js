@@ -30,10 +30,10 @@ getTotal();
           <div className="card mb-3">
             <div className="card-body">
               <div className="mb-2">
-                <i className="bi bi-calendar-check fs-1 text-primary lh-1"></i>
+                <i className="bi bi-calendar-check fs-1 text-secondary lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Total Bookings</h5>
+                <h5 className="m-0 text-secondary fw-normal">Bookings</h5>
                 <h3 className="m-0 text-primary">{total.total_bookings}</h3>
               </div>
             </div>
@@ -43,11 +43,11 @@ getTotal();
           <div className="card mb-3">
             <div className="card-body">
               <div className="mb-2">
-                <i className="bi bi-cash-stack fs-1 text-primary lh-1"></i>
+                <i className="bi bi-cash-stack fs-1 text-warning lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Total Payments</h5>
-                <h3 className="m-0 text-primary">{total.total_payments}</h3>
+                <h5 className="m-0 text-secondary fw-normal">Payments</h5>
+                <h3 className="m-0 text-primary">₡ {total.total_payments}</h3>
               </div>
             </div>
           </div>
@@ -59,7 +59,7 @@ getTotal();
                 <i className="bi bi-people fs-1 text-primary lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Total Users</h5>
+                <h5 className="m-0 text-secondary fw-normal">Users</h5>
                 <h3 className="m-0 text-primary">{total.total_admins}</h3>
               </div>
             </div>
@@ -69,10 +69,10 @@ getTotal();
           <div className="card mb-3">
             <div className="card-body">
               <div className="mb-2">
-                <i className="bi bi-chat fs-1 text-primary lh-1"></i>
+                <i className="bi bi-chat fs-1 text-success lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Total Enquiries</h5>
+                <h5 className="m-0 text-secondary fw-normal">Enquiries</h5>
                 <h3 className="m-0 text-primary">{total.total_enquiries}</h3>
               </div>
             </div>

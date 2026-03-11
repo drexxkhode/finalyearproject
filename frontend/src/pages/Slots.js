@@ -80,7 +80,7 @@ function CalendarComponent() {
   )
 }
 
-export default function Events() {
+export default function Slots() {
   return (
     <div className="row gx-3">
       <div className="col-xxl-12">

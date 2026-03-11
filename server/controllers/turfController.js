@@ -103,7 +103,7 @@ exports.getTurfName = async (req, res) => {
          WHERE payment_status = 'completed' AND turf_id = ?) AS total_payments,
 
         (SELECT COUNT(*) FROM bookings 
-         WHERE status = 'confirmed' AND turf_id = ?) AS total_bookings,
+         WHERE status = 'completed' AND turf_id = ?) AS total_bookings,
 
         (SELECT COUNT(*) FROM admins WHERE turf_id = ?) AS total_admins,
 

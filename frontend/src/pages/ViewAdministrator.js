@@ -214,7 +214,7 @@ if (hasError) {
       await fetchDetail();
       toast.success(res?.data?.message || "Record Updated Successfully!", {
         position: "top-right",
-        onClose: ()=> window.location.href='/administrators',
+        onClose: ()=> window.location.href='/users',
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,

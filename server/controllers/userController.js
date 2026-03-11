@@ -102,6 +102,7 @@ exports.login = async (req, res) => {
         name: user.name,
         contact: user.contact,
         photo: photoUrl(user.photo),
+        created_at: user.created_at,
       },
     });
   } catch (err) {

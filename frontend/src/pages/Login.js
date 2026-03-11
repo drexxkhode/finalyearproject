@@ -24,19 +24,11 @@ const Login = () => {
 
       // ✅ store token
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("user", JSON.stringify(res.data?.user));
       // ✅ redirect after login
       navigate("/", { replace: true });
     } catch (err) {
       setError(err?.response?.data?.message || "Login failed");
-      toast.error("Login failed!", {
-        position: "top-center",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
     }
   };
 

@@ -5,18 +5,18 @@ function Hero() {
 
   const routes = [
     { path: '/', name: 'Dashboard' },
-    { path: '/events', name: 'Events Calendar' },
+    { path: '/slots', name: 'Manage Time Slots' },
     { path: '/profile', name: 'My Profile' },
     { path: '/profile/:id', name: 'User Profile' },
     { path: '/bookings', name: 'Bookings' },
     { path: '/enquiries', name: 'Enquiries' },
-    { path: '/administrators', name: 'Administrators' },
+    { path: '/users', name: 'Active Users' },
     { path: '/history/bookings', name: 'Booking History' },
     { path: '/history/payments', name: 'Payment History' },
     { path: '/report/payments', name: 'Payment Report' },
     { path: '/report/bookings', name: 'Booking Report' },
     { path: '/register', name: 'Register' },
-    { path: '/edit-details/:id', name: 'Edit Details' },
+    { path: '/edit-details/:id', name: 'Edit User Details' },
     { path: '/settings', name: 'Settings' },
     { path: '/reset-password', name: 'Reset Password' },
   ];

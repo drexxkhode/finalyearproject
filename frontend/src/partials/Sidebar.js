@@ -88,12 +88,12 @@ const getTurfName = async () =>{
 
           <li
             className={
-              location.pathname === "/events" ? "active current-page" : ""
+              location.pathname === "/slots" ? "active current-page" : ""
             }
           >
-            <NavLink to="/events">
+            <NavLink to="/slots">
               <i className="bi bi-calendar-event text-danger"></i>
-              <span className="menu-text">Events</span>
+              <span className="menu-text">Manage Slots</span>
             </NavLink>
           </li>
 
@@ -104,7 +104,7 @@ const getTurfName = async () =>{
               onClick={() => handleToggle("invoices")}
               style={{ cursor: "pointer" }}
             >
-<i className="bi bi-clock-history text-primary"></i>
+           <i className="bi bi-clock-history text-primary"></i>
               <span className="menu-text">History</span>
             </a>
             <ul className="treeview-menu">
@@ -157,14 +157,14 @@ const getTurfName = async () =>{
           </li>
           <li
             className={
-              location.pathname === "/administrators"
+              location.pathname === "/users"
                 ? "active current-page"
                 : ""
             }
           >
-            <NavLink to="/administrators">
+            <NavLink to="/users">
               <i className="bi bi-person-fill-lock text-info" ></i>
-              <span className="menu-text">Administrators</span>
+              <span className="menu-text">Users</span>
             </NavLink>
           </li>
           <li

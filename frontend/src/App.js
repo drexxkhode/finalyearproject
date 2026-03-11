@@ -13,7 +13,7 @@ import BookingHistory from './pages/BookingHistory';
 import PaymentHistory from './pages/PaymentHistory';
 import BookingReport from './pages/BookingReport';
 import PaymentReport from './pages/PaymentReport';
-import Events from './pages/Events';
+import Slots from './pages/Slots';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Update from './pages/ViewAdministrator';
@@ -57,10 +57,10 @@ function App() {
                         <Route path="/history/payments" element={<PaymentHistory />} />
                         <Route path="/report/bookings" element={<BookingReport />} />
                         <Route path="/report/payments" element={<PaymentReport />} />
-                        <Route path="/administrators" element={<Administrators />} />
+                        <Route path="/users" element={<Administrators />} />
                         <Route path="/edit-details/:id" element={<Update />} />
                         <Route path='/register' element={<Register />} />
-                        <Route path="/events" element={<Events />} />
+                        <Route path="/slots" element={<Slots />} />
                         <Route path="/profile/:id" element={<Profile />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/settings" element={<Settings />} />
