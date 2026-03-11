@@ -198,8 +198,19 @@ const paystackWebhook = async (req, res) => {
         return;
       }
 
-      const p       = pending[0];
-      const slots   = JSON.parse(p.slots_json);
+      const p = pending[0];
+
+      // Parse slots_json safely — guard against '[object Object]' if DB column was wrong type
+      let slots;
+      try {
+        slots = typeof p.slots_json === 'string' ? JSON.parse(p.slots_json) : p.slots_json;
+        if (!Array.isArray(slots)) throw new Error('slots_json is not an array');
+      } catch (parseErr) {
+        console.error('[webhook] slots_json parse failed:', parseErr.message);
+        console.error('[webhook] raw slots_json value:', p.slots_json);
+        console.error('[webhook] Fix: run ALTER TABLE pending_payments MODIFY COLUMN slots_json JSON NOT NULL on your DB');
+        return;
+      }
       const slotIds = slots.map(s => s.time_slot_id);
 
       console.log(`[webhook] Processing ${slots.length} slot(s) for user=${p.user_id} turf=${p.turf_id}`);
