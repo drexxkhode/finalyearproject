@@ -4,13 +4,16 @@ import axios from 'axios'
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ?? ''
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
-const SK_STEP = 'tf_bk_step'
-const SK_INFO = 'tf_bk_info'
-const SK_REF  = 'tf_bk_ref'
-const SK_PAID = 'tf_bk_paid'
+const SK_STEP        = 'tf_bk_step'
+const SK_INFO        = 'tf_bk_info'
+const SK_REF         = 'tf_bk_ref'
+const SK_PAID        = 'tf_bk_paid'
+const SK_SLOTS_SNAP  = 'tf_bk_slots'   // snapshot of lockedSlots at pay time
+const SK_AMOUNT_SNAP = 'tf_bk_amount'  // snapshot of totalAmount at pay time
 
 function clearSession() {
-  [SK_STEP, SK_INFO, SK_REF, SK_PAID].forEach(k => sessionStorage.removeItem(k))
+  [SK_STEP, SK_INFO, SK_REF, SK_PAID, SK_SLOTS_SNAP, SK_AMOUNT_SNAP]
+    .forEach(k => sessionStorage.removeItem(k))
 }
 
 // Loads Paystack script and resolves when window.PaystackPop is ready
@@ -59,6 +62,14 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const [err,        setErr]        = useState('')
   const [bookingRef, setBookingRef] = useState(() => sessionStorage.getItem(SK_REF) ?? null)
   const [psReady,    setPsReady]    = useState(!!window.PaystackPop)
+  // Snapshot at pay time — so confirmation screen shows correct values
+  // even if lockedSlots state is cleared by timer expiry after payment
+  const [slotsSnap,  setSlotsSnap]  = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem(SK_SLOTS_SNAP)) ?? [] } catch { return [] }
+  })
+  const [amountSnap, setAmountSnap] = useState(() => {
+    return parseFloat(sessionStorage.getItem(SK_AMOUNT_SNAP) ?? '0')
+  })
   const payingRef = useRef(false)
 
   // Persist step + info across refreshes
@@ -112,7 +123,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
       // ── Step 1: get the real ref from backend FIRST ────────────────────
       // This MUST happen before openIframe() so the webhook can find it.
       const initRes = await axios.post(
-        `${API}/bookings`,
+        `${API}/api/bookings`,
         {
           turf_id:      turf.id,
           date,
@@ -127,6 +138,14 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
 
       const { paystack_ref } = initRes.data
       console.log('[pay] got ref from backend:', paystack_ref)
+
+      // Snapshot slots + amount NOW before any state changes
+      const snapSlots  = lockedSlots.map(l => ({ slotId: l.slotId, label: l.label }))
+      const snapAmount = totalAmount
+      sessionStorage.setItem(SK_SLOTS_SNAP,  JSON.stringify(snapSlots))
+      sessionStorage.setItem(SK_AMOUNT_SNAP, String(snapAmount))
+      setSlotsSnap(snapSlots)
+      setAmountSnap(snapAmount)
 
       // ── Step 2: open Paystack with the BACKEND ref ─────────────────────
       // Mobile browsers (Safari/Chrome) require openIframe() to be called
@@ -181,13 +200,29 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const lineCls = i => step > i ? 'tf-step-line-done' : 'tf-step-line-idle'
 
   // ── Confirmed ────────────────────────────────────────────────────────────
+  // Use snapshots — lockedSlots may be empty by the time this renders
+  // Read directly from sessionStorage — state updates are async and may
+  // not be set yet on the first render after payment callback fires
+  const displaySlots = (() => {
+    try {
+      const s = JSON.parse(sessionStorage.getItem(SK_SLOTS_SNAP))
+      if (Array.isArray(s) && s.length > 0) return s
+    } catch {}
+    return slotsSnap.length > 0 ? slotsSnap : lockedSlots
+  })()
+  const displayAmount = (() => {
+    const v = parseFloat(sessionStorage.getItem(SK_AMOUNT_SNAP))
+    if (v > 0) return v
+    return amountSnap > 0 ? amountSnap : totalAmount
+  })()
+
   if (paid) return (
     <div className="tf-animate-in row justify-content-center">
       <div className="col-12 col-md-8 col-lg-6 text-center py-5">
         <div className="display-1 mb-3">🎉</div>
         <h3 className="font-condensed fw-bolder text-primary mb-1">BOOKING CONFIRMED!</h3>
         <p className="text-muted mb-2">
-          Your {lockedSlots.length > 1 ? 'slots are' : 'slot is'} secured. See you on the turf!
+          Your {displaySlots.length > 1 ? 'slots are' : 'slot is'} secured. See you on the turf!
         </p>
         <p className="text-muted small mb-4">
           <i className="bi bi-info-circle me-1"></i>
@@ -197,9 +232,9 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
           {[
             ['Reference',  bookingRef ?? '—'],
             ['Turf',       turf.name],
-            ['Slots',      lockedSlots.map(l => l.label).join(', ')],
+            ['Slots',      displaySlots.map(l => l.label).join(', ') || '—'],
             ['Date',       info.date || new Date().toLocaleDateString('en-GB')],
-            ['Total Paid', `₵${totalAmount}.00`],
+            ['Total Paid', `₵${displayAmount}.00`],
           ].map(([k, v]) => (
             <div key={k} className="tf-divider-row">
               <span className="text-muted">{k}</span>
