@@ -1,19 +1,9 @@
 import { useState, useEffect } from 'react'
 import TurfCard from '../components/TurfCard'
-import MapView from './Mapview';
-import axios from 'axios';
-const API = import.meta.env.VITE_API_URL ?? 'http://192.168.43.99:5000';
+import MapView from './MapView'
+import axios from 'axios'
 
-const FALLBACK_PHOTOS = [
-  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80',
-  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80',
-  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
-  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80',
-]
-
-const PAGE_SIZE = 12;
-
-
+const PAGE_SIZE = 12
 
 export default function Home({ slots = {}, onOpenTurf, activeTab }) {
   const [search,  setSearch]  = useState('')
@@ -25,7 +15,8 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    axios.get(`${API}/map/turf-data`, {
+    const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
+    axios.get(`${API}/turf/turf-data`, {
       headers: { Authorization: `Bearer ${token}` },
     }).then(res => {
       setTurfs(res.data.data.map(t => ({
@@ -33,7 +24,8 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
         pricePerHour: t.price_per_hour,
         location:     t.district || t.location,
         address:      t.location,
-        image:        FALLBACK_PHOTOS[t.id % FALLBACK_PHOTOS.length],
+        cover_image:  t.cover_image ?? null,
+        images:       t.images       ?? [],
         distance:     t.distance ?? 0,
         rating:       t.rating   ?? 4.5,
         capacity:     t.capacity ?? '5',
@@ -153,8 +145,8 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
           <div className="col-12 col-lg-7">
             <div className="tf-rec-highlight">
               <span className="tf-badge tf-badge-yellow">⭐ TOP PICK</span>
-              <img src={rec[0].image} alt={rec[0].name} className="img-fluid rounded mb-3"
-                onError={e => { e.target.src = FALLBACK_PHOTOS[0] }} />
+              <img src={rec[0].cover_image || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={rec[0].name} className="img-fluid rounded mb-3"
+                onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }} />
               <div className="fw-bold fs-4">{rec[0].name}</div>
               <small className="text-muted">{rec[0].location}</small>
               <div className="mt-3">
@@ -171,8 +163,8 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
                 <div key={t.id} className="d-flex align-items-center gap-3 py-2 border-bottom" style={{ cursor: 'pointer' }}
                   onClick={() => onOpenTurf(t)}>
                   <div className="fw-bold">{i + 1}</div>
-                  <img src={t.image} alt={t.name} width={44} height={44} className="rounded"
-                    onError={e => { e.target.src = FALLBACK_PHOTOS[0] }} />
+                  <img src={t.cover_image || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={t.name} width={44} height={44} className="rounded"
+                    onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }} />
                   <div className="flex-grow-1">
                     <div className="fw-bold small">{t.name}</div>
                     <small className="text-muted">⭐ {t.rating}</small>

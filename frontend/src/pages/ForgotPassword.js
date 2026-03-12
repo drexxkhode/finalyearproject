@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import ClipLoader from "react-spinners/ClipLoader";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
@@ -71,13 +72,13 @@ const ForgotPassword = () => {
             <div className="my-5">
               <div className="border rounded-2 p-4 mt-5">
                 <div className="login-form">
-                  <a href="index.html" className="mb-4 d-flex">
+                  <Link to={"/login"}  className="mb-4 d-flex">
                     <img
-                      src="assets/images/logo.svg"
+                      src="/assets/images/logo.svg"
                       className="img-fluid login-logo"
                       alt="Earth Admin Dashboard"
                     />
-                  </a>
+                  </Link>
                   <h5 className="fw-light mb-5 lh-2">
                     In order to access your account, please enter the email you
                     provided during the registration process.

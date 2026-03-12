@@ -13,7 +13,7 @@ headers: {
   "Content-Type": 'application/json'
 }
 });
-setTotal(res.data);
+setTotal(res?.data);
 } catch (err) {
   console.log(err.res?.data?.message || "Could not fetch dashboard total data");
 }

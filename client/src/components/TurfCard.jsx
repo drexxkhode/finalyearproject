@@ -1,16 +1,9 @@
-import { TURF_PHOTOS } from '../data/turfs';
-
-const FALLBACK_PHOTOS = [
-  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80',
-  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80',
-  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
-  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80',
-]
+const FALLBACK = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'
 
 export default function TurfCard({ turf, slots = {}, onOpen }) {
   const avail = slots[turf.id]?.filter(s => s.status === 'available').length ?? 0
-  const photos = TURF_PHOTOS[turf.id]
-  const coverImg = photos?.[0] ?? FALLBACK_PHOTOS[turf.id % FALLBACK_PHOTOS.length]
+  // cover_image is the URL of the is_cover=1 image, joined in the API response
+  const coverImg = turf.cover_image || FALLBACK
 
   return (
     <div className="tf-card h-100" onClick={() => onOpen(turf)}>
@@ -18,7 +11,7 @@ export default function TurfCard({ turf, slots = {}, onOpen }) {
         <img
           src={coverImg}
           alt={turf.name}
-          onError={e => { e.target.src = FALLBACK_PHOTOS[0] }}
+          onError={e => { e.target.src = FALLBACK }}
         />
         <div className="tf-card-cover-overlay" />
         <div className="tf-card-cover-badges">

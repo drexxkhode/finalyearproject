@@ -1,67 +1,9 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
-
-/** Same helpers as Profile.jsx — must stay in sync */
-const toAvatarSrc = (photo) => {
-  if (!photo) return null
-  if (photo.startsWith('data:') || photo.startsWith('blob:') || photo.startsWith('http')) return photo
-  return `${API}/images/${photo}`
-}
-const getCachedAvatar = (userId) => {
-  try { return localStorage.getItem(`avatar_preview_${userId}`) ?? null } catch { return null }
-}
-
-/**
- * Shared avatar component — shows image if available, falls back to
- * colored initials circle. onError handles broken URLs gracefully.
- */
-function AvatarCircle({ name, size = 32, userId, photo, onClick }) {
-  const [imgBroken, setImgBroken] = useState(false)
-
-  const initials   = (name ?? 'U').split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
-  const colors     = ['#0d6efd', '#198754', '#dc3545', '#0dcaf0', '#6f42c1', '#fd7e14']
-  const color      = colors[(name?.charCodeAt(0) ?? 0) % colors.length]
-
-  // Priority: cached base64 (survives refresh) → server URL from filename
-  const src        = getCachedAvatar(userId) ?? toAvatarSrc(photo)
-  const showImage  = !!src && !imgBroken
-
-  return (
-    <button
-      onClick={onClick}
-      title="View Profile"
-      style={{
-        width: size, height: size, borderRadius: '50%',
-        background: showImage ? 'transparent' : `linear-gradient(135deg, ${color}, ${color}cc)`,
-        border: '2px solid #fff',
-        boxShadow: `0 2px 8px ${color}44`,
-        color: '#fff', fontWeight: 900,
-        fontSize: size * 0.36,
-        fontFamily: "'Barlow Condensed',sans-serif",
-        cursor: 'pointer', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0, padding: 0,
-        overflow: 'hidden',
-      }}
-    >
-      {showImage
-        ? <img
-            src={src}
-            alt={name}
-            onError={() => setImgBroken(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-          />
-        : (initials || '?')
-      }
-    </button>
-  )
-}
-
 export default function Navbar({ TABS, activeTab, onTabChange, user, logout, notify, onProfile }) {
-  const navigate        = useNavigate()
-  const location        = useLocation()
+  const navigate      = useNavigate()
+  const location      = useLocation()
   const [open, setOpen] = useState(false)
 
   // Close menu on route change
@@ -82,12 +24,38 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
 
   const closeAndGo = (path) => { setOpen(false); navigate(path) }
 
-  const firstName  = user?.name?.split(' ')[0] || ''
+  const colors = ['#0d6efd','#198754','#dc3545','#0dcaf0','#6f42c1','#fd7e14']
+  const avatarColor = colors[(user?.name?.charCodeAt(0) ?? 0) % colors.length]
+  const initials = (user?.name ?? 'U').split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
+  const firstName = user?.name?.split(' ')[0] || ''
 
-  // Always read fresh from localStorage so photo updates are reflected immediately
-  const storedUser = (() => { try { return JSON.parse(localStorage.getItem('user')) ?? {} } catch { return {} } })()
-  const userPhoto  = storedUser.photo   ?? user?.photo   ?? null
-  const userId     = storedUser.id      ?? user?.id      ?? null
+  const AvatarBtn = ({ size = 32, onClick }) => {
+    const [imgErr, setImgErr] = React.useState(false)
+    if (user?.photo && !imgErr) return (
+      <button onClick={onClick} title="View Profile"
+        style={{ width: size, height: size, borderRadius: '50%',
+          border: '2px solid #fff', padding: 0, cursor: 'pointer',
+          boxShadow: `0 2px 8px ${avatarColor}44`, flexShrink: 0,
+          overflow: 'hidden', background: 'none' }}>
+        <img src={user.photo} alt={user.name}
+          onError={() => setImgErr(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      </button>
+    )
+    return (
+      <button onClick={onClick} title="View Profile"
+        style={{ width: size, height: size, borderRadius: '50%',
+          background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)`,
+          border: '2px solid #fff', boxShadow: `0 2px 8px ${avatarColor}44`,
+          color: '#fff', fontWeight: 900, fontSize: size * 0.36,
+          fontFamily: "'Barlow Condensed',sans-serif",
+          cursor: 'pointer', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+        {initials}
+      </button>
+    )
+  }
 
   return (
     <>
@@ -130,13 +98,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
               {/* Desktop: avatar + name */}
               {user && (
                 <div className="d-none d-md-flex align-items-center gap-2">
-                  <AvatarCircle
-                    name={user.name}
-                    size={32}
-                    userId={userId}
-                    photo={userPhoto}
-                    onClick={onProfile}
-                  />
+                  <AvatarBtn onClick={onProfile} />
                   <span
                     className="text-muted small"
                     style={{ cursor: 'pointer' }}
@@ -210,7 +172,10 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
                 <div className="tf-brand-icon">⚽</div>
                 <div className="tf-brand-title">TURFARENA</div>
               </div>
-              <button className="btn btn-light btn-sm" onClick={() => setOpen(false)}>
+              <button
+                className="btn btn-light btn-sm"
+                onClick={() => setOpen(false)}
+              >
                 <i className="bi bi-x-lg fs-5"></i>
               </button>
             </div>
@@ -226,13 +191,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
                   marginBottom: 16, cursor: 'pointer',
                 }}
               >
-                <AvatarCircle
-                  name={user.name}
-                  size={44}
-                  userId={userId}
-                  photo={userPhoto}
-                  onClick={() => {}}
-                />
+                <AvatarBtn size={44} onClick={() => {}} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a2e' }}>{user.name}</div>
                   <div style={{ fontSize: 12, color: '#6c757d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -298,6 +257,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
         </>
       )}
 
+      {/* Slide-down animation */}
       <style>{`
         @keyframes slideDown {
           from { opacity: 0; transform: translateY(-12px); }

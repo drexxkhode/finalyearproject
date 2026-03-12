@@ -42,7 +42,7 @@ const Login = () => {
                 <div className="login-form">
                   <a href="#" className="mb-4 d-flex">
                     <img
-                      src="assets/images/logo.svg"
+                      src="/assets/images/logo.svg"
                       className="img-fluid login-logo"
                       alt="Earth Admin Dashboard"
                     />

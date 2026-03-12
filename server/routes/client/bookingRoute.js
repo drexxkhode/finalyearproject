@@ -15,6 +15,6 @@ router.post('/',              auth, initiateBooking);   // initiate (pending)
 router.get('/mybookings',               auth, getMyBookings);     // my bookings
 router.post('/:id/cancel',    auth, cancelBooking);     // cancel + refund
 router.get('/slots',               getBookedSlots);     // available slots (public)
-router.get('/get-bookings',            getBookings);     // available slots (public)
+router.get('/get-bookings',       auth,     getBookings);     // available slots (public)
 
 module.exports = router;

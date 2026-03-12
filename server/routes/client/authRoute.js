@@ -10,6 +10,11 @@ const {
   resetPassword
 } = require("../../controllers/userController");
 
+const { upload }               = require('../../middleware/upload');
+const { uploadProfilePhoto,
+        deleteProfilePhoto }   = require('../../controllers/userPhotoController');
+
+
 const protect = require("../../middleware/auth");
 const RateLimit  = require("../../middleware/RateLimit");
 
@@ -26,9 +31,17 @@ router.put("/update-user/:id", protect, updateUser);
 router.delete("/delete-user", protect, deleteUser);
 router.put("/change-password/:id", protect, changePassword);
 
+
+// Upload profile photo — single file, field name must be 'photo'
+router.put('/profile/photo',  protect, upload.single('photo'), uploadProfilePhoto);
+
+// Remove profile photo
+router.delete('/profile/photo', protect, deleteProfilePhoto);
+
 /* PASSWORD RESET */
 
 router.post("/forgot-password", RateLimit, forgotPassword);
 router.post("/reset-password", resetPassword);
 
 module.exports = router;
+

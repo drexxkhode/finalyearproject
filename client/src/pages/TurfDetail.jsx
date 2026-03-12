@@ -1,11 +1,7 @@
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 import EnquiriesSection from '../components/EnquiriesSection'
-
-const FALLBACK_PHOTOS = [
-  'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80',
-  'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&q=80',
-  'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&q=80',
-  'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&q=80',
-]
+import Gallery from '../components/Gallery'
 
 export default function TurfDetail({
   turf, slots, loadedTurfs, lockedSlots, user,
@@ -24,7 +20,20 @@ export default function TurfDetail({
     ? turf.amenities
     : turf.amenities ? turf.amenities.split(',').map(a => a.trim()) : []
 
-  const coverImg = FALLBACK_PHOTOS[turf.id % FALLBACK_PHOTOS.length]
+  // Fetch full images array for Gallery — listing only has cover_image
+  const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
+  const [turfImages, setTurfImages] = useState(turf.images ?? [])
+
+  useEffect(() => {
+    if (!turf?.id) return
+    const token = localStorage.getItem('token')
+    axios.get(`${API}/turf/turf-data/${turf.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then(res => { if (res.data.images) setTurfImages(res.data.images) })
+    .catch(() => {})  // silently fall back to empty — Gallery shows fallback
+  }, [turf.id])
+
 
   const handleSlotClick = s => {
     if (!user)                                        { notify('Please sign in to book', 'e'); return }
@@ -55,11 +64,7 @@ export default function TurfDetail({
         {/* LEFT */}
         <div className="col-12 col-lg-6">
           <div className="rounded-4 overflow-hidden mb-3" style={{ height: 260 }}>
-            <img
-              src={turf.image || coverImg} alt={turf.name}
-              className="w-100 h-100 object-fit-cover"
-              onError={e => { e.target.src = FALLBACK_PHOTOS[0] }}
-            />
+            <Gallery images={turfImages} />
           </div>
 
           <div className="tf-info-panel">
