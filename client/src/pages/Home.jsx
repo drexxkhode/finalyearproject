@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import TurfCard from '../components/TurfCard'
-import MapView from './MapView'
-import axios from 'axios'
+import { useState, useEffect } from 'react';
+import TurfCard from '../components/TurfCard';
+import MapView from './Mapview';
+import axios from 'axios';
 
 const PAGE_SIZE = 12
 
