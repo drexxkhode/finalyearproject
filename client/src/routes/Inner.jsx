@@ -8,6 +8,7 @@ import MobileBottomNav from '../partials/MobileBottomNav'
 import Notification from '../components/Notification'
 import AuthScreen from '../components/AuthScreen'
 import LostPassword from '../components/LostPassword'
+import ResetPassword from '../components/ResetPassword'
 
 import Home from '../pages/Home'
 import TurfDetail from '../pages/TurfDetail'
@@ -109,8 +110,11 @@ export default function Inner() {
           <AuthScreen onSuccess={(u) => { setUser(u); notify(`Welcome, ${u.name}! 👋`) }} />
         } />
         <Route path="/lost-password" element={<LostPassword />} />
+      <Route to={"/reset-password/:token"} element={<ResetPassword/>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+      
+
     </>
   )
 
