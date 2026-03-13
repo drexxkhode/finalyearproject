@@ -33,6 +33,7 @@ const getAdminPayments = async (req, res) => {
          p.paid_at, p.created_at,
          u.name  AS user_name,
          u.email AS user_email,
+         u.contact AS user_contact,
          -- Get booking date from first booking in booking_ids
          (SELECT b.booking_date FROM bookings b
           WHERE b.paystack_ref = p.paystack_ref

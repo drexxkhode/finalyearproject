@@ -148,7 +148,6 @@ exports.changePassword = async (req, res) => {
   try {
     const userId = req?.user?.id;
     const { currentPassword, newPassword } = req.body;
-    console.log(req.body, userId);
 
     if (!currentPassword || !newPassword)
       return res.status(400).json({ message: "All fields are required" });
@@ -174,7 +173,7 @@ exports.changePassword = async (req, res) => {
     res.status(200).json({ message: "Password updated successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server Error ⚠️" });
   }
 };
 
@@ -308,6 +307,6 @@ exports.resetPassword = async (req, res) => {
     res.json({ message: "Password reset successful" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server Error ⚠️" });
   }
 };

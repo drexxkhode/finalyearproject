@@ -19,7 +19,7 @@ export default function AuthScreen({ onSuccess }) {
   const [registerForm, setRegisterForm] = useState({
     name: "",
     email: "",
-    phone: "",
+    contact: "",
     password: "",
     confirm: "",
   });
@@ -41,7 +41,7 @@ export default function AuthScreen({ onSuccess }) {
     setRegisterForm({
       name: "",
       email: "",
-      phone: "",
+      contact: "",
       password: "",
       confirm: "",
     });
@@ -92,7 +92,7 @@ export default function AuthScreen({ onSuccess }) {
     if (
       !registerForm.name ||
       !registerForm.email ||
-      !registerForm.phone ||
+      !registerForm.contact ||
       !registerForm.password
     ) {
       setLoading(false);
@@ -312,7 +312,7 @@ export default function AuthScreen({ onSuccess }) {
                   className="form-control"
                   placeholder="Phone Number"
                   autoComplete="tel"
-                  value={registerForm.phone}
+                  value={registerForm.contact}
                   onChange={handleRegister("phone")}
                 />
 

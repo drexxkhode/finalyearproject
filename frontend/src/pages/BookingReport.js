@@ -8,7 +8,7 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeri
 const fmtAmt  = (a) => `₵${parseFloat(a??0).toFixed(2)}`
 
 const StatusBadge = ({ s }) => {
-  const m = { confirmed:["#198754","Confirmed"], cancelled:["#dc3545","Cancelled"], pending:["#e6a817","Pending"] }
+  const m = { confirmed:["#193c87","Confirmed"], cancelled:["#dc3545","Cancelled"], pending:["#e6a817","Pending"],completed:["#18e76e","Completed"] }
   const [col, label] = m[s] || ["#6c757d", s]
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
@@ -88,7 +88,7 @@ export default function BookingReport() {
   const [payment,  setPayment]  = useState("")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo,   setDateTo]   = useState("")
-  const [summary,  setSummary]  = useState({ total:0, confirmed:0, cancelled:0, refunded:0, revenue:0 })
+  const [summary,  setSummary]  = useState({ total:0, confirmed:0, cancelled:0, refunded:0, completed:0 })
   const [generated,setGenerated]= useState(null)
 
   const token   = localStorage.getItem("token")
@@ -106,7 +106,7 @@ export default function BookingReport() {
           confirmed: rows.filter(r => r.status === "confirmed").length,
           cancelled: rows.filter(r => r.status === "cancelled").length,
           refunded:  rows.filter(r => r.payment_status === "refunded").length,
-          revenue:   rows.filter(r => r.payment_status === "paid").reduce((s,r) => s+parseFloat(r.amount??0), 0),
+          completed:  rows.filter(r => r.status === "completed").length,
         })
       })
       .catch(()=>{})
@@ -146,10 +146,10 @@ export default function BookingReport() {
       <div className="row g-3 mb-4">
         {[
           { label:"Total",     value:summary.total,           icon:"bi-calendar-check",    color:"primary" },
-          { label:"Confirmed", value:summary.confirmed,       icon:"bi-check-circle-fill", color:"success" },
+          { label:"Confirmed", value:summary.confirmed,       icon:"bi-check-circle-fill", color:"info" },
           { label:"Cancelled", value:summary.cancelled,       icon:"bi-x-circle-fill",     color:"danger"  },
           { label:"Refunded",  value:summary.refunded,        icon:"bi-arrow-counterclockwise", color:"info" },
-          { label:"Revenue",   value:fmtAmt(summary.revenue), icon:"bi-cash-coin",         color:"warning" },
+          { label:"Completed",   value:summary.completed,     icon:"bi-calendar-check",         color:"success" },
         ].map(c => (
           <div className="col-6 col-xl" key={c.label}>
             <div className="card border-0 shadow-sm text-center h-100">
@@ -196,6 +196,7 @@ export default function BookingReport() {
                 <option value="">All Statuses</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="Completed">Completed</option>
                 <option value="pending">Pending</option>
               </select>
             </div>

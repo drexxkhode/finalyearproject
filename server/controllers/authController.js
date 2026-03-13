@@ -27,10 +27,10 @@ const extractPublicId = (url) => {
 // Route must use: upload.single('photo') middleware before this handler
 exports.register = async (req, res) => {
   try {
-    if (req.user.role !== "Manager")
+    if (req.user?.role !== "Manager")
       return res.status(403).json({ message: "Not authorized" });
 
-    const turf_id = req.user.turf_id;
+    const turf_id = req.user?.turf_id;
     if (!turf_id)
       return res.status(403).json({ message: "No turf assigned" });
 

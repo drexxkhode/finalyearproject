@@ -14,12 +14,12 @@ const passwordResetRateLimit = async (req, res, next) => {
 
     // Get last reset request time from users table
     const [rows] = await db.execute(
-      "SELECT reset_request_time FROM admins WHERE email = ?",
+      "SELECT reset_request_time FROM users WHERE email = ?",
       [email]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "We couldn't find an account associated with that email." });
     }
 
     const lastRequest = rows[0].reset_request_time;
@@ -41,7 +41,7 @@ const passwordResetRateLimit = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("Rate-limit middleware error:", error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({ message: "Server Error ⚠️" });
   }
 };
 
