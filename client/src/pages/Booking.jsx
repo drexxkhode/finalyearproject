@@ -124,7 +124,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
       // ── Step 1: get the real ref from backend FIRST ────────────────────
       // This MUST happen before openIframe() so the webhook can find it.
       const initRes = await axios.post(
-        `${API}/api/bookings`,
+        `${API}/bookings`,
         {
           turf_id:      turf.id,
           date,
