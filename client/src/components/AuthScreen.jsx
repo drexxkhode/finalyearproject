@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 export default function AuthScreen({ onSuccess }) {
   const { login, register } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [mode, setMode] = useState("login");
 
@@ -50,18 +51,22 @@ export default function AuthScreen({ onSuccess }) {
       return setErr("Email and password required.");
     }
 
+    setErr("");
+    setLoading(true);
     try {
-      setErr("");
       const user = await login(loginForm);
       onSuccess(user);
     } catch (e) {
       setErr(e.message || "Login failed");
+    }finally{
+      setLoading(false);
     }
   };
 
   /* REGISTER SUBMIT */
   const submitRegister = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     if (
       !registerForm.name ||
@@ -93,6 +98,8 @@ export default function AuthScreen({ onSuccess }) {
       }, 1500);
     } catch (e) {
       setErr(e.message || "Registration failed");
+    }finally{
+      setLoading(false);
     }
   };
 
@@ -190,8 +197,12 @@ export default function AuthScreen({ onSuccess }) {
               <button
                 type="submit"
                 className="btn btn-primary w-100 fw-bold mt-3 py-2"
+                disabled={loading}
               >
-                Sign In →
+                {loading
+                      ? <><span className="spinner-border spinner-border-sm me-2"/>Signing in…</>
+                      : "Sign In →"
+                    }
               </button>
 
               <p className="text-center text-muted small mt-3 mb-0">
@@ -264,8 +275,12 @@ export default function AuthScreen({ onSuccess }) {
               <button
                 type="submit"
                 className="btn btn-primary w-100 fw-bold mt-3 py-2"
+                disabled={loading}
               >
-                Create Account →
+                {loading
+                      ? <><span className="spinner-border spinner-border-sm me-2"/>Rigistering…</>
+                      : "Create Account →"
+                    }
               </button>
             </form>
           )}

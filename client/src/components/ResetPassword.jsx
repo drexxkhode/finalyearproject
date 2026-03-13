@@ -70,7 +70,6 @@ export default function ResetPassword() {
             Submit
           </button>
         </form>
-
         <p className="text-info fw-bold text-center mt-2">{message}</p>
       </div>
     </div>
