@@ -42,16 +42,38 @@ async function emitMonthlyAnalytics(socket, turfId) {
     // For booking counts we use the bookings table directly
     const [rows] = await db.query(`
       SELECT
-        DATE_FORMAT(b.booking_date, '%b %Y')              AS month,
-        SUM(CASE WHEN b.status = 'confirmed'  THEN 1 ELSE 0 END) AS accepted,
-        SUM(CASE WHEN b.status = 'cancelled'  THEN 1 ELSE 0 END) AS rejected,
-        COALESCE(SUM(
-          CASE WHEN b.payment_status = 'paid' THEN b.amount ELSE 0 END
-        ), 0)                                             AS payments
-      FROM bookings b
-      WHERE b.turf_id = ?
-      GROUP BY YEAR(b.booking_date), MONTH(b.booking_date)
-      ORDER BY YEAR(b.booking_date), MONTH(b.booking_date)
+  DATE_FORMAT(b.booking_date, '%b %Y') AS month,
+  YEAR(b.booking_date) AS year,
+  MONTH(b.booking_date) AS month_num,
+  
+  SUM(
+    CASE 
+      WHEN b.status = 'confirmed' OR b.status = 'completed' 
+      THEN 1 ELSE 0 
+    END
+  ) AS accepted,
+
+  SUM(
+    CASE 
+      WHEN b.status = 'cancelled' 
+      THEN 1 ELSE 0 
+    END
+  ) AS rejected,
+
+  COALESCE(
+    SUM(
+      CASE 
+        WHEN b.payment_status = 'paid' 
+        THEN b.amount 
+        ELSE 0 
+      END
+    ), 0
+  ) AS payments
+
+FROM bookings b
+WHERE b.turf_id = ?
+GROUP BY year, month_num
+ORDER BY year, month_num
     `, [turfId]);
 
     socket.emit('booking-analytics-monthly', rows.map(row => ({

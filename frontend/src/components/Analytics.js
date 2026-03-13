@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
 import ClipLoader from "react-spinners/ClipLoader";
 import { io } from "socket.io-client";
-const API = process.env.REACT_APP_URL || "http://localhost:5000";
+const API = process.env.REACT_APP_URL ?? "http://localhost:5000";
 const Analytics = () => {
 
   const [categories, setCategories] = useState([]);
   const [series, setSeries] = useState([
-    { name: "Accepted", type: "column", data: [], yAxisIndex: 0 },
-    { name: "Rejected", type: "column", data: [], yAxisIndex: 0 },
+    { name: "Completed", type: "column", data: [], yAxisIndex: 0 },
+    { name: "Cancelled", type: "column", data: [], yAxisIndex: 0 },
     { name: "Payments", type: "line", data: [], yAxisIndex: 1 },
   ]);
 
