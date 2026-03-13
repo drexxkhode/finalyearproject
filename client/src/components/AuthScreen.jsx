@@ -4,10 +4,12 @@ import { Link } from "react-router-dom";
 
 export default function AuthScreen({ onSuccess }) {
   const { login, register } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const [mode, setMode] = useState("login");
+  const [loading, setLoading] = useState(false);
+
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
   const [loginForm, setLoginForm] = useState({
     email: "",
@@ -25,10 +27,24 @@ export default function AuthScreen({ onSuccess }) {
   const [err, setErr] = useState("");
   const [ok, setOk] = useState(false);
 
+  /* SWITCH MODE */
   const switchMode = (m) => {
     setMode(m);
     setErr("");
     setOk(false);
+
+    setLoginForm({
+      email: "",
+      password: "",
+    });
+
+    setRegisterForm({
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirm: "",
+    });
   };
 
   /* LOGIN INPUT */
@@ -46,19 +62,22 @@ export default function AuthScreen({ onSuccess }) {
   /* LOGIN SUBMIT */
   const submitLogin = async (e) => {
     e.preventDefault();
-   setLoading(true);
+    if (loading) return;
+
+    setLoading(true);
+
     if (!loginForm.email || !loginForm.password) {
+      setLoading(false);
       return setErr("Email and password required.");
     }
 
-    setErr("");
-    
     try {
+      setErr("");
       const user = await login(loginForm);
-      onSuccess(user);
+      onSuccess?.(user);
     } catch (e) {
       setErr(e.message || "Login failed");
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -66,6 +85,8 @@ export default function AuthScreen({ onSuccess }) {
   /* REGISTER SUBMIT */
   const submitRegister = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
 
     if (
@@ -74,15 +95,25 @@ export default function AuthScreen({ onSuccess }) {
       !registerForm.phone ||
       !registerForm.password
     ) {
+      setLoading(false);
       return setErr("All fields are required.");
     }
 
     if (registerForm.password !== registerForm.confirm) {
+      setLoading(false);
       return setErr("Passwords do not match.");
     }
 
     if (registerForm.password.length < 6) {
+      setLoading(false);
       return setErr("Password must be at least 6 characters.");
+    }
+
+    const phoneRegex = /^[0-9]{9,15}$/;
+
+    if (!phoneRegex.test(registerForm.phone)) {
+      setLoading(false);
+      return setErr("Enter a valid phone number.");
     }
 
     try {
@@ -98,7 +129,7 @@ export default function AuthScreen({ onSuccess }) {
       }, 1500);
     } catch (e) {
       setErr(e.message || "Registration failed");
-    }finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -116,14 +147,24 @@ export default function AuthScreen({ onSuccess }) {
       <div className="w-100" style={{ maxWidth: 420 }}>
         {/* Logo */}
         <div className="text-center mb-4">
-          <div className="tf-auth-logo"><img src="/assets/img/logo/logo.png" /></div>
-          <div className="tf-brand-title font-condensed fs-2">TURFARENA</div>
-          <div className="tf-brand-sub">Accra Metropolitan Assembly</div>
+          <div className="tf-auth-logo">
+            <img src="/assets/img/logo/logo.png" alt="logo" />
+          </div>
+
+          <div className="tf-brand-title font-condensed fs-2">
+            TURFARENA
+          </div>
+
+          <div className="tf-brand-sub">
+            Accra Metropolitan Assembly
+          </div>
         </div>
 
         <div className="card border-0 shadow-lg rounded-4 p-4">
+
           {/* Toggle */}
           <div className="tf-auth-toggle">
+
             <button
               type="button"
               className={`tf-auth-toggle-btn ${
@@ -131,7 +172,8 @@ export default function AuthScreen({ onSuccess }) {
               }`}
               onClick={() => switchMode("login")}
             >
-              <i className="bi bi-key-fill me-1"></i>Sign In
+              <i className="bi bi-key-fill me-1"></i>
+              Sign In
             </button>
 
             <button
@@ -141,8 +183,10 @@ export default function AuthScreen({ onSuccess }) {
               }`}
               onClick={() => switchMode("register")}
             >
-              <i className="bi bi-person-plus-fill me-1"></i>Register
+              <i className="bi bi-person-plus-fill me-1"></i>
+              Register
             </button>
+
           </div>
 
           {ok && (
@@ -151,38 +195,56 @@ export default function AuthScreen({ onSuccess }) {
             </div>
           )}
 
-          {err && <div className="alert alert-danger py-2 small">{err}</div>}
+          {err && (
+            <div className="alert alert-danger py-2 small">
+              {err}
+            </div>
+          )}
 
           {/* LOGIN */}
           {mode === "login" && (
             <form onSubmit={submitLogin}>
+
               <div className="d-flex flex-column gap-2">
+
                 <input
                   className="form-control"
                   type="email"
                   placeholder="Email Address"
+                  autoComplete="email"
                   value={loginForm.email}
                   onChange={handleLogin("email")}
                 />
 
                 <div className="input-group">
+
                   <input
                     className="form-control"
-                    type={showPassword ? "text" : "password"}
+                    type={showLoginPassword ? "text" : "password"}
                     placeholder="Password"
+                    autoComplete="current-password"
                     value={loginForm.password}
                     onChange={handleLogin("password")}
                   />
+
                   <span
                     className="input-group-text"
                     style={{ cursor: "pointer" }}
-                    onClick={() => setShowPassword((prev) => !prev)}
+                    onClick={() =>
+                      setShowLoginPassword((prev) => !prev)
+                    }
                   >
                     <i
-                      className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}
+                      className={`bi ${
+                        showLoginPassword
+                          ? "bi-eye-slash"
+                          : "bi-eye"
+                      }`}
                     ></i>
                   </span>
+
                 </div>
+
               </div>
 
               <div className="d-flex justify-content-end mt-2">
@@ -199,10 +261,14 @@ export default function AuthScreen({ onSuccess }) {
                 className="btn btn-primary w-100 fw-bold mt-3 py-2"
                 disabled={loading}
               >
-                {loading
-                      ? <><span className="spinner-border spinner-border-sm me-2"/>Signing in…</>
-                      : "Sign In →"
-                    }
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Signing in…
+                  </>
+                ) : (
+                  "Sign In →"
+                )}
               </button>
 
               <p className="text-center text-muted small mt-3 mb-0">
@@ -215,16 +281,20 @@ export default function AuthScreen({ onSuccess }) {
                   Register here
                 </span>
               </p>
+
             </form>
           )}
 
           {/* REGISTER */}
           {mode === "register" && (
             <form onSubmit={submitRegister}>
+
               <div className="d-flex flex-column gap-2">
+
                 <input
                   className="form-control"
                   placeholder="Full Name"
+                  autoComplete="name"
                   value={registerForm.name}
                   onChange={handleRegister("name")}
                 />
@@ -233,6 +303,7 @@ export default function AuthScreen({ onSuccess }) {
                   className="form-control"
                   type="email"
                   placeholder="Email Address"
+                  autoComplete="email"
                   value={registerForm.email}
                   onChange={handleRegister("email")}
                 />
@@ -240,36 +311,49 @@ export default function AuthScreen({ onSuccess }) {
                 <input
                   className="form-control"
                   placeholder="Phone Number"
+                  autoComplete="tel"
                   value={registerForm.phone}
                   onChange={handleRegister("phone")}
                 />
 
                 <div className="input-group">
+
                   <input
                     className="form-control"
-                    type={showPassword ? "text" : "password"}
+                    type={showRegisterPassword ? "text" : "password"}
                     placeholder="Password"
+                    autoComplete="new-password"
                     value={registerForm.password}
                     onChange={handleRegister("password")}
-                  />{" "}
+                  />
+
                   <span
                     className="input-group-text"
                     style={{ cursor: "pointer" }}
-                    onClick={() => setShowPassword((prev) => !prev)}
+                    onClick={() =>
+                      setShowRegisterPassword((prev) => !prev)
+                    }
                   >
                     <i
-                      className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}
+                      className={`bi ${
+                        showRegisterPassword
+                          ? "bi-eye-slash"
+                          : "bi-eye"
+                      }`}
                     ></i>
                   </span>
+
                 </div>
 
                 <input
                   className="form-control"
                   type="password"
                   placeholder="Confirm Password"
+                  autoComplete="new-password"
                   value={registerForm.confirm}
                   onChange={handleRegister("confirm")}
                 />
+
               </div>
 
               <button
@@ -277,20 +361,28 @@ export default function AuthScreen({ onSuccess }) {
                 className="btn btn-primary w-100 fw-bold mt-3 py-2"
                 disabled={loading}
               >
-                {loading
-                      ? <><span className="spinner-border spinner-border-sm me-2"/>Rigistering…</>
-                      : "Create Account →"
-                    }
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Registering…
+                  </>
+                ) : (
+                  "Create Account →"
+                )}
               </button>
+
             </form>
           )}
+
         </div>
 
         <p className="text-center text-muted small mt-3">
-          <i className="bi bi-lock-fill me-1"></i>Your data is secure ·
+          <i className="bi bi-lock-fill me-1"></i>
+          Your data is secure ·
           <span className="text-success fw-bold"> Turf</span>
           <span className="text-primary fw-bold">Arena</span> Certified Platform
         </p>
+
       </div>
     </div>
   );
