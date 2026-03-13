@@ -12,20 +12,27 @@ const meilisearchRoutes = require("./routes/turf/meilisearchRoute");
 const mapRoutes = require("./routes/turf/mapRoute");
 const userRoutes = require("./routes/client/authRoute");
 const bookingRoute = require('./routes/client/bookingRoute');
-const timeslotRoute = require('./routes/turf/timeslotRoute');
+const timeslotRoute = require('./routes/admin/timeslotRoute');
 const bookingsRoute = require('./routes/admin/bookingsRoute');
 const dashbaordRoute = require('./routes/admin/dashboardRoute');
+const paymentsRoute = require('./routes/admin/paymentRoute')
 const turfImageRoute = require('./routes/turf/turfImageRoute');
+// 4. Add enquiries route
+const enquiriesRoute = require('./routes/client/enquirieRoute');
 const setupAnalyticsSocket = require("./sockets/Analytics");
 const registerSlotLockSocket = require('./sockets/slotLockSocket');
+// 2. Register the admin notification socket
+const registerAdminNotificationSocket = require('./sockets/notificationSocket');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" },
 });
-
-// Middleware
+global._io = io; 
+// 3. Also store io on app so controllers can access via req.app.get('io')
+app.set('io', io);
+// Cors Middleware
 app.use(cors({
   origin: [
     "http://localhost:3000",
@@ -38,7 +45,7 @@ app.use(cors({
     /\.trycloudflare\.com$/,
   ],
   credentials: true,
-  methods: ["GET","POST","PUT","DELETE"]
+  methods: ["GET","POST","PUT","DELETE","PATCH"]
 }));
 // ── 2. Webhook FIRST — raw body, before express.json() ────────────────────
 const { paystackWebhook } = require('./controllers/bookingController')
@@ -65,6 +72,8 @@ app.use('/api/slots', timeslotRoute);
 app.use('/api/admin', bookingsRoute);  
 app.use('/api/admin', dashbaordRoute); 
 app.use('/api/turf/:id/images', turfImageRoute); 
+app.use('/api/enquiries', enquiriesRoute);
+app.use('/api/payments', paymentsRoute);
 
 app.get("/", (req, res) => {
   res.send("Astro Turf API running");
@@ -73,7 +82,11 @@ app.get("/", (req, res) => {
 // Initialize socket
 setupAnalyticsSocket(io);
 registerSlotLockSocket(io);
+registerAdminNotificationSocket(io);
 
 // Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT,"0.0.0.0", () => console.log(`Server running on port ${PORT}`));
+
+
+ 

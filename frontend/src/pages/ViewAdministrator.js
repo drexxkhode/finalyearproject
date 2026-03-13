@@ -168,6 +168,8 @@ const Update = () => {
         photo: res.data?.photo ? `${res.data.photo}?t=${Date.now()}` : null,
       };
       localStorage.setItem("user", JSON.stringify(freshUser));
+      // ← Notify Navbar on the SAME tab to re-read user from localStorage
+      window.dispatchEvent(new Event("user:updated"));
     } catch {
       // non-critical — don't block the flow
     }

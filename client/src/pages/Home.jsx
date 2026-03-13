@@ -105,7 +105,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
 
           {totalPages > 1 && (
             <div className="d-flex justify-content-center align-items-center gap-3 mt-5">
-              <button className="btn btn-outline-primary px-3" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
+              <button className="btn btn-sm btn-outline-primary px-1" onClick={() => setPage(p => p - 1)} disabled={page === 1}>
                 <i className="bi bi-chevron-left"></i> Prev
               </button>
               <div className="d-flex align-items-center gap-2">
@@ -123,7 +123,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
                           onClick={() => setPage(p)}>{p}</button>
                   )}
               </div>
-              <button className="btn btn-outline-primary px-3" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
+              <button className="btn btn-sm btn-outline-primary px-1" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>
                 Next <i className="bi bi-chevron-right"></i>
               </button>
             </div>

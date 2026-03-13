@@ -26,14 +26,24 @@ const getBookedSlots = async (req, res) => {
     );
     const bookedIds = new Set(booked.map(r => r.time_slot_id));
 
+    // Mark past slots on today's date — calculated, never written to DB
+    const today       = new Date().toISOString().split('T')[0]
+    const isToday     = date === today
+    const currentHour = new Date().getHours()
+
     return res.json({
-      slots: timeSlots.map(s => ({
-        id:       s.id,
-        hour:     parseInt(s.start_time.split(':')[0], 10),
-        label:    `${s.start_time.slice(0, 5)} – ${s.end_time.slice(0, 5)}`,
-        status:   bookedIds.has(s.id) ? 'booked' : 'available',
-        lockedBy: null,
-      })),
+      slots: timeSlots.map(s => {
+        const slotHour = parseInt(s.start_time.split(':')[0], 10)
+        const isPast   = isToday && slotHour <= currentHour
+
+        return {
+          id:       s.id,
+          hour:     slotHour,
+          label:    `${s.start_time.slice(0, 5)} – ${s.end_time.slice(0, 5)}`,
+          status:   bookedIds.has(s.id) ? 'booked' : isPast ? 'past' : 'available',
+          lockedBy: null,
+        }
+      }),
     });
   } catch (err) {
     console.error('getBookedSlots error:', err);
@@ -52,6 +62,11 @@ const initiateBooking = async (req, res) => {
 
     if (!turf_id || !slots?.length || !date || !total_amount)
       return res.status(400).json({ message: 'turf_id, slots, date, total_amount required' });
+
+    // Reject bookings for past dates
+    const today = new Date().toISOString().split('T')[0];
+    if (date < today)
+      return res.status(400).json({ message: 'Cannot book a past date' });
 
     const slotIds = slots.map(s => s.time_slot_id);
 
@@ -156,8 +171,8 @@ const paystackWebhook = async (req, res) => {
     console.log('[webhook] signatures match:', expectedSig === receivedSig);
 
     if (expectedSig !== receivedSig) {
-      console.error('[webhook] Signature mismatch — BYPASS ACTIVE FOR DIAGNOSTICS');
-      // Temporary bypass — remove once signature issue is confirmed fixed
+      console.error('[webhook] Signature mismatch — rejected');
+      return res.sendStatus(401);
     }
 
     // ── Parse event ───────────────────────────────────────────────────────
@@ -265,6 +280,23 @@ const paystackWebhook = async (req, res) => {
 
       // Clean up staging row
       await db.query(`DELETE FROM pending_payments WHERE paystack_ref = ?`, [ref]);
+
+      // ── Notify admin room in real time ──────────────────────────────────
+      const io = global._io  // set in server.js: global._io = io
+      if (io) {
+        // Get user name for the notification
+        const [uRows] = await db.query(
+          'SELECT name FROM users WHERE id = ? LIMIT 1', [p.user_id]
+        )
+        io.to(`admin:${p.turf_id}`).emit('booking:new', {
+          ref,
+          user:     uRows[0]?.name ?? 'A user',
+          slots:    slots.length,
+          amount:   amountGHS,
+          date:     p.booking_date,
+          turf_id:  p.turf_id,
+        })
+      }
 
       console.log(`[webhook] ✅ Done — ${bookingIds.length} booking(s) saved for ref=${ref}`);
     }
@@ -412,19 +444,46 @@ const getBookings = async (req, res) => {
       SELECT 
         b.id,
         b.booking_date,
+        b.slot_label,
         b.amount,
         u.name,
         u.email,
         u.contact,
-        ts.id AS time_slot_id,
-        ts.start_time,
-        ts.end_time
+        b.created_at
       FROM bookings b
       JOIN users u 
         ON b.user_id = u.id
-      JOIN time_slots ts
-        ON b.time_slot_id = ts.id
       WHERE b.turf_id = ?
+      ORDER BY b.created_at DESC
+    `, [turf_id]);
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching bookings" });
+  }
+};
+//ADMIN DASHBOARD DATA FETCH.
+const getBookingHistory = async (req, res) => {
+  try {
+    const turf_id = req.user?.turf_id;
+
+    const [rows] = await db.execute(`
+      SELECT 
+        b.id,
+        b.booking_date,
+        b.slot_label,
+        b.amount,
+        u.name,
+        u.email,
+        u.contact,
+        b.created_at
+      FROM bookings b
+      JOIN users u 
+        ON b.user_id = u.id
+      WHERE b.turf_id = ?
+      ORDER BY b.created_at DESC
     `, [turf_id]);
 
     res.json(rows);
@@ -435,14 +494,10 @@ const getBookings = async (req, res) => {
   }
 };
 
-module.exports = {
-  getBookings,
-  getBookedSlots,
-  initiateBooking,
-  paystackWebhook,
-  cancelBooking,
-  getMyBookings,
-};
+module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings };
+
+
+
 
 
 

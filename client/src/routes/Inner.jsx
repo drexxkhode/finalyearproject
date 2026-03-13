@@ -141,7 +141,11 @@ export default function Inner() {
                   onDirections={turfId => navigate(`/directions/${turfId}`)}
                   lockSlot={lockSlot} releaseSlot={releaseSlot}
                   fmtCountdown={fmtCountdown} notify={notify}
-                  onDateChange={date => refreshSlots(activeTurf.id, date)}
+                  onDateChange={date => {
+                    const today = new Date().toISOString().split('T')[0]
+                    if (date < today) return  // silently ignore past dates — min attr handles UI
+                    refreshSlots(activeTurf.id, date)
+                  }}
                 />
               : <Navigate to="/" replace />
           } />

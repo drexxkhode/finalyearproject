@@ -149,13 +149,13 @@ exports.getDashboardDetails = async (req, res) => {
     const [rows] = await db.execute(
       `SELECT
          (SELECT COUNT(*) FROM payments
-          WHERE payment_status = 'completed' AND turf_id = ?) AS total_payments,
-         (SELECT COUNT(*) FROM bookings
-          WHERE status = 'completed'          AND turf_id = ?) AS total_bookings,
+          WHERE turf_id = ?) AS total_payments,
+         (SELECT COUNT(*) FROM bookings 
+         WHERE turf_id = ?) AS total_bookings,
          (SELECT COUNT(*) FROM admins
-          WHERE turf_id = ?)                                   AS total_admins,
-         (SELECT COUNT(*) FROM enquiries
-          WHERE status = 'resolved'           AND turf_id = ?) AS total_enquiries`,
+          WHERE turf_id = ?)  AS total_admins,
+         (SELECT COUNT(*) FROM enquiries 
+         WHERE turf_id = ?) AS total_enquiries`,
       [turf_id, turf_id, turf_id, turf_id]
     );
 

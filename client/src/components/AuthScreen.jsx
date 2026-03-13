@@ -109,7 +109,7 @@ export default function AuthScreen({ onSuccess }) {
       <div className="w-100" style={{ maxWidth: 420 }}>
         {/* Logo */}
         <div className="text-center mb-4">
-          <div className="tf-auth-logo">⚽</div>
+          <div className="tf-auth-logo"><img src="/assets/img/logo/logo.png" /></div>
           <div className="tf-brand-title font-condensed fs-2">TURFARENA</div>
           <div className="tf-brand-sub">Accra Metropolitan Assembly</div>
         </div>

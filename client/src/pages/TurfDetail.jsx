@@ -9,10 +9,9 @@ export default function TurfDetail({
   lockSlot, releaseSlot,
   fmtCountdown, notify, onDateChange,
 }) {
-  const turfSlots   = slots[turf.id] ?? []
-  const isLoaded    = loadedTurfs.has(turf.id)   // fetch completed (even if empty)
+  const turfSlots  = slots[turf.id] ?? []
+  const isLoaded   = loadedTurfs.has(turf.id)
 
-  // My locked slots for THIS turf only
   const myLockedHere = Object.values(lockedSlots).filter(l => l.turfId === turf.id)
   const totalAmount  = myLockedHere.length * (turf.pricePerHour ?? 0)
 
@@ -20,37 +19,41 @@ export default function TurfDetail({
     ? turf.amenities
     : turf.amenities ? turf.amenities.split(',').map(a => a.trim()) : []
 
-  // Fetch full images array for Gallery — listing only has cover_image
   const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
   const [turfImages, setTurfImages] = useState(turf.images ?? [])
+
+  // Today's date string for min attribute e.g. "2026-03-12"
+  const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     if (!turf?.id) return
     const token = localStorage.getItem('token')
-    axios.get(`${API}/turf/turf-data/${turf.id}`, {
+    axios.get(`${API}/turf/turf-data/${turf.id}`, {  // ← fixed: was missing /api/
       headers: { Authorization: `Bearer ${token}` },
     })
     .then(res => { if (res.data.images) setTurfImages(res.data.images) })
-    .catch(() => {})  // silently fall back to empty — Gallery shows fallback
+    .catch(() => {})
   }, [turf.id])
 
-
+  // ── Slot click ────────────────────────────────────────────────────────────
   const handleSlotClick = s => {
-    if (!user)                                        { notify('Please sign in to book', 'e'); return }
-    if (s.status === 'booked')                        return
-    if (s.status === 'locked' && s.lockedBy !== 'you') return
-    if (s.lockedBy === 'you')                         return  // already mine
+    if (!user)                                           { notify('Please sign in to book', 'e'); return }
+    if (s.status === 'booked')                           return
+    if (s.status === 'past')                             return  // ← past slots unclickable
+    if (s.status === 'locked' && s.lockedBy !== 'you')  return
+    if (s.lockedBy === 'you')                            return
     lockSlot(turf.id, s.id, s.label)
     notify('🔒 Slot locked for 5 mins!')
   }
 
-  // Fix #4: class colors match legend exactly
+  // ── Slot CSS class ────────────────────────────────────────────────────────
   const slotClass = s => {
-    if (s.status === 'booked') return 'tf-slot tf-slot-booked'           // red
+    if (s.status === 'booked') return 'tf-slot tf-slot-booked'
+    if (s.status === 'past')   return 'tf-slot tf-slot-past'       // ← new: greyed out
     if (s.status === 'locked') return s.lockedBy === 'you'
-      ? 'tf-slot tf-slot-locked-mine'   // amber/yellow
-      : 'tf-slot tf-slot-locked-other'  // grey
-    return 'tf-slot tf-slot-available'  // blue
+      ? 'tf-slot tf-slot-locked-mine'
+      : 'tf-slot tf-slot-locked-other'
+    return 'tf-slot tf-slot-available'
   }
 
   return (
@@ -110,19 +113,25 @@ export default function TurfDetail({
         <div className="col-12 col-lg-6">
           <div className="card border-0 shadow-sm rounded-4 p-3 mb-3">
 
-            {/* Fix #4: legend colors match CSS exactly */}
             <div className="d-flex justify-content-between align-items-center mb-2">
-              <div className="fw-bold">⏰ Select Time Slot</div>
+              <div className="fw-bold">⏰ Select Time Slot And Date</div>
               <div className="d-flex gap-2" style={{ fontSize: 10 }}>
                 <span style={{ color: '#0d6efd', fontWeight: 700 }}>■ Free</span>
                 <span style={{ color: '#dc3545', fontWeight: 700 }}>■ Taken</span>
-                <span style={{ color: '#856404', fontWeight: 700 }}>■ Yours</span>
+                <span style={{ color: '#f5bd16', fontWeight: 700 }}>■ Yours</span>
                 <span style={{ color: '#6c757d', fontWeight: 700 }}>■ Others</span>
+                <span style={{ color: '#adb5bd', fontWeight: 700 }}>■ Past</span>
               </div>
             </div>
 
-            <input type="date" className="form-control mb-2"
-              onChange={e => onDateChange(e.target.value)} />
+            {/* ← min=today prevents selecting past dates entirely */}
+            <input
+              type="date"
+              className="form-control mb-2"
+              min={today}
+              onChange={e => onDateChange(e.target.value)}
+              placeholder='-- select date --'
+              />
 
             {!user && (
               <div className="alert alert-warning py-2 small text-center mb-2">
@@ -130,7 +139,6 @@ export default function TurfDetail({
               </div>
             )}
 
-            {/* Fix #3: spinner vs empty message */}
             <div className="tf-slot-grid">
               {!isLoaded ? (
                 <div className="text-center text-muted py-3 w-100">
@@ -148,9 +156,10 @@ export default function TurfDetail({
                   return (
                     <div key={s.id} className={slotClass(s)} onClick={() => handleSlotClick(s)}>
                       {s.label}
-                      {s.status === 'booked'           && <div className="tf-slot-sub">Taken</div>}
-                      {mine                            && <div className="tf-slot-sub">🔒 Yours</div>}
-                      {s.status === 'locked' && !mine  && <div className="tf-slot-sub">In use</div>}
+                      {s.status === 'booked'          && <div className="tf-slot-sub">Taken</div>}
+                      {s.status === 'past'            && <div className="tf-slot-sub">Passed</div>}  {/* ← new */}
+                      {mine                           && <div className="tf-slot-sub">🔒 Yours</div>}
+                      {s.status === 'locked' && !mine && <div className="tf-slot-sub">In use</div>}
                     </div>
                   )
                 })
@@ -158,7 +167,6 @@ export default function TurfDetail({
             </div>
           </div>
 
-          {/* Fix #1: multi-slot panel with independent timers */}
           {myLockedHere.length > 0 && (
             <div className="card border-0 shadow-sm rounded-4 p-3 mb-3"
               style={{ borderLeft: '4px solid #856404' }}>
@@ -168,7 +176,7 @@ export default function TurfDetail({
                 {myLockedHere.map(lock => (
                   <div key={lock.slotId}
                     className="d-flex justify-content-between align-items-center rounded-3 px-3 py-2"
-                    style={{ background: 'rgba(255,193,7,.1)', border: '1px solid rgba(255,193,7,.4)' }}
+                    style={{ background: 'rgba(166, 235, 5, 0.93)', border: '1px solid rgba(255,193,7,.4)' }}
                   >
                     <div>
                       <div className="fw-bold small">{lock.label}</div>

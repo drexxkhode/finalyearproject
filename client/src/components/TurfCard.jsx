@@ -1,7 +1,7 @@
 const FALLBACK = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'
 
 export default function TurfCard({ turf, slots = {}, onOpen }) {
-  const avail = slots[turf.id]?.filter(s => s.status === 'available').length ?? 0
+  const avail = slots[turf.id]?.filter(s => s.status === 'free').length ?? 0
   // cover_image is the URL of the is_cover=1 image, joined in the API response
   const coverImg = turf.cover_image || FALLBACK
 

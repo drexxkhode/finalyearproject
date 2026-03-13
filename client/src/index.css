@@ -261,6 +261,12 @@ body { font-family:'Barlow','Segoe UI',sans-serif; background:#fff; color:var(--
     max-width: 25%;
   }
 }
+.tf-slot-past {
+  background: #e9ecef;
+  color: #adb5bd;
+  cursor: not-allowed;
+  border: 1px solid #dee2e6;
+}
 
 /* ── Remove duplicate secondary tab bar ────────────────── */
 /* The nav tabs live ONLY in the navbar now */
