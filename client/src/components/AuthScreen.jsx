@@ -46,13 +46,13 @@ export default function AuthScreen({ onSuccess }) {
   /* LOGIN SUBMIT */
   const submitLogin = async (e) => {
     e.preventDefault();
-
+   setLoading(true);
     if (!loginForm.email || !loginForm.password) {
       return setErr("Email and password required.");
     }
 
     setErr("");
-    setLoading(true);
+    
     try {
       const user = await login(loginForm);
       onSuccess(user);
