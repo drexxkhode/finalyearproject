@@ -14,7 +14,7 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000"
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 // Generate 30-min or 1-hour options for a time picker
 function timeOptions() {

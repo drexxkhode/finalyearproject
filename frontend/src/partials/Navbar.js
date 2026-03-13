@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 // ── Notification sound (uses Web Audio API — no file needed) ──────────────
 function playNotifSound(type = 'enquiry') {

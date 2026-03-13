@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react"
 import DataTable from "react-data-table-component"
 import axios from "axios"
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000"
+const API = process.env.REACT_APP_URL || "http://localhost:5000"
 
 const STATUS_BADGE = {
   pending:  { cls: "bg-warning text-dark", label: "Pending"  },

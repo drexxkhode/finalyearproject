@@ -3,7 +3,7 @@ import DataTable from "react-data-table-component"
 import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000"
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const customStyles = {
   headRow:   { style: { background:"#1a56db", borderRadius:"4px 4px 0 0" } },

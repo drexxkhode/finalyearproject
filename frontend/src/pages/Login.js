@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 
-const API = process.env.REACT_APP_URL || "http://localhost:5000"
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const Login = () => {
   const [email,        setEmail]        = useState("")

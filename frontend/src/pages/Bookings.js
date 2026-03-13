@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react"
 import DataTable from "react-data-table-component"
 import axios from "axios"
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000"
+const API = process.env.REACT_APP_URL || "http://localhost:5000";
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—"
 const fmtAmt  = (a) => `₵${parseFloat(a??0).toFixed(2)}`
 
