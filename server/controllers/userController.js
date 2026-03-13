@@ -4,6 +4,8 @@ const crypto        = require("crypto");
 const generateToken = require("../config/jwt");
 const sendEmail     = require("../utils/userMail");
 
+const URL = process.env.VITE_APP_URL;
+
 /* ================= PASSWORD VALIDATION ================= */
 const validatePassword = (password) =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(password);
@@ -199,7 +201,7 @@ exports.forgotPassword = async (req, res) => {
     );
     const name = findOne[0].name;
 
-    const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+    const resetLink = `${URL}/reset-password/${resetToken}`;
 
     await sendEmail(
       email,

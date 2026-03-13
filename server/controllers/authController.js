@@ -5,6 +5,7 @@ const generateToken = require("../config/jwt");
 const sendEmail    = require("../utils/sendMail");
 const { uploadToCloudinary, deleteFromCloudinary } = require("../middleware/upload");
 
+const URL = process.env.REACT_APP_URL;
 /* ================= PASSWORD VALIDATION ================= */
 const validatePassword = (password) =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
@@ -415,7 +416,7 @@ exports.forgotPassword = async (req, res) => {
     );
     const lastName = findOne[0].lastName;
 
-    const resetLink = `https://admindashboard-c220.onrender.com/reset-password/${resetToken}`;
+    const resetLink = `${URL}/reset-password/${resetToken}`;
 
     await sendEmail(
       email,
