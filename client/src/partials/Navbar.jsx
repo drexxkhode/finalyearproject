@@ -68,7 +68,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
               className="d-flex align-items-center gap-2 border-0 bg-transparent p-0"
               onClick={() => navigate('/')}
             >
-              <div className="tf-brand-icon">⚽</div>
+              <div className="tf-brand-icon"><img src='/assets/img/logo/logo.png' /></div>
               <div className="text-start">
                 <div className="tf-brand-title">TURFARENA</div>
                 <div className="tf-brand-sub">Accra Metropolitan Assembly</div>

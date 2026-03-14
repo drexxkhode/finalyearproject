@@ -184,6 +184,9 @@ export default function MapView({ turfs, onOpenTurf }) {
   const [search,       setSearch]       = useState('')
   const [selected,     setSelected]     = useState(null)
   const [clusterReady, setClusterReady] = useState(false)
+  const [page,         setPage]         = useState(1)
+
+  const PAGE_SIZE = 5
 
   // Filter turfs by search
   const filtered = turfs.filter(t =>
@@ -191,6 +194,17 @@ export default function MapView({ turfs, onOpenTurf }) {
     t.name?.toLowerCase().includes(search.toLowerCase()) ||
     t.location?.toLowerCase().includes(search.toLowerCase())
   )
+
+  // Pagination — derived from filtered list
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  // Reset to page 1 whenever the search changes
+  const prevSearch = useRef(search)
+  if (prevSearch.current !== search) {
+    prevSearch.current = search
+    if (page !== 1) setPage(1)
+  }
 
   // Load markercluster plugin
   useEffect(() => {
@@ -302,36 +316,116 @@ export default function MapView({ turfs, onOpenTurf }) {
       {/* ── Side list (desktop only) ── */}
       <div
         className="d-none d-lg-flex"
-        style={{ width: 300, flexShrink: 0, overflowY: 'auto', flexDirection: 'column', gap: 8 }}
+        style={{
+          width: 300, flexShrink: 0, flexDirection: 'column', gap: 8,
+          // No overflowY: 'auto' — pagination replaces scrolling
+        }}
       >
-        <div className="text-muted small fw-bold text-uppercase mb-1" style={{ letterSpacing: 1 }}>
-          {filtered.length} Turfs
-        </div>
-        {filtered.map(t => (
-          <div
-            key={t.id}
-            onClick={() => { setSelected(t); onOpenTurf(t) }}
-            className="card border-0 shadow-sm rounded-3 p-3"
-            style={{
-              cursor: 'pointer', display: 'flex', flexDirection: 'row',
-              alignItems: 'center', gap: 12,
-              border: selected?.id === t.id ? '2px solid #0d6efd' : '1px solid #dee2e6',
-            }}
-          >
-            <img
-              src={t.image ?? FALLBACK_PHOTOS[0]}
-              alt={t.name} width={52} height={52}
-              className="rounded-3 object-fit-cover flex-shrink-0"
-              onError={e => { e.target.src = FALLBACK_PHOTOS[0] }}
-            />
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div className="fw-bold small text-truncate">{t.name}</div>
-              <div className="text-muted" style={{ fontSize: 11 }}>{t.location} · {t.distance ?? '—'} km</div>
-              <div className="text-primary fw-bold" style={{ fontSize: 12 }}>₵{t.pricePerHour}/hr</div>
-            </div>
-            <i className="bi bi-chevron-right text-muted" />
+        {/* Header — count + page indicator */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="text-muted small fw-bold text-uppercase" style={{ letterSpacing: 1 }}>
+            {filtered.length} Turf{filtered.length !== 1 ? 's' : ''}
           </div>
-        ))}
+          {totalPages > 1 && (
+            <div className="text-muted" style={{ fontSize: 11 }}>
+              Page {page} of {totalPages}
+            </div>
+          )}
+        </div>
+
+        {/* Turf cards — current page only */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {paginated.map(t => (
+            <div
+              key={t.id}
+              onClick={() => { setSelected(t); onOpenTurf(t) }}
+              className="card border-0 shadow-sm rounded-3 p-3"
+              style={{
+                cursor: 'pointer', display: 'flex', flexDirection: 'row',
+                alignItems: 'center', gap: 12,
+                border: selected?.id === t.id ? '2px solid #0d6efd' : '1px solid #dee2e6',
+                transition: 'border-color .15s',
+              }}
+            >
+              <img
+                src={t.cover_image ?? t.image ?? FALLBACK_PHOTOS[0]}
+                alt={t.name} width={52} height={52}
+                className="rounded-3 flex-shrink-0"
+                style={{ objectFit: 'cover' }}
+                onError={e => { e.target.src = FALLBACK_PHOTOS[0] }}
+              />
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <div className="fw-bold small text-truncate">{t.name}</div>
+                <div className="text-muted" style={{ fontSize: 11 }}>{t.location} · {t.distance ?? '—'} km</div>
+                <div className="text-primary fw-bold" style={{ fontSize: 12 }}>₵{t.pricePerHour}/hr</div>
+              </div>
+              <i className="bi bi-chevron-right text-muted" />
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination controls — only shown when there is more than one page */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            paddingTop: 8, borderTop: '1px solid #f0f0f0', marginTop: 4,
+          }}>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={{
+                border: 'none', borderRadius: 8, padding: '5px 12px',
+                background: page === 1 ? '#f0f0f0' : '#0d6efd',
+                color: page === 1 ? '#adb5bd' : '#fff',
+                fontWeight: 700, fontSize: 12, cursor: page === 1 ? 'default' : 'pointer',
+                transition: 'background .15s',
+              }}
+            >
+              ‹ Prev
+            </button>
+
+            {/* Page number pills */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce((acc, p, idx, arr) => {
+                  if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…')
+                  acc.push(p)
+                  return acc
+                }, [])
+                .map((p, idx) =>
+                  p === '…'
+                    ? <span key={`e${idx}`} style={{ fontSize: 11, color: '#adb5bd', alignSelf: 'center' }}>…</span>
+                    : <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        style={{
+                          width: 26, height: 26, border: 'none', borderRadius: 6,
+                          background: page === p ? '#0d6efd' : '#f0f0f0',
+                          color: page === p ? '#fff' : '#495057',
+                          fontWeight: 700, fontSize: 11, cursor: 'pointer',
+                          transition: 'background .15s',
+                        }}
+                      >{p}</button>
+                )
+              }
+            </div>
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              style={{
+                border: 'none', borderRadius: 8, padding: '5px 12px',
+                background: page === totalPages ? '#f0f0f0' : '#0d6efd',
+                color: page === totalPages ? '#adb5bd' : '#fff',
+                fontWeight: 700, fontSize: 12, cursor: page === totalPages ? 'default' : 'pointer',
+                transition: 'background .15s',
+              }}
+            >
+              Next ›
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

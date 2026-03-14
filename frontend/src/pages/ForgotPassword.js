@@ -33,10 +33,9 @@ const ForgotPassword = () => {
     setMessage("");
     setIsSending(true);
     try {
-      const res = await axios.post(
-        `${API}/api/auth/forgot-password`,
-        { email },
-      );
+      const res = await axios.post(`${API}/api/auth/forgot-password`, {
+        email,
+      });
       setMessage(res?.data?.message);
 
       // Start timer after sending email
@@ -72,7 +71,7 @@ const ForgotPassword = () => {
             <div className="my-5">
               <div className="border rounded-2 p-4 mt-5">
                 <div className="login-form">
-                  <Link to={"/login"}  className="mb-4 d-flex">
+                  <Link to={"/login"} className="mb-4 d-flex">
                     <img
                       src="/assets/images/logo.svg"
                       className="img-fluid login-logo"
@@ -110,6 +109,15 @@ const ForgotPassword = () => {
                     {timer > 0 && <p>Try again in: {formatTime(timer)}</p>}
                   </div>
                 </div>
+              </div>
+              <div className="d-flex align-items-center justify-content-center mt-3">
+                <Link
+                  to="/login"
+                  className="text-decoration-underline fw-bold"
+                  style={{ fontSize: 18, color: "blue" }}
+                >
+                  ← Back to login
+                </Link>
               </div>
             </div>
           </div>

@@ -11,9 +11,18 @@ const FALLBACK_PHOTOS = [
 ]
 
 const STATUS_META = {
-  confirmed: { bg: 'rgba(25,135,84,.1)',  color: '#198754', border: 'rgba(25,135,84,.25)',  icon: 'bi-check-circle-fill',  label: 'Confirmed' },
-  completed: { bg: 'rgba(13,110,253,.1)', color: '#0d6efd', border: 'rgba(13,110,253,.25)', icon: 'bi-flag-fill',           label: 'Completed' },
-  cancelled: { bg: 'rgba(220,53,69,.1)',  color: '#dc3545', border: 'rgba(220,53,69,.25)',  icon: 'bi-x-circle-fill',       label: 'Cancelled' },
+  confirmed:      { bg: 'rgba(25,135,84,.1)',   color: '#198754', border: 'rgba(25,135,84,.25)',  icon: 'bi-check-circle-fill',  label: 'Confirmed'      },
+  completed:      { bg: 'rgba(13,110,253,.1)',  color: '#0d6efd', border: 'rgba(13,110,253,.25)', icon: 'bi-flag-fill',           label: 'Completed'      },
+  cancelled:      { bg: 'rgba(220,53,69,.1)',   color: '#dc3545', border: 'rgba(220,53,69,.25)',  icon: 'bi-x-circle-fill',       label: 'Cancelled'      },
+}
+
+// Separate map for payment_status display — shown as a secondary badge
+const PAYMENT_META = {
+  paid:            { color: '#198754', icon: 'bi-check-circle',       label: null              },  // default — no badge needed
+  refund_pending:  { color: '#fd7e14', icon: 'bi-hourglass-split',    label: 'Refund Pending'  },
+  refunded:        { color: '#0d6efd', icon: 'bi-arrow-return-left',  label: 'Refunded'        },
+  no_refund:       { color: '#6c757d', icon: 'bi-slash-circle',       label: 'No Refund'       },
+  partial_refund:  { color: '#0d6efd', icon: 'bi-arrow-return-left',  label: 'Partial Refund'  },
 }
 
 // Penalty preview — mirrors server logic
@@ -162,14 +171,22 @@ function BookingCard({ b, index, onCancel }) {
           <span style={{ fontSize: 13, fontWeight: 600 }}>{b.slot_label ?? b.slot ?? '—'}</span>
         </div>
 
-        {/* Refund info for cancelled */}
-        {status === 'cancelled' && parseFloat(b.refund_amount) > 0 && (
-          <div style={{ fontSize: 11, color: '#198754', background: 'rgba(25,135,84,.08)',
-            borderRadius: 6, padding: '4px 8px' }}>
-            <i className="bi bi-arrow-return-left me-1"></i>
-            Refund: ₵{parseFloat(b.refund_amount).toFixed(2)}
-          </div>
-        )}
+        {/* Payment status badge — only shown when it conveys extra info */}
+        {(() => {
+          const pm = PAYMENT_META[b.payment_status]
+          if (!pm || !pm.label) return null
+          return (
+            <div style={{ fontSize: 11, color: pm.color,
+              background: `${pm.color}18`, borderRadius: 6,
+              padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <i className={`bi ${pm.icon}`}></i>
+              {pm.label}
+              {(b.payment_status === 'refund_pending' || b.payment_status === 'refunded' || b.payment_status === 'partial_refund')
+                && parseFloat(b.refund_amount) > 0
+                && ` — ₵${parseFloat(b.refund_amount).toFixed(2)}`}
+            </div>
+          )
+        })()}
 
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -232,8 +249,13 @@ export default function MyBookings({ onBack }) {
       setCancelTarget(null)
       await fetchBookings()   // refresh list
     } catch (e) {
-      setError(e.response?.data?.message || 'Cancellation failed.')
+      // Show the server's specific error message — it distinguishes between
+      // "Paystack refund failed (booking NOT cancelled)" vs other errors
+      const msg = e.response?.data?.message || 'Cancellation failed. Please try again.'
+      setError(msg)
       setCancelTarget(null)
+      // Re-fetch so the UI reflects true current state from DB
+      await fetchBookings()
     } finally {
       setCancelling(false)
     }
@@ -326,4 +348,4 @@ export default function MyBookings({ onBack }) {
       )}
     </div>
   )
-}
+};

@@ -20,4 +20,4 @@ export default function MobileBottomNav({ TABS, activeTab, handleTabChange }) {
       ))}
     </div>
   );
-}
+};

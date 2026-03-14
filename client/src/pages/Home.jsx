@@ -6,12 +6,15 @@ import axios from 'axios';
 const PAGE_SIZE = 12
 
 export default function Home({ slots = {}, onOpenTurf, activeTab }) {
-  const [search,  setSearch]  = useState('')
-  const [fCap,    setFCap]    = useState('All')
-  const [sort,    setSort]    = useState('distance')
-  const [page,    setPage]    = useState(1)
-  const [turfs,   setTurfs]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const [search,   setSearch]  = useState('')
+  const [fCap,     setFCap]    = useState('All')
+  const [sort,     setSort]    = useState('distance')
+  const [page,     setPage]    = useState(1)
+  const [recPage,  setRecPage] = useState(1)
+  const [turfs,    setTurfs]   = useState([])
+  const [loading,  setLoading] = useState(true)
+
+  const REC_PAGE_SIZE = 4
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -54,7 +57,11 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   useEffect(() => { setPage(1) }, [search, fCap, sort])
 
-  const rec = [...turfs].sort((a, b) => b.rating - a.rating)
+  const rec          = [...turfs].sort((a, b) => b.rating - a.rating)
+  const recTotal     = Math.ceil(rec.length / REC_PAGE_SIZE)
+  const recPaginated = rec.slice((recPage - 1) * REC_PAGE_SIZE, recPage * REC_PAGE_SIZE)
+  // The featured turf on the left rotates with recPage
+  const featured     = rec[(recPage - 1) * REC_PAGE_SIZE] ?? rec[0]
 
   if (loading) return (
     <div className="text-center py-5">
@@ -142,40 +149,214 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
       {/* ── RECOMMEND TAB ── */}
       {activeTab === 'recommend' && rec.length > 0 && (
         <div className="row g-4">
+
+          {/* ── LEFT — Featured turf highlight ── */}
           <div className="col-12 col-lg-7">
-            <div className="tf-rec-highlight">
-              <span className="tf-badge tf-badge-yellow">⭐ TOP PICK</span>
-              <img src={rec[0].cover_image ?? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={rec[0].name} className="img-fluid rounded mb-3"
-                onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }} />
-              <div className="fw-bold fs-4">{rec[0].name}</div>
-              <small className="text-muted">{rec[0].location}</small>
-              <div className="mt-3">
-                <span className="tf-info-price-big">₵{rec[0].pricePerHour}</span>
-                <span className="tf-info-label"> /hr</span>
+            <div className="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
+
+              {/* Cover image — fixed height so it never stretches the card */}
+              <div style={{ position: 'relative', height: 220, overflow: 'hidden' }}>
+                <img
+                  src={featured.cover_image ?? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'}
+                  alt={featured.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }}
+                />
+                {/* Gradient overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,.65))',
+                }} />
+                {/* Top badge */}
+                <div style={{ position: 'absolute', top: 12, left: 14 }}>
+                  <span className="tf-badge tf-badge-yellow">⭐ TOP PICK</span>
+                </div>
+                {/* Rating + capacity overlay on image */}
+                <div style={{
+                  position: 'absolute', bottom: 12, left: 14, right: 14,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+                }}>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: 18, lineHeight: 1.2 }}>
+                      {featured.name}
+                    </div>
+                    <div style={{ color: 'rgba(255,255,255,.8)', fontSize: 12, marginTop: 2 }}>
+                      <i className="bi bi-geo-alt-fill me-1"></i>
+                      {featured.location}
+                      {featured.distance ? ` · ${featured.distance} km` : ''}
+                    </div>
+                  </div>
+                  <div style={{
+                    background: 'rgba(255,255,255,.15)', backdropFilter: 'blur(6px)',
+                    borderRadius: 8, padding: '4px 10px', textAlign: 'center',
+                  }}>
+                    <div style={{ color: '#ffc107', fontWeight: 800, fontSize: 15 }}>
+                      ⭐ {featured.rating}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <button className="btn btn-primary mt-3" onClick={() => onOpenTurf(rec[0])}>Book Now</button>
+
+              {/* Card body */}
+              <div className="p-3">
+                {/* Amenity + surface badges */}
+                <div className="d-flex flex-wrap gap-2 mb-3">
+                  {featured.surface && (
+                    <span className="tf-badge tf-badge-gray">{featured.surface}</span>
+                  )}
+                  {featured.capacity && (
+                    <span className="tf-badge tf-badge-blue">{featured.capacity}</span>
+                  )}
+                  {(Array.isArray(featured.amenities) ? featured.amenities : [])
+                    .slice(0, 3)
+                    .map(a => (
+                      <span key={a} className="tf-badge tf-badge-green">
+                        <i className="bi bi-check-circle-fill me-1"></i>{a}
+                      </span>
+                    ))
+                  }
+                </div>
+
+                {/* About snippet */}
+                {featured.about && (
+                  <p className="text-muted small mb-3" style={{
+                    display: '-webkit-box', WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {featured.about}
+                  </p>
+                )}
+
+                {/* Price + Book */}
+                <div className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <span className="tf-info-price-big">₵{featured.pricePerHour}</span>
+                    <span className="tf-info-label"> /hr</span>
+                  </div>
+                  <button
+                    className="btn btn-primary fw-bold px-4"
+                    onClick={() => onOpenTurf(featured)}
+                  >
+                    Book Now →
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* ── RIGHT — Ranked list with pagination ── */}
           <div className="col-12 col-lg-5">
-            <div className="card border-0 shadow-sm rounded-4 p-3">
-              <div className="fw-bold mb-3">🏆 All Turfs Ranked</div>
-              {rec.map((t, i) => (
-                <div key={t.id} className="d-flex align-items-center gap-3 py-2 border-bottom" style={{ cursor: 'pointer' }}
-                  onClick={() => onOpenTurf(t)}>
-                  <div className="fw-bold">{i + 1}</div>
-                  <img src={t.cover_image ?? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={t.name} width={44} height={44} className="rounded"
-                    onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }} />
-                  <div className="flex-grow-1">
-                    <div className="fw-bold small">{t.name}</div>
-                    <small className="text-muted">⭐ {t.rating}</small>
+            <div className="card border-0 shadow-sm rounded-4 p-3 h-100 d-flex flex-column">
+
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="fw-bold">🏆 All Turfs Ranked</div>
+                {recTotal > 1 && (
+                  <small className="text-muted">
+                    {(recPage - 1) * REC_PAGE_SIZE + 1}–{Math.min(recPage * REC_PAGE_SIZE, rec.length)} of {rec.length}
+                  </small>
+                )}
+              </div>
+
+              {/* List — current page only */}
+              <div className="flex-grow-1">
+                {recPaginated.map((t, i) => {
+                  const globalRank = (recPage - 1) * REC_PAGE_SIZE + i + 1
+                  const isTop3     = globalRank <= 3
+                  const rankColors = ['#ffc107', '#adb5bd', '#cd7f32']  // gold, silver, bronze
+                  return (
+                    <div
+                      key={t.id}
+                      className="d-flex align-items-center gap-3 py-2 border-bottom"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => onOpenTurf(t)}
+                    >
+                      {/* Rank badge */}
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: isTop3 ? rankColors[globalRank - 1] : '#b9a9a9',
+                        color: isTop3 ? (globalRank === 1 ? '#000' : '#927f7f') : '#6c757d',
+                        fontWeight: 800, fontSize: 12,
+                      }}>
+                        {globalRank}
+                      </div>
+
+                      {/* Turf image */}
+                      <img
+                        src={t.cover_image ?? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'}
+                        alt={t.name}
+                        width={44} height={44}
+                        style={{ borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                        onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }}
+                      />
+
+                      {/* Info */}
+                      <div className="flex-grow-1" style={{ overflow: 'hidden' }}>
+                        <div className="fw-bold small text-truncate">{t.name}</div>
+                        <div className="text-muted" style={{ fontSize: 11 }}>
+                          ⭐ {t.rating}
+                          {t.surface  ? ` · ${t.surface}`         : ''}
+                          {t.capacity ? ` · ${t.capacity}`        : ''}
+                          {t.distance ? ` · ${t.distance} km`     : ''}
+                        </div>
+                      </div>
+
+                      {/* Price */}
+                      <div className="text-primary fw-bold" style={{ fontSize: 13, flexShrink: 0 }}>
+                        ₵{t.pricePerHour}/hr
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Pagination controls */}
+              {recTotal > 1 && (
+                <div className="d-flex justify-content-between align-items-center pt-3 mt-2"
+                  style={{ borderTop: '1px solid #f0f0f0' }}>
+                  <button
+                    className="btn btn-sm btn-outline-primary px-1"
+                    onClick={() => setRecPage(p => Math.max(1, p - 1))}
+                    disabled={recPage === 1}
+                  >
+                    <i className="bi bi-chevron-left"></i> Prev
+                  </button>
+
+                  <div className="d-flex align-items-center gap-1">
+                    {Array.from({ length: recTotal }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === recTotal || Math.abs(p - recPage) <= 1)
+                      .reduce((acc, p, idx, arr) => {
+                        if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...')
+                        acc.push(p); return acc
+                      }, [])
+                      .map((p, idx) =>
+                        p === '...'
+                          ? <span key={`e${idx}`} className="text-muted px-1" style={{ fontSize: 12 }}>…</span>
+                          : <button
+                              key={p}
+                              className={`btn btn-sm px-2 ${recPage === p ? 'btn-primary' : 'btn-outline-secondary'}`}
+                              style={{ minWidth: 30 }}
+                              onClick={() => setRecPage(p)}
+                            >{p}</button>
+                      )
+                    }
                   </div>
-                  <div className="text-primary fw-bold">₵{t.pricePerHour}</div>
+
+                  <button
+                    className="btn btn-sm btn-outline-primary px-1"
+                    onClick={() => setRecPage(p => Math.min(recTotal, p + 1))}
+                    disabled={recPage === recTotal}
+                  >
+                    Next <i className="bi bi-chevron-right"></i>
+                  </button>
                 </div>
-              ))}
+              )}
+
             </div>
           </div>
         </div>
       )}
     </div>
   )
-}
+};

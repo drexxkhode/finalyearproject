@@ -254,7 +254,37 @@ const paystackWebhook = async (req, res) => {
           [p.user_id, p.turf_id, s.time_slot_id, slotLabel,
            p.booking_date, perSlotAmount, ref]
         );
-        if (result.insertId) bookingIds.push(result.insertId);
+
+        if (result.insertId) {
+          bookingIds.push(result.insertId);
+
+          // ── DB-level double-booking guard ────────────────────────────────
+          // INSERT into active_bookings enforces the UNIQUE KEY
+          // (time_slot_id, booking_date) at the database level.
+          // If a race condition causes two webhooks for the same slot+date,
+          // the second INSERT throws a duplicate key error and is logged —
+          // the booking row above was already INSERT IGNORE'd so it's a no-op.
+          try {
+            await db.query(
+              `INSERT INTO active_bookings
+                 (time_slot_id, booking_date, booking_id, turf_id)
+               VALUES (?, ?, ?, ?)`,
+              [s.time_slot_id, p.booking_date, result.insertId, p.turf_id]
+            );
+          } catch (dupErr) {
+            // Duplicate key — another booking already owns this slot on this date.
+            // Roll back the booking row we just inserted.
+            console.error(
+              `[webhook] ⚠️  Double-booking attempt blocked by DB constraint — ` +
+              `slotId=${s.time_slot_id} date=${p.booking_date} ref=${ref}`
+            );
+            await db.query(
+              `DELETE FROM bookings WHERE id = ?`, [result.insertId]
+            );
+            bookingIds.pop();
+          }
+        }
+
         console.log(`[webhook] Booking row — slotId=${s.time_slot_id} label=${slotLabel} amount=${perSlotAmount} insertId=${result.insertId}`);
       }
 
@@ -301,26 +331,62 @@ const paystackWebhook = async (req, res) => {
 
     // ── refund.processed ──────────────────────────────────────────────────
     if (event.event === 'refund.processed') {
-      const ref       = event.data.transaction_reference;
-      const refundGHS = event.data.amount / 100;
+      // Paystack's refund.processed payload shape:
+      // event.data.transaction.reference  — the original charge reference (our paystack_ref)
+      // event.data.amount                 — refund amount in pesewas
+      const ref       = event.data?.transaction?.reference ?? event.data?.transaction_reference;
+      const refundGHS = (event.data?.amount ?? 0) / 100;
 
-      const [bRows] = await db.query(
-        `SELECT id FROM bookings WHERE paystack_ref = ? AND status = 'cancelled'`, [ref]
-      );
-      const perSlot = bRows.length
-        ? parseFloat((refundGHS / bRows.length).toFixed(2))
-        : refundGHS;
+      if (!ref) {
+        console.error('[webhook] refund.processed — could not extract transaction reference', JSON.stringify(event.data));
+        return;
+      }
 
-      await db.query(
-        `UPDATE bookings SET payment_status = 'refunded', refund_amount = ?
-         WHERE paystack_ref = ? AND status = 'cancelled'`,
-        [perSlot, ref]
-      );
-      await db.query(
-        `UPDATE payments SET payment_status = 'refunded', paystack_event = 'refund.processed'
-         WHERE paystack_ref = ?`, [ref]
-      );
       console.log(`[webhook] ↩️  Refund processed ref=${ref} ₵${refundGHS}`);
+
+      // Update only the cancelled booking rows for this ref that are still
+      // refund_pending — a single paystack_ref may cover multiple slots,
+      // some cancelled (refund_pending) and some still confirmed.
+      // We only update the cancelled ones.
+      await db.query(
+        `UPDATE bookings
+         SET payment_status = 'refunded'
+         WHERE paystack_ref = ? AND status = 'cancelled' AND payment_status = 'refund_pending'`,
+        [ref]
+      );
+
+      // Check if ALL booking rows for this ref are now either cancelled+refunded
+      // or still confirmed. Only mark the payments row as 'refunded' if every
+      // slot in the original transaction has been refunded.
+      const [remaining] = await db.query(
+        `SELECT
+           SUM(CASE WHEN status = 'cancelled' AND payment_status = 'refund_pending' THEN 1 ELSE 0 END) AS still_pending,
+           SUM(CASE WHEN status = 'confirmed' AND payment_status = 'paid' THEN 1 ELSE 0 END) AS still_active
+         FROM bookings WHERE paystack_ref = ?`,
+        [ref]
+      );
+
+      const stillPending = parseInt(remaining[0]?.still_pending ?? 0);
+      const stillActive  = parseInt(remaining[0]?.still_active  ?? 0);
+
+      if (stillPending === 0 && stillActive === 0) {
+        // All slots cancelled and refunded — mark payment as fully refunded
+        await db.query(
+          `UPDATE payments SET payment_status = 'refunded', paystack_event = 'refund.processed'
+           WHERE paystack_ref = ?`,
+          [ref]
+        );
+        console.log(`[webhook] Payment ref=${ref} fully refunded`);
+      } else if (stillPending === 0 && stillActive > 0) {
+        // Partial refund — some slots still active, mark payment as partial_refund
+        await db.query(
+          `UPDATE payments SET payment_status = 'partial_refund', paystack_event = 'refund.processed'
+           WHERE paystack_ref = ?`,
+          [ref]
+        );
+        console.log(`[webhook] Payment ref=${ref} partial refund — ${stillActive} slot(s) still active`);
+      }
+      // If stillPending > 0, more refund webhooks are coming — leave payments as-is
     }
 
   } catch (err) {
@@ -345,26 +411,36 @@ const cancelBooking = async (req, res) => {
     if (!rows.length) return res.status(404).json({ message: 'Booking not found' });
 
     const booking = rows[0];
+
+    // ── Guard: already cancelled ───────────────────────────────────────────
     if (booking.status === 'cancelled')
       return res.status(400).json({ message: 'Booking is already cancelled' });
+
+    // ── Guard: only paid bookings can be cancelled ─────────────────────────
     if (booking.payment_status !== 'paid')
       return res.status(400).json({ message: 'Only paid bookings can be cancelled' });
 
-    // Fetch the authoritative start_time from time_slots instead of
-    // parsing slot_label — more reliable and format-independent
+    // ── Fetch authoritative start_time from time_slots ────────────────────
     const [tsRows] = await db.query(
       `SELECT start_time FROM time_slots WHERE id = ? LIMIT 1`,
       [booking.time_slot_id]
     );
-    // Strip any time component from booking_date (DB may return full ISO string)
-    const dateOnly   = String(booking.booking_date).slice(0, 10);
-    const startTime  = tsRows.length ? tsRows[0].start_time.slice(0, 5) : booking.slot_label.slice(0, 5);
+    const dateOnly       = String(booking.booking_date).slice(0, 10);
+    const startTime      = tsRows.length ? tsRows[0].start_time.slice(0, 5) : booking.slot_label.slice(0, 5);
     const slotDateTime   = new Date(`${dateOnly}T${startTime}:00`);
     const hoursUntilSlot = (slotDateTime - Date.now()) / (1000 * 60 * 60);
 
+    // ── Guard: reject cancellation for already-passed slots ───────────────
+    // The client hides the button, but this server-side check prevents
+    // direct API calls from cancelling a passed booking.
+    if (hoursUntilSlot < 0)
+      return res.status(400).json({
+        message: 'Cannot cancel a booking whose slot time has already passed.',
+      });
+
+    // ── Calculate penalty and refund ──────────────────────────────────────
     let penaltyPct;
-    if      (hoursUntilSlot < 0)  penaltyPct = 100;
-    else if (hoursUntilSlot < 6)  penaltyPct = 100;
+    if      (hoursUntilSlot < 6)  penaltyPct = 100;
     else if (hoursUntilSlot < 24) penaltyPct = 50;
     else                           penaltyPct = 0;
 
@@ -372,32 +448,93 @@ const cancelBooking = async (req, res) => {
     const penaltyAmt   = parseFloat(((penaltyPct / 100) * paidAmount).toFixed(2));
     const refundAmount = parseFloat((paidAmount - penaltyAmt).toFixed(2));
 
+    // ── No refund case (100% penalty) — cancel immediately ────────────────
+    if (refundAmount === 0) {
+      await db.query(
+        `UPDATE bookings
+         SET status = 'cancelled', cancelled_at = NOW(),
+             refund_amount = 0, payment_status = 'no_refund'
+         WHERE id = ?`,
+        [booking_id]
+      );
+      // Free the slot in active_bookings so it can be re-booked
+      await db.query(
+        `DELETE FROM active_bookings WHERE booking_id = ?`,
+        [booking_id]
+      );
+      console.log(`[cancel] Booking ${booking_id} cancelled — no refund (within 6 hrs)`);
+      return res.json({
+        message:          'Booking cancelled — no refund applies (within 6 hours of slot)',
+        refund_amount:    0,
+        penalty_pct:      penaltyPct,
+        refund_initiated: false,
+      });
+    }
+
+    // ── Refund case — call Paystack FIRST, then update DB ─────────────────
+    // IMPORTANT: DB is only updated after Paystack confirms the refund was
+    // accepted. If Paystack rejects (wrong ref, key mismatch, network error),
+    // the booking stays 'confirmed' and 'paid' — the user can try again.
+    let paystackRefundRef = null;
+    try {
+      const refRes = await axios.post(
+        'https://api.paystack.co/refund',
+        {
+          transaction: booking.paystack_ref,
+          amount:      Math.round(refundAmount * 100),  // pesewas
+        },
+        {
+          headers: {
+            Authorization:  `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!refRes.data?.status) {
+        // Paystack returned a failure response
+        const msg = refRes.data?.message ?? 'Paystack refund request failed';
+        console.error(`[cancel] Paystack rejected refund for booking ${booking_id}: ${msg}`);
+        return res.status(502).json({ message: `Refund could not be initiated: ${msg}` });
+      }
+
+      paystackRefundRef = refRes.data?.data?.id ?? null;
+      console.log(`[cancel] Paystack refund accepted — booking=${booking_id} ref=${booking.paystack_ref} refundRef=${paystackRefundRef} amount=₵${refundAmount}`);
+
+    } catch (refErr) {
+      const msg = refErr.response?.data?.message ?? refErr.message;
+      console.error(`[cancel] Paystack refund error for booking ${booking_id}:`, msg);
+      // Do NOT update DB — return error so user knows refund wasn't initiated
+      return res.status(502).json({
+        message: `Could not initiate refund: ${msg}. Your booking has NOT been cancelled. Please try again or contact support.`,
+      });
+    }
+
+    // ── Paystack accepted — now update DB ─────────────────────────────────
     await db.query(
-      `UPDATE bookings SET status = 'cancelled', cancelled_at = NOW(), refund_amount = ?
+      `UPDATE bookings
+       SET status = 'cancelled', cancelled_at = NOW(),
+           refund_amount = ?, payment_status = 'refund_pending'
        WHERE id = ?`,
       [refundAmount, booking_id]
     );
-    // slot_locks row was already deleted at payment time — nothing to free here.
-    // The booking row's status = 'cancelled' is all that's needed.
+    // Free the slot in active_bookings immediately — the slot is available
+    // for new bookings as soon as the cancellation is accepted, regardless
+    // of how long Paystack takes to process the actual refund.
+    await db.query(
+      `DELETE FROM active_bookings WHERE booking_id = ?`,
+      [booking_id]
+    );
 
-    let refundInitiated = false;
-    if (refundAmount > 0 && booking.paystack_ref) {
-      try {
-        const refRes = await axios.post(
-          'https://api.paystack.co/refund',
-          { transaction: booking.paystack_ref, amount: Math.round(refundAmount * 100) },
-          { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' } }
-        );
-        refundInitiated = refRes.data?.status === true;
-      } catch (refErr) {
-        console.error('Paystack refund error:', refErr.response?.data ?? refErr.message);
-      }
-    }
+    console.log(`[cancel] Booking ${booking_id} cancelled — refund_pending ₵${refundAmount}`);
 
     return res.json({
-      message: 'Booking cancelled', refund_amount: refundAmount,
-      penalty_pct: penaltyPct, refund_initiated: refundInitiated,
+      message:          'Booking cancelled. Refund is being processed.',
+      refund_amount:    refundAmount,
+      penalty_pct:      penaltyPct,
+      refund_initiated: true,
     });
+
   } catch (err) {
     console.error('cancelBooking error:', err);
     return res.status(500).json({ message: 'Server error' });
