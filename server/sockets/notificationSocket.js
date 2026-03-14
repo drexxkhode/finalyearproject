@@ -60,7 +60,7 @@ LIMIT 5`,
         )
 
         const [recentBookings] = await db.query(
-          `SELECT b.id, u.name, COUNT(*) AS slots,
+          `SELECT MIN(b.id) AS id, u.name, COUNT(*) AS slots,
                   SUM(b.amount) AS amount, b.booking_date AS date,
                   MAX(b.created_at) AS created_at
            FROM bookings b

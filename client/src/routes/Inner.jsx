@@ -109,7 +109,7 @@ export default function Inner() {
       <Notification notif={notif} />
       <Routes>
         <Route path="/login" element={
-          <AuthScreen onSuccess={(u) => { setUser(u); notify(`Welcome, ${u.name}! 👋`) }} />
+          <AuthScreen onSuccess={(u) => { setUser(u); notify(`Welcome!, ${u.name}! 👋`) }} />
         } />
         <Route path="/lost-password" element={<LostPassword />} />
       <Route path={"/reset-password/:token"} element={<ResetPassword/>} />
