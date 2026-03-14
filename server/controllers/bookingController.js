@@ -257,32 +257,6 @@ const paystackWebhook = async (req, res) => {
 
         if (result.insertId) {
           bookingIds.push(result.insertId);
-
-          // ── DB-level double-booking guard ────────────────────────────────
-          // INSERT into active_bookings enforces the UNIQUE KEY
-          // (time_slot_id, booking_date) at the database level.
-          // If a race condition causes two webhooks for the same slot+date,
-          // the second INSERT throws a duplicate key error and is logged —
-          // the booking row above was already INSERT IGNORE'd so it's a no-op.
-          try {
-            await db.query(
-              `INSERT INTO active_bookings
-                 (time_slot_id, booking_date, booking_id, turf_id)
-               VALUES (?, ?, ?, ?)`,
-              [s.time_slot_id, p.booking_date, result.insertId, p.turf_id]
-            );
-          } catch (dupErr) {
-            // Duplicate key — another booking already owns this slot on this date.
-            // Roll back the booking row we just inserted.
-            console.error(
-              `[webhook] ⚠️  Double-booking attempt blocked by DB constraint — ` +
-              `slotId=${s.time_slot_id} date=${p.booking_date} ref=${ref}`
-            );
-            await db.query(
-              `DELETE FROM bookings WHERE id = ?`, [result.insertId]
-            );
-            bookingIds.pop();
-          }
         }
 
         console.log(`[webhook] Booking row — slotId=${s.time_slot_id} label=${slotLabel} amount=${perSlotAmount} insertId=${result.insertId}`);
@@ -329,25 +303,55 @@ const paystackWebhook = async (req, res) => {
       console.log(`[webhook] ✅ Done — ${bookingIds.length} booking(s) saved for ref=${ref}`);
     }
 
-    // ── refund.processed ──────────────────────────────────────────────────
-    if (event.event === 'refund.processed') {
-      // Paystack's refund.processed payload shape:
-      // event.data.transaction.reference  — the original charge reference (our paystack_ref)
-      // event.data.amount                 — refund amount in pesewas
-      const ref       = event.data?.transaction?.reference ?? event.data?.transaction_reference;
+    // ── refund.pending + refund.processed ────────────────────────────────
+    // refund.pending  — Paystack queued the refund (intermediate state)
+    // refund.processed — Paystack completed the refund (money returned)
+    // We update the DB only on refund.processed. refund.pending is logged
+    // for diagnostics only.
+    if (event.event === 'refund.pending' || event.event === 'refund.processed') {
+
+      // ── Log full payload so we can see the exact shape ───────────────────
+      // Paystack's refund event payload shape varies — log it once so we
+      // know exactly which field holds the original transaction reference.
+      console.log(`[webhook] ${event.event} full data:`, JSON.stringify(event.data));
+
+      // ── Extract original transaction reference — try every known path ────
+      // Paystack test vs live mode sometimes differs. Try all known variants:
+      //   event.data.transaction_reference   (flat string — older format)
+      //   event.data.transaction.reference   (nested object — newer format)
+      //   event.data.reference               (some event types)
+      const ref =
+        event.data?.transaction_reference           ??   // flat string
+        event.data?.transaction?.reference          ??   // nested object
+        event.data?.reference                       ??   // top-level
+        event.data?.metadata?.transaction_reference ??   // metadata fallback
+        null
+
       const refundGHS = (event.data?.amount ?? 0) / 100;
 
+      console.log(`[webhook] ${event.event} — extracted ref=${ref} ₵${refundGHS}`);
+
       if (!ref) {
-        console.error('[webhook] refund.processed — could not extract transaction reference', JSON.stringify(event.data));
+        // Log the full payload so you can see exactly which field to use
+        console.error(
+          `[webhook] ⚠️  Could not extract transaction reference from ${event.event}. ` +
+          `Full data: ${JSON.stringify(event.data)}`
+        );
+        // Don't update DB — wait for the next event or investigate payload
         return;
       }
 
+      // refund.pending — log only, do NOT update DB yet
+      // The refund is queued but money hasn't moved. Wait for refund.processed.
+      if (event.event === 'refund.pending') {
+        console.log(`[webhook] ↩️  Refund pending for ref=${ref} ₵${refundGHS} — waiting for refund.processed`);
+        return;
+      }
+
+      // ── refund.processed — money confirmed returned, update DB ───────────
       console.log(`[webhook] ↩️  Refund processed ref=${ref} ₵${refundGHS}`);
 
-      // Update only the cancelled booking rows for this ref that are still
-      // refund_pending — a single paystack_ref may cover multiple slots,
-      // some cancelled (refund_pending) and some still confirmed.
-      // We only update the cancelled ones.
+      // Update cancelled booking rows for this ref that are still refund_pending
       await db.query(
         `UPDATE bookings
          SET payment_status = 'refunded'
@@ -355,9 +359,7 @@ const paystackWebhook = async (req, res) => {
         [ref]
       );
 
-      // Check if ALL booking rows for this ref are now either cancelled+refunded
-      // or still confirmed. Only mark the payments row as 'refunded' if every
-      // slot in the original transaction has been refunded.
+      // Check if ALL booking rows for this ref are now settled
       const [remaining] = await db.query(
         `SELECT
            SUM(CASE WHEN status = 'cancelled' AND payment_status = 'refund_pending' THEN 1 ELSE 0 END) AS still_pending,
@@ -370,7 +372,6 @@ const paystackWebhook = async (req, res) => {
       const stillActive  = parseInt(remaining[0]?.still_active  ?? 0);
 
       if (stillPending === 0 && stillActive === 0) {
-        // All slots cancelled and refunded — mark payment as fully refunded
         await db.query(
           `UPDATE payments SET payment_status = 'refunded', paystack_event = 'refund.processed'
            WHERE paystack_ref = ?`,
@@ -378,7 +379,6 @@ const paystackWebhook = async (req, res) => {
         );
         console.log(`[webhook] Payment ref=${ref} fully refunded`);
       } else if (stillPending === 0 && stillActive > 0) {
-        // Partial refund — some slots still active, mark payment as partial_refund
         await db.query(
           `UPDATE payments SET payment_status = 'partial_refund', paystack_event = 'refund.processed'
            WHERE paystack_ref = ?`,
@@ -386,7 +386,6 @@ const paystackWebhook = async (req, res) => {
         );
         console.log(`[webhook] Payment ref=${ref} partial refund — ${stillActive} slot(s) still active`);
       }
-      // If stillPending > 0, more refund webhooks are coming — leave payments as-is
     }
 
   } catch (err) {
@@ -457,11 +456,7 @@ const cancelBooking = async (req, res) => {
          WHERE id = ?`,
         [booking_id]
       );
-      // Free the slot in active_bookings so it can be re-booked
-      await db.query(
-        `DELETE FROM active_bookings WHERE booking_id = ?`,
-        [booking_id]
-      );
+
       console.log(`[cancel] Booking ${booking_id} cancelled — no refund (within 6 hrs)`);
       return res.json({
         message:          'Booking cancelled — no refund applies (within 6 hours of slot)',
@@ -518,13 +513,7 @@ const cancelBooking = async (req, res) => {
        WHERE id = ?`,
       [refundAmount, booking_id]
     );
-    // Free the slot in active_bookings immediately — the slot is available
-    // for new bookings as soon as the cancellation is accepted, regardless
-    // of how long Paystack takes to process the actual refund.
-    await db.query(
-      `DELETE FROM active_bookings WHERE booking_id = ?`,
-      [booking_id]
-    );
+
 
     console.log(`[cancel] Booking ${booking_id} cancelled — refund_pending ₵${refundAmount}`);
 
