@@ -119,7 +119,21 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
 
     try {
       const token = localStorage.getItem('token')
-      const date  = info.date || new Date().toISOString().split('T')[0]
+      const today = new Date().toISOString().split('T')[0]
+
+      // The canonical booking date comes from the lock itself — not the form field.
+      // All slots in one session are locked for the same date (viewDate when locked).
+      // info.date is kept as a display/confirmation field only.
+      const lockDate = lockedSlots[0]?.lockDate ?? info.date ?? today
+      const date     = lockDate
+
+      // Final guard — reject past dates (belt + suspenders for mobile)
+      if (date < today) {
+        setPaying(false)
+        payingRef.current = false
+        setErr('The selected date is in the past. Please go back and choose today or a future date.')
+        return
+      }
 
       // ── Step 1: get the real ref from backend FIRST ────────────────────
       // This MUST happen before openIframe() so the webhook can find it.
@@ -312,8 +326,15 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
                   value={info.email} onChange={handle('email')} />
               </div>
               <div className="col-12 col-sm-6">
-                <input className="form-control" type="date"
-                  value={info.date} onChange={handle('date')} />
+                <div className="form-control bg-light text-muted" style={{ cursor: 'default' }}>
+                  <i className="bi bi-calendar3 me-2"></i>
+                  {[...new Set(lockedSlots.map(l => l.lockDate))].filter(Boolean).length > 0
+                    ? [...new Set(lockedSlots.map(l => l.lockDate))].filter(Boolean)
+                        .map(d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
+                          weekday: 'short', day: 'numeric', month: 'long', year: 'numeric'
+                        })).join(' & ')
+                    : 'No date selected'}
+                </div>
               </div>
             </div>
             <button className="btn btn-primary w-100 fw-bold mt-4 py-2"
@@ -333,26 +354,56 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
             <div className="col-12 col-md-7">
               <div className="card border-0 shadow-sm rounded-4 p-4 h-100">
                 <div className="fw-bold text-primary mb-3">📋 Booking Summary</div>
-                {[
-                  ['Turf',     turf.name],
-                  ['Location', turf.location],
-                  ['Date',     info.date || new Date().toLocaleDateString('en-GB')],
-                  ['Name',     info.name],
-                  ['Phone',    info.phone],
-                ].map(([k, v]) => (
-                  <div key={k} className="tf-divider-row">
-                    <span className="text-muted">{k}</span>
-                    <span className="fw-bold">{v}</span>
-                  </div>
-                ))}
+                {(() => {
+                  // Derive unique booking dates from the locks themselves
+                  const uniqueDates = [...new Set(lockedSlots.map(l => l.lockDate))].filter(Boolean)
+                  const dateDisplay = uniqueDates.length > 0
+                    ? uniqueDates.map(d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
+                        weekday: 'short', day: 'numeric', month: 'long', year: 'numeric'
+                      })).join(' & ')
+                    : new Date().toLocaleDateString('en-GB')
+                  return [
+                    ['Turf',     turf.name],
+                    ['Location', turf.location],
+                    ['Date',     dateDisplay],
+                    ['Name',     info.name],
+                    ['Phone',    info.phone],
+                  ].map(([k, v]) => (
+                    <div key={k} className="tf-divider-row">
+                      <span className="text-muted">{k}</span>
+                      <span className="fw-bold">{v}</span>
+                    </div>
+                  ))
+                })()}
                 <div className="mt-2 mb-1">
                   <div className="text-muted small mb-1">Time Slots</div>
-                  {lockedSlots.map(l => (
-                    <div key={l.slotId} className="d-flex justify-content-between small py-1 border-bottom">
-                      <span>{l.label}</span>
-                      <span className="fw-bold">₵{turf.pricePerHour}</span>
-                    </div>
-                  ))}
+                  {(() => {
+                    // Group slots by their lockDate for a clear multi-date display
+                    const byDate = lockedSlots.reduce((acc, l) => {
+                      const key = l.lockDate ?? 'Unknown date'
+                      if (!acc[key]) acc[key] = []
+                      acc[key].push(l)
+                      return acc
+                    }, {})
+                    const dates = Object.keys(byDate).sort()
+                    return dates.map(date => (
+                      <div key={date}>
+                        {dates.length > 1 && (
+                          <div className="text-muted small fw-bold mt-2 mb-1">
+                            {new Date(date + 'T00:00:00').toLocaleDateString('en-GB', {
+                              weekday: 'short', day: 'numeric', month: 'short'
+                            })}
+                          </div>
+                        )}
+                        {byDate[date].map(l => (
+                          <div key={l.slotId} className="d-flex justify-content-between small py-1 border-bottom">
+                            <span>{l.label}</span>
+                            <span className="fw-bold">₵{turf.pricePerHour}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))
+                  })()}
                 </div>
                 <div className="d-flex justify-content-between align-items-center pt-2">
                   <span className="fw-bolder fs-5">Total</span>
@@ -370,7 +421,28 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
                 <div className="text-muted small mb-1">Turf</div>
                 <div className="fw-bold">{turf.name}</div>
                 <div className="text-muted small mt-2 mb-1">Slots</div>
-                <div className="fw-bold text-primary small">{lockedSlots.map(l => l.label).join(' · ')}</div>
+                <div className="fw-bold text-primary small">
+                  {(() => {
+                    const byDate = lockedSlots.reduce((acc, l) => {
+                      const key = l.lockDate ?? ''
+                      if (!acc[key]) acc[key] = []
+                      acc[key].push(l.label)
+                      return acc
+                    }, {})
+                    return Object.entries(byDate).sort().map(([date, labels]) => (
+                      <div key={date}>
+                        {Object.keys(byDate).length > 1 && date && (
+                          <span className="text-muted me-1">
+                            {new Date(date + 'T00:00:00').toLocaleDateString('en-GB', {
+                              day: 'numeric', month: 'short'
+                            })}:
+                          </span>
+                        )}
+                        {labels.join(' · ')}
+                      </div>
+                    ))
+                  })()}
+                </div>
                 <div className="text-muted small mt-2 mb-1">Amount</div>
                 <div className="fw-bolder fs-4 text-primary">₵{totalAmount}.00</div>
               </div>
@@ -438,7 +510,28 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
                 <hr />
                 <div className="text-muted small mb-1">Booking</div>
                 <div className="fw-bold small">{turf.name}</div>
-                <div className="text-muted small">{lockedSlots.map(l => l.label).join(', ')}</div>
+                <div className="text-muted small">
+                  {(() => {
+                    const byDate = lockedSlots.reduce((acc, l) => {
+                      const key = l.lockDate ?? ''
+                      if (!acc[key]) acc[key] = []
+                      acc[key].push(l.label)
+                      return acc
+                    }, {})
+                    return Object.entries(byDate).sort().map(([date, labels]) => (
+                      <div key={date}>
+                        {Object.keys(byDate).length > 1 && date && (
+                          <span className="text-muted me-1">
+                            {new Date(date + 'T00:00:00').toLocaleDateString('en-GB', {
+                              day: 'numeric', month: 'short'
+                            })}:
+                          </span>
+                        )}
+                        {labels.join(', ')}
+                      </div>
+                    ))
+                  })()}
+                </div>
               </div>
               <button className="btn btn-outline-secondary w-100 fw-bold" onClick={() => goStep(2)}>
                 ← Back to Review
@@ -449,4 +542,4 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
       </div>
     </div>
   )
-}
+};

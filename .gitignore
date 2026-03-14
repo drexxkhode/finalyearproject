@@ -10,6 +10,7 @@ backend/
 .env.*
 server/.env
 client/.env
+frontend/.env
 
 # logs
 logs

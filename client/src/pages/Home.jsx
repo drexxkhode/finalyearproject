@@ -145,7 +145,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
           <div className="col-12 col-lg-7">
             <div className="tf-rec-highlight">
               <span className="tf-badge tf-badge-yellow">⭐ TOP PICK</span>
-              <img src={rec[0].cover_image || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={rec[0].name} className="img-fluid rounded mb-3"
+              <img src={rec[0].cover_image ?? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={rec[0].name} className="img-fluid rounded mb-3"
                 onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }} />
               <div className="fw-bold fs-4">{rec[0].name}</div>
               <small className="text-muted">{rec[0].location}</small>
@@ -163,7 +163,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
                 <div key={t.id} className="d-flex align-items-center gap-3 py-2 border-bottom" style={{ cursor: 'pointer' }}
                   onClick={() => onOpenTurf(t)}>
                   <div className="fw-bold">{i + 1}</div>
-                  <img src={t.cover_image || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={t.name} width={44} height={44} className="rounded"
+                  <img src={t.cover_image ?? 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80'} alt={t.name} width={44} height={44} className="rounded"
                     onError={e => { e.target.src = 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80' }} />
                   <div className="flex-grow-1">
                     <div className="fw-bold small">{t.name}</div>

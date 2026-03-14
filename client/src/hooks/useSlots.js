@@ -1,11 +1,20 @@
 /**
  * useSlots.js  —  src/hooks/useSlots.js
+ *
+ * v2 — advance booking support via slot_locks table.
+ * Every lock/release/confirm socket event now carries lockDate so the
+ * server can store and look up locks against a specific booking date.
+ * The slot:locked / slot:released broadcasts include lockDate so each
+ * client only applies the visual update when their viewDate matches.
  */
 import { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
-import { useSocket } from '../context/SocketContext'
+import { useSocket } from '../context/SocketContext';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
+
+// sessionStorage key — persists the last-viewed date across refreshes
+const SK_SLOT_DATE = 'tf_slot_date'
 
 async function fetchSlots(turfId, date) {
   try {
@@ -22,6 +31,13 @@ function todayISO() {
   return new Date().toISOString().split('T')[0]
 }
 
+// Returns the persisted viewing date, falling back to today if it's in the past
+function getPersistedDate() {
+  const saved = sessionStorage.getItem(SK_SLOT_DATE)
+  const today = todayISO()
+  return (saved && saved >= today) ? saved : today
+}
+
 export function useSlots(onSlotExpired) {
   const { socket, connected } = useSocket()
 
@@ -29,13 +45,21 @@ export function useSlots(onSlotExpired) {
   const [loadedTurfs, setLoadedTurfs] = useState(new Set())
   const [lockedSlots, setLockedSlots] = useState({})
 
-  const tickersRef      = useRef({})         // { [slotId]: intervalId }
-  const fetchingRef     = useRef(new Set())  // turfIds mid-fetch
-  const lockedSlotsRef  = useRef({})         // mirror of lockedSlots for use in event handlers
-  const activeTurfIdRef = useRef(null)       // currently viewed turfId
+  // The date the user is currently viewing — persisted in sessionStorage
+  const [viewDate, setViewDate] = useState(getPersistedDate)
 
-  // Keep ref in sync with state so event handlers always see latest value
+  const tickersRef      = useRef({})
+  const fetchingRef     = useRef(new Set())
+  const lockedSlotsRef  = useRef({})
+  const activeTurfIdRef = useRef(null)
+  const viewDateRef     = useRef(viewDate)
+
+  // Keep refs in sync with state
   useEffect(() => { lockedSlotsRef.current = lockedSlots }, [lockedSlots])
+  useEffect(() => {
+    viewDateRef.current = viewDate
+    sessionStorage.setItem(SK_SLOT_DATE, viewDate)
+  }, [viewDate])
 
   // ── Countdown ticker ──────────────────────────────────────────────────
   const startTicker = useCallback((slotId, expiresAt) => {
@@ -75,66 +99,74 @@ export function useSlots(onSlotExpired) {
   const ensureSlots = useCallback(async (turfId) => {
     activeTurfIdRef.current = turfId
     if (fetchingRef.current.has(turfId)) return
-    // Always re-fetch if we have a socket (gets fresh lock state too)
     fetchingRef.current.add(turfId)
 
-    const fetched = await fetchSlots(turfId, todayISO())
+    const date    = viewDateRef.current
+    const fetched = await fetchSlots(turfId, date)
 
     setSlots(prev => ({ ...prev, [turfId]: fetched }))
     setLoadedTurfs(prev => new Set([...prev, turfId]))
     fetchingRef.current.delete(turfId)
 
-    socket?.emit('turf:join', turfId)
+    // Send viewDate so the server returns only locks for this date
+    socket?.emit('turf:join', { turfId, viewDate: date })
   }, [socket])
 
   const refreshSlots = useCallback(async (turfId, date) => {
-    const fetched  = await fetchSlots(turfId, date)
+    const today    = todayISO()
+    const safeDate = (date && date >= today) ? date : today
+
+    setViewDate(safeDate)
+    viewDateRef.current = safeDate
+
+    const fetched = await fetchSlots(turfId, safeDate)
+
+    // Overlay the user's own locked slots only when viewing the date they locked for
     const myLocked = new Set(
       Object.values(lockedSlotsRef.current)
-        .filter(l => l.turfId === turfId)
+        .filter(l => l.turfId === turfId && l.lockDate === safeDate)
         .map(l => l.slotId)
     )
+
     setSlots(prev => ({
       ...prev,
       [turfId]: fetched.map(s =>
         myLocked.has(s.id) ? { ...s, status: 'locked', lockedBy: 'you' } : s
       ),
     }))
-    socket?.emit('turf:join', turfId)
+
+    socket?.emit('turf:join', { turfId, viewDate: safeDate })
   }, [socket])
 
-  // ── Re-join room on reconnect ─────────────────────────────────────────
+  // ── Re-join room on socket reconnect ─────────────────────────────────
   useEffect(() => {
     if (!connected || !socket) return
     const turfId = activeTurfIdRef.current
     if (turfId) {
-      // Re-fetch fresh data and re-join socket room
-      fetchingRef.current.delete(turfId)  // allow re-fetch
+      fetchingRef.current.delete(turfId)
       ensureSlots(turfId)
     }
   }, [connected]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Socket event listeners ────────────────────────────────────────────
-  // Registered once — use refs to access latest state without re-subscribing
   useEffect(() => {
     if (!socket) return
 
-    // Server sends ALL current locks for the turf on join.
-    // This is the single source of truth — overlay on fetched slots.
+    // Server sends locks for the exact viewDate the user joined with.
+    // No cross-date bleed — each lock row is date-specific in slot_locks.
     socket.on('turf:current-locks', ({ turfId, locks }) => {
       const myUserId = String(
         JSON.parse(localStorage.getItem('user') ?? '{}')?.id ?? ''
       )
 
-      // Rebuild lockedSlots for THIS user from server data
-      const myLocks = locks.filter(l => String(l.userId) === myUserId)
+      const myLocks          = locks.filter(l => String(l.userId) === myUserId)
+      const lockedByOtherIds = new Set(
+        locks.filter(l => String(l.userId) !== myUserId).map(l => l.slotId)
+      )
+      const myLockedIds = new Set(myLocks.map(l => l.slotId))
 
       setSlots(prev => {
         if (!prev[turfId]) return prev
-        const lockedByOtherIds = new Set(
-          locks.filter(l => String(l.userId) !== myUserId).map(l => l.slotId)
-        )
-        const myLockedIds = new Set(myLocks.map(l => l.slotId))
         return {
           ...prev,
           [turfId]: prev[turfId].map(s => {
@@ -145,16 +177,16 @@ export function useSlots(onSlotExpired) {
         }
       })
 
-      // Restore tickers for user's own locks (e.g. after page refresh)
+      // Restore countdown tickers for the user's own locks after a refresh
       myLocks.forEach(lock => {
-        const existing = lockedSlotsRef.current[lock.slotId]
-        if (!existing) {
-          // Find label from slots
+        if (!lockedSlotsRef.current[lock.slotId]) {
+          const expiresAt = new Date(lock.expiresAt).getTime()
+          const countdown = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+          if (countdown <= 0) return
+
           setSlots(prev => {
-            const slot = prev[turfId]?.find(s => s.id === lock.slotId)
+            const slot  = prev[turfId]?.find(s => s.id === lock.slotId)
             const label = slot?.label ?? `Slot ${lock.slotId}`
-            const expiresAt = new Date(lock.expiresAt).getTime()
-            const countdown = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
 
             setLockedSlots(p => ({
               ...p,
@@ -162,20 +194,22 @@ export function useSlots(onSlotExpired) {
                 turfId,
                 slotId:   lock.slotId,
                 label,
+                lockDate: viewDateRef.current,   // the date this lock is for
                 expiresAt,
                 countdown,
               },
             }))
             startTicker(lock.slotId, expiresAt)
-            return prev  // don't modify slots here
+            return prev
           })
         }
       })
     })
 
-    // Another user locked a slot — update visually for everyone else
-    socket.on('slot:locked', ({ turfId, slotId }) => {
-      // Don't overwrite 'you' with 'other'
+    // Another user locked a slot — only apply if they locked it for the
+    // same date the current user is viewing
+    socket.on('slot:locked', ({ turfId, slotId, lockDate }) => {
+      if (lockDate !== viewDateRef.current) return   // different date — ignore
       setSlots(prev => {
         if (!prev[turfId]) return prev
         return {
@@ -189,20 +223,20 @@ export function useSlots(onSlotExpired) {
       })
     })
 
-    // Slot released — update visually for ALL users immediately
-    socket.on('slot:released', ({ turfId, slotId, reason }) => {
-      // Update the slot grid for everyone
+    // Slot released — only apply if it's for the date being viewed
+    socket.on('slot:released', ({ turfId, slotId, lockDate, reason }) => {
+      if (lockDate !== viewDateRef.current) return   // different date — ignore
+
       setSlots(prev => {
         if (!prev[turfId]) return prev
         return {
           ...prev,
           [turfId]: prev[turfId].map(s =>
-            s.id === slotId ? { ...s, status: 'available', lockedBy: null } : s
+            s.id === slotId ? { ...s, status: 'free', lockedBy: null } : s
           ),
         }
       })
 
-      // If this was MY slot (expired or released by server), clean up timer
       const myLock = lockedSlotsRef.current[slotId]
       if (myLock && myLock.turfId === turfId) {
         stopTicker(slotId)
@@ -211,8 +245,9 @@ export function useSlots(onSlotExpired) {
       }
     })
 
-    // Slot permanently booked
-    socket.on('slot:booked', ({ turfId, slotId }) => {
+    // Slot permanently booked — only apply for the matching date
+    socket.on('slot:booked', ({ turfId, slotId, lockDate }) => {
+      if (lockDate && lockDate !== viewDateRef.current) return
       setSlots(prev => {
         if (!prev[turfId]) return prev
         return {
@@ -230,16 +265,17 @@ export function useSlots(onSlotExpired) {
       socket.off('slot:released')
       socket.off('slot:booked')
     }
-  }, [socket, startTicker, stopTicker, onSlotExpired]) // NO lockedSlots here — use ref instead
+  }, [socket, startTicker, stopTicker, onSlotExpired])
 
   // ── LOCK ──────────────────────────────────────────────────────────────
+  // lockDate defaults to viewDate — the date the user is currently browsing
   const lockSlot = useCallback((turfId, slotId, slotLabel) => {
     if (!socket) return
-    socket.emit('slot:lock', { turfId, slotId })
+    const lockDate = viewDateRef.current
+    socket.emit('slot:lock', { turfId, slotId, lockDate })
 
-    socket.once('slot:lock:ack', ({ ok, turfId: aTurf, slotId: aSlot, expiresAt, reason }) => {
+    socket.once('slot:lock:ack', ({ ok, turfId: aTurf, slotId: aSlot, lockDate: aDate, expiresAt, reason }) => {
       if (!ok) {
-        // Race condition — show as locked by other
         applyToTurf(aTurf, aSlot, { status: 'locked', lockedBy: 'other' })
         onSlotExpired?.(aSlot, reason)
         return
@@ -248,7 +284,14 @@ export function useSlots(onSlotExpired) {
       const countdown = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
       setLockedSlots(prev => ({
         ...prev,
-        [aSlot]: { turfId: aTurf, slotId: aSlot, label: slotLabel, expiresAt, countdown },
+        [aSlot]: {
+          turfId:   aTurf,
+          slotId:   aSlot,
+          label:    slotLabel,
+          lockDate: aDate ?? lockDate,   // store which date this lock is for
+          expiresAt,
+          countdown,
+        },
       }))
       startTicker(aSlot, expiresAt)
     })
@@ -256,35 +299,37 @@ export function useSlots(onSlotExpired) {
 
   // ── RELEASE ───────────────────────────────────────────────────────────
   const releaseSlot = useCallback((turfId, slotId) => {
-    // Fix: update UI immediately for the releasing user, don't wait for server echo
+    const lock     = lockedSlotsRef.current[slotId]
+    const lockDate = lock?.lockDate ?? viewDateRef.current
     stopTicker(slotId)
     setLockedSlots(prev => { const n = { ...prev }; delete n[slotId]; return n })
-    applyToTurf(turfId, slotId, { status: 'available', lockedBy: null })
-    // Tell server — it will broadcast to all OTHER users in the room
-    socket?.emit('slot:release', { turfId, slotId })
+    applyToTurf(turfId, slotId, { status: 'free', lockedBy: null })
+    socket?.emit('slot:release', { turfId, slotId, lockDate })
   }, [socket, stopTicker, applyToTurf])
 
   const releaseAll = useCallback(() => {
-    Object.values(lockedSlotsRef.current).forEach(({ turfId, slotId }) => {
+    Object.values(lockedSlotsRef.current).forEach(({ turfId, slotId, lockDate }) => {
       stopTicker(slotId)
-      applyToTurf(turfId, slotId, { status: 'available', lockedBy: null })
-      socket?.emit('slot:release', { turfId, slotId })
+      applyToTurf(turfId, slotId, { status: 'free', lockedBy: null })
+      socket?.emit('slot:release', { turfId, slotId, lockDate: lockDate ?? viewDateRef.current })
     })
     setLockedSlots({})
   }, [socket, stopTicker, applyToTurf])
 
   // ── CONFIRM ───────────────────────────────────────────────────────────
   const confirmSlot = useCallback((turfId, slotId) => {
+    const lock     = lockedSlotsRef.current[slotId]
+    const lockDate = lock?.lockDate ?? viewDateRef.current
     stopTicker(slotId)
     setLockedSlots(prev => { const n = { ...prev }; delete n[slotId]; return n })
-    socket?.emit('slot:confirm', { turfId, slotId })
+    socket?.emit('slot:confirm', { turfId, slotId, lockDate })
   }, [socket, stopTicker])
 
   const confirmAll = useCallback((turfId) => {
     const mine = Object.values(lockedSlotsRef.current).filter(l => l.turfId === turfId)
-    mine.forEach(({ slotId }) => {
+    mine.forEach(({ slotId, lockDate }) => {
       stopTicker(slotId)
-      socket?.emit('slot:confirm', { turfId, slotId })
+      socket?.emit('slot:confirm', { turfId, slotId, lockDate: lockDate ?? viewDateRef.current })
     })
     setLockedSlots(prev => {
       const n = { ...prev }
@@ -302,6 +347,7 @@ export function useSlots(onSlotExpired) {
 
   return {
     slots, loadedTurfs, lockedSlots,
+    viewDate,
     ensureSlots, refreshSlots,
     lockSlot, releaseSlot, releaseAll,
     confirmSlot, confirmAll,

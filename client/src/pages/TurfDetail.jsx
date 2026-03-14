@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react'
-import axios from 'axios'
-import EnquiriesSection from '../components/EnquiriesSection'
-import Gallery from '../components/Gallery'
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import EnquiriesSection from '../components/EnquiriesSection';
+import Gallery from '../components/Gallery';
 
 export default function TurfDetail({
   turf, slots, loadedTurfs, lockedSlots, user,
+  viewDate,
   onBack, onBook, onDirections,
   lockSlot, releaseSlot,
   fmtCountdown, notify, onDateChange,
 }) {
   const turfSlots  = slots[turf.id] ?? []
-  const isLoaded   = loadedTurfs.has(turf.id)
+  const isLoaded   = loadedTurfs?.has(turf.id) ?? false
 
   const myLockedHere = Object.values(lockedSlots).filter(l => l.turfId === turf.id)
   const totalAmount  = myLockedHere.length * (turf.pricePerHour ?? 0)
@@ -39,9 +40,22 @@ export default function TurfDetail({
   const handleSlotClick = s => {
     if (!user)                                           { notify('Please sign in to book', 'e'); return }
     if (s.status === 'booked')                           return
-    if (s.status === 'past')                             return  // ← past slots unclickable
+    if (s.status === 'past')                             return
     if (s.status === 'locked' && s.lockedBy !== 'you')  return
     if (s.lockedBy === 'you')                            return
+
+    // Warn if the user already has slots locked for a different date.
+    // Each checkout handles one date — cross-date locks require separate checkouts.
+    const existingDate = myLockedHere.length > 0 ? myLockedHere[0].lockDate : null
+    if (existingDate && existingDate !== viewDate) {
+      notify(
+        `⚠️ Your locked slots are for ${existingDate}. ` +
+        `Complete that checkout first, then book for ${viewDate}.`,
+        'e'
+      )
+      return
+    }
+
     lockSlot(turf.id, s.id, s.label)
     notify('🔒 Slot locked for 5 mins!')
   }
@@ -124,11 +138,15 @@ export default function TurfDetail({
               </div>
             </div>
 
-            {/* ← min=today prevents selecting past dates entirely */}
+            {/* min=today blocks past dates on desktop.
+                BUG 2 FIX: value= makes the input controlled so it shows the
+                persisted date after refresh. The onDateChange handler in
+                Inner.jsx rejects past dates for mobile browsers that ignore min= */}
             <input
               type="date"
               className="form-control mb-2"
               min={today}
+              value={viewDate || ''}
               onChange={e => onDateChange(e.target.value)}
               placeholder='-- select date --'
               />

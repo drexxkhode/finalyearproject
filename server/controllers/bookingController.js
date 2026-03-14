@@ -40,7 +40,7 @@ const getBookedSlots = async (req, res) => {
           id:       s.id,
           hour:     slotHour,
           label:    `${s.start_time.slice(0, 5)} – ${s.end_time.slice(0, 5)}`,
-          status:   bookedIds.has(s.id) ? 'booked' : isPast ? 'past' : 'available',
+          status:   bookedIds.has(s.id) ? 'booked' : isPast ? 'past' : 'free',
           lockedBy: null,
         }
       }),
@@ -89,15 +89,15 @@ const initiateBooking = async (req, res) => {
     if (alreadyBooked.length)
       return res.status(409).json({ message: 'One or more slots are already booked' });
 
-    // Verify user holds the lock on every slot
+    // Verify user holds an active lock on every slot for this date in slot_locks
     const [lockedRows] = await db.query(
-      `SELECT id FROM time_slots
-       WHERE id IN (?)
+      `SELECT time_slot_id FROM slot_locks
+       WHERE time_slot_id IN (?)
          AND turf_id = ?
-         AND lock_status = 'locked'
+         AND lock_date = ?
          AND locked_by = ?
          AND lock_expires_at > NOW()`,
-      [slotIds, turf_id, String(user_id)]
+      [slotIds, turf_id, date, String(user_id)]
     );
     if (lockedRows.length !== slotIds.length)
       return res.status(400).json({
@@ -267,14 +267,12 @@ const paystackWebhook = async (req, res) => {
       );
       console.log(`[webhook] Payment row insertId=${payResult.insertId} amount=₵${amountGHS}`);
 
-      // Mark slots as permanently booked
+      // Delete lock rows — booking rows in `bookings` are now the permanent record
       if (slotIds.length) {
         await db.query(
-          `UPDATE time_slots
-           SET lock_status = 'booked', locked_by = NULL,
-               lock_socket_id = NULL, lock_expires_at = NULL
-           WHERE id IN (?)`,
-          [slotIds]
+          `DELETE FROM slot_locks
+           WHERE time_slot_id IN (?) AND lock_date = ?`,
+          [slotIds, p.booking_date]
         );
       }
 
@@ -352,8 +350,16 @@ const cancelBooking = async (req, res) => {
     if (booking.payment_status !== 'paid')
       return res.status(400).json({ message: 'Only paid bookings can be cancelled' });
 
-    const slotTime       = booking.slot_label.slice(0, 5);
-    const slotDateTime   = new Date(`${booking.booking_date}T${slotTime}:00`);
+    // Fetch the authoritative start_time from time_slots instead of
+    // parsing slot_label — more reliable and format-independent
+    const [tsRows] = await db.query(
+      `SELECT start_time FROM time_slots WHERE id = ? LIMIT 1`,
+      [booking.time_slot_id]
+    );
+    // Strip any time component from booking_date (DB may return full ISO string)
+    const dateOnly   = String(booking.booking_date).slice(0, 10);
+    const startTime  = tsRows.length ? tsRows[0].start_time.slice(0, 5) : booking.slot_label.slice(0, 5);
+    const slotDateTime   = new Date(`${dateOnly}T${startTime}:00`);
     const hoursUntilSlot = (slotDateTime - Date.now()) / (1000 * 60 * 60);
 
     let penaltyPct;
@@ -371,13 +377,8 @@ const cancelBooking = async (req, res) => {
        WHERE id = ?`,
       [refundAmount, booking_id]
     );
-    await db.query(
-      `UPDATE time_slots
-       SET lock_status = 'free', locked_by = NULL,
-           lock_socket_id = NULL, lock_expires_at = NULL
-       WHERE id = ?`,
-      [booking.time_slot_id]
-    );
+    // slot_locks row was already deleted at payment time — nothing to free here.
+    // The booking row's status = 'cancelled' is all that's needed.
 
     let refundInitiated = false;
     if (refundAmount > 0 && booking.paystack_ref) {
@@ -468,10 +469,3 @@ const getBookings = async (req, res) => {
 };
 
 module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings };
-
-
-
-
-
-
-

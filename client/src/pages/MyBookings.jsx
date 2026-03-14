@@ -19,7 +19,12 @@ const STATUS_META = {
 // Penalty preview — mirrors server logic
 function penaltyInfo(booking) {
   if (!booking.booking_date || !booking.slot_label) return null
-  const slotDateTime = new Date(`${booking.booking_date}T${booking.slot_label.slice(0, 5)}:00`)
+  // Strip any time/timezone component from booking_date — DB may return full ISO string
+  const dateOnly  = String(booking.booking_date).slice(0, 10)
+  // slot_label is "08:00 – 09:00" — take first 5 chars for start time
+  const timeOnly  = booking.slot_label.slice(0, 5)
+  const slotDateTime = new Date(`${dateOnly}T${timeOnly}:00`)
+  if (isNaN(slotDateTime)) return null   // guard against malformed data
   const hrs = (slotDateTime - Date.now()) / (1000 * 60 * 60)
   if (hrs < 0)       return { pct: 100, refund: 0,   label: 'Slot already passed — no refund' }
   if (hrs < 6)       return { pct: 100, refund: 0,   label: 'Less than 6 hrs — no refund' }
@@ -112,7 +117,12 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
 function BookingCard({ b, index, onCancel }) {
   const photo  = FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]
   const status = (b.status ?? 'confirmed').toLowerCase()
-  const canCancel = status === 'confirmed' && b.payment_status === 'paid'
+  // Don't show cancel button once the slot time has already passed —
+  // the server would still process it but the user gets 0 refund (100% penalty).
+  // Better to hide it and avoid confusion.
+  const info      = penaltyInfo(b)
+  const slotPast  = info === null || info.pct === 100 && info.label.includes('passed')
+  const canCancel = status === 'confirmed' && b.payment_status === 'paid' && !slotPast
 
   return (
     <div className="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
@@ -139,7 +149,7 @@ function BookingCard({ b, index, onCancel }) {
           <i className="bi bi-calendar3 text-primary" style={{ width: 16, fontSize: 12 }}></i>
           <span style={{ fontSize: 13, fontWeight: 600 }}>
             {b.date
-              ? new Date(b.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+              ? new Date(String(b.date).slice(0, 10) + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
               : '—'
             }
           </span>
@@ -212,7 +222,7 @@ export default function MyBookings({ onBack }) {
     try {
       const token = localStorage.getItem('token')
       await axios.post(
-        `${API}/bookings/bookings/${cancelTarget.raw_id}/cancel`,
+        `${API}/bookings/${cancelTarget.raw_id}/cancel`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       )

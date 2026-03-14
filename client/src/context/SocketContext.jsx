@@ -2,10 +2,10 @@
  * SocketContext.jsx  —  src/context/SocketContext.jsx
  */
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { io } from 'socket.io-client'
-import { useAuth } from './AuthContext'
+import { io } from 'socket.io-client';
+import { useAuth } from './AuthContext';
 
-const SocketContext = createContext(null)
+const SocketContext = createContext(null);
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_API_URL ?? 'http://localhost:5000'
 

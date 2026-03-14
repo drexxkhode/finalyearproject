@@ -52,15 +52,17 @@ export default function Inner() {
 
   const {
     slots, loadedTurfs, lockedSlots,
+    viewDate,
     ensureSlots, refreshSlots,
     lockSlot, releaseSlot,
     confirmAll, leaveSlotRoom, fmtCountdown,
   } = useSlots(handleSlotExpired)
 
-  // Restore slot room on hard refresh
+  // Restore slot room on hard refresh — covers both /turf/:id and /booking
   useEffect(() => {
-    const match = location.pathname.match(/^\/turf\/(\d+)/)
-    if (match && activeTurf) ensureSlots(activeTurf.id)
+    const onTurfPage    = location.pathname.match(/^\/turf\/(\d+)/)
+    const onBookingPage = location.pathname === '/booking'
+    if ((onTurfPage || onBookingPage) && activeTurf) ensureSlots(activeTurf.id)
   }, []) // eslint-disable-line
 
   const openTurf = useCallback((turf) => {
@@ -140,6 +142,7 @@ export default function Inner() {
               ? <TurfDetail
                   turf={activeTurf} slots={slots} loadedTurfs={loadedTurfs}
                   lockedSlots={lockedSlots} user={user}
+                  viewDate={viewDate}
                   onBack={closeTurf}
                   onBook={() => navigate('/booking')}
                   onDirections={turfId => navigate(`/directions/${turfId}`)}
@@ -147,7 +150,12 @@ export default function Inner() {
                   fmtCountdown={fmtCountdown} notify={notify}
                   onDateChange={date => {
                     const today = new Date().toISOString().split('T')[0]
-                    if (date < today) return  // silently ignore past dates — min attr handles UI
+                    // BUG 2 FIX: Hard-reject past dates even if mobile browser
+                    // bypasses the min= attribute on the date input
+                    if (!date || date < today) {
+                      notify('Cannot select a past date', 'e')
+                      return
+                    }
                     refreshSlots(activeTurf.id, date)
                   }}
                 />
@@ -195,4 +203,4 @@ export default function Inner() {
       <MobileBottomNav TABS={TABS} activeTab={activeTab} handleTabChange={handleTabChange} />
     </div>
   )
-}
+};
