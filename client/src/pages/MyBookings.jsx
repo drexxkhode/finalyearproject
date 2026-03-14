@@ -72,6 +72,7 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
   return createPortal(
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      className="tf-modal-overlay"
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(10,10,20,.75)',
@@ -81,6 +82,7 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
     >
       <div
         onClick={e => e.stopPropagation()}
+        className="tf-modal-sheet"
         style={{
           background: '#fff',
           borderRadius: '20px 20px 0 0',
@@ -91,7 +93,7 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
         }}
       >
         <div style={{ overflowY: 'auto', padding: '12px 20px 8px', flex: 1 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#dee2e6', margin: '0 auto 18px' }} />
+          <div className="tf-modal-handle" style={{ width: 36, height: 4, borderRadius: 2, background: '#dee2e6', margin: '0 auto 18px' }} />
           <div style={{ fontSize: 34, textAlign: 'center', marginBottom: 8 }}>⚠️</div>
           <h5 className="fw-bolder text-center mb-1">Cancel Booking?</h5>
           <p className="text-muted small text-center mb-3">{booking.turf} · {booking.slot_label}</p>
@@ -148,6 +150,7 @@ function DeleteModal({ booking, onConfirm, onClose, loading }) {
   return createPortal(
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      className="tf-modal-overlay"
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         background: 'rgba(10,10,20,.75)',
@@ -157,6 +160,7 @@ function DeleteModal({ booking, onConfirm, onClose, loading }) {
     >
       <div
         onClick={e => e.stopPropagation()}
+        className="tf-modal-sheet"
         style={{
           background: '#fff',
           borderRadius: '20px 20px 0 0',
@@ -165,7 +169,7 @@ function DeleteModal({ booking, onConfirm, onClose, loading }) {
         }}
       >
         <div style={{ padding: '12px 20px 4px' }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#dee2e6', margin: '0 auto 18px' }} />
+          <div className="tf-modal-handle" style={{ width: 36, height: 4, borderRadius: 2, background: '#dee2e6', margin: '0 auto 18px' }} />
           <div style={{ fontSize: 34, textAlign: 'center', marginBottom: 8 }}>🗑️</div>
           <h5 className="fw-bolder text-center mb-1">Delete Booking?</h5>
           <p className="text-muted small text-center mb-3">
@@ -295,7 +299,7 @@ function BookingCard({ b, index, onCancel, onDelete }) {
   )
 }
 
-export default function MyBookings({ onBack }) {
+export default function MyBookings({ onBack, notify }) {
   const [bookings,     setBookings]     = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState('')
@@ -314,6 +318,7 @@ export default function MyBookings({ onBack }) {
       setBookings(res.data.bookings ?? [])
     } catch {
       setError('Could not load bookings.')
+      notify?.('Could not load bookings. Please try again.', 'e')
     } finally {
       setLoading(false)
     }
@@ -332,14 +337,13 @@ export default function MyBookings({ onBack }) {
         { headers: { Authorization: `Bearer ${token}` } }
       )
       setCancelTarget(null)
-      await fetchBookings()   // refresh list
+      await fetchBookings()
+      notify?.('Booking cancelled. Refund is being processed.', 's')
     } catch (e) {
-      // Show the server's specific error message — it distinguishes between
-      // "Paystack refund failed (booking NOT cancelled)" vs other errors
       const msg = e.response?.data?.message || 'Cancellation failed. Please try again.'
       setError(msg)
+      notify?.(msg, 'e')
       setCancelTarget(null)
-      // Re-fetch so the UI reflects true current state from DB
       await fetchBookings()
     } finally {
       setCancelling(false)
@@ -357,8 +361,11 @@ export default function MyBookings({ onBack }) {
       )
       setDeleteTarget(null)
       await fetchBookings()
+      notify?.('Booking removed from your history.', 's')
     } catch (e) {
-      setError(e.response?.data?.message || 'Could not delete booking.')
+      const msg = e.response?.data?.message || 'Could not delete booking.'
+      setError(msg)
+      notify?.(msg, 'e')
       setDeleteTarget(null)
     } finally {
       setDeleting(false)

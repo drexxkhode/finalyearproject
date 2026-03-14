@@ -184,7 +184,7 @@ export default function Inner() {
           } />
 
           <Route path="/mybookings" element={
-            <MyBookings onBack={() => navigate('/')} />
+            <MyBookings onBack={() => navigate('/')} notify={notify} />
           } />
 
           <Route path="/profile" element={

@@ -291,3 +291,35 @@ body { font-family:'Barlow','Segoe UI',sans-serif; background:#fff; color:var(--
 
 /* ── Remove duplicate secondary tab bar ────────────────── */
 /* The nav tabs live ONLY in the navbar now */
+
+/* ── Bottom-sheet modals — desktop override (≥768px) ───────
+   On mobile: full-width sheet anchored to bottom (set in JSX)
+   On desktop: small centred floating modal                    */
+@media (min-width: 768px) {
+
+  /* Turn the overlay into a centred flexbox */
+  .tf-modal-overlay {
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 20px;
+  }
+
+  /* Turn the sheet panel into a compact centred card */
+  .tf-modal-sheet {
+    border-radius: 20px !important;   /* all corners rounded */
+    max-width: 440px !important;
+    width: 100% !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,.22) !important;
+    animation: tfFadeIn .22s ease !important;
+  }
+
+  /* Hide the drag handle pill — not needed on desktop */
+  .tf-modal-handle {
+    display: none !important;
+  }
+}
+
+@keyframes tfFadeIn {
+  from { opacity: 0; transform: scale(.96) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
