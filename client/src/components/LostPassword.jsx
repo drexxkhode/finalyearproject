@@ -95,7 +95,7 @@ export default function LostPassword() {
         {timer > 0 && <p>Try again in: {formatTime(timer)}</p>}
       </div>
       <div className="text-center mt-3 fw-bold">
-        <Link to="/login">Back to Login</Link>
+        <Link to="/login">← Back to Login</Link>
       </div>
     </div>
   );

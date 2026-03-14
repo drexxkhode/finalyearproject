@@ -533,6 +533,20 @@ const Settings = () => {
                                 value={formData.district} onChange={handleChange} />
                               {errors.district && <div className="invalid-feedback">{errors.district}</div>}
                             </div>
+                            <div className="col-6 mt-3">
+                              <label htmlFor="district" className="form-label">District</label>
+                              <input id="district"
+                                className={`form-control ${errors.district ? "is-invalid" : ""}`}
+                                value={formData.district} onChange={handleChange} />
+                              {errors.district && <div className="invalid-feedback">{errors.district}</div>}
+                            </div>
+                            <div className="col-6 mt-3">
+                              <label htmlFor="district" className="form-label">District</label>
+                              <input id="district"
+                                className={`form-control ${errors.district ? "is-invalid" : ""}`}
+                                value={formData.district} onChange={handleChange} />
+                              {errors.district && <div className="invalid-feedback">{errors.district}</div>}
+                            </div>
                           </div>
                           <div className="d-flex gap-2 justify-content-end p-3">
                             <button type="button" className="btn btn-primary"

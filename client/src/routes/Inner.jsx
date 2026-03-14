@@ -112,7 +112,7 @@ export default function Inner() {
           <AuthScreen onSuccess={(u) => { setUser(u); notify(`Welcome, ${u.name}! 👋`) }} />
         } />
         <Route path="/lost-password" element={<LostPassword />} />
-      <Route to={"/reset-password/:token"} element={<ResetPassword/>} />
+      <Route path={"/reset-password/:token"} element={<ResetPassword/>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
       
