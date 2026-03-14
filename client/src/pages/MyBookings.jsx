@@ -120,8 +120,11 @@ function BookingCard({ b, index, onCancel }) {
   // Don't show cancel button once the slot time has already passed —
   // the server would still process it but the user gets 0 refund (100% penalty).
   // Better to hide it and avoid confusion.
-  const info      = penaltyInfo(b)
-  const slotPast  = info === null || info.pct === 100 && info.label.includes('passed')
+  const info = penaltyInfo(b)
+  // If info is null (missing data), we can't determine timing — allow cancellation
+  // and let the server apply the correct penalty.
+  // Only hide the button when we can CONFIRM the slot time has already passed.
+  const slotPast  = info !== null && info.pct === 100 && info.label.includes('passed')
   const canCancel = status === 'confirmed' && b.payment_status === 'paid' && !slotPast
 
   return (
