@@ -187,7 +187,11 @@ const paystackWebhook = async (req, res) => {
     // Acknowledge immediately — Paystack retries if no 200 within ~30s
     res.sendStatus(200);
 
-    console.log(`[webhook] ✅ Verified — event=${event.event} ref=${event.data?.reference} amount=${event.data?.amount}`);
+    // ref field differs by event type — pick the right one for the log
+    const _logRef = event.data?.reference               // charge.success
+                 ?? event.data?.transaction_reference   // refund.pending / refund.processed
+                 ?? '—'
+    console.log(`[webhook] ✅ Verified — event=${event.event} ref=${_logRef} amount=${event.data?.amount}`);
 
     // ── charge.success ────────────────────────────────────────────────────
     if (event.event === 'charge.success') {
@@ -304,47 +308,22 @@ const paystackWebhook = async (req, res) => {
     }
 
     // ── refund.pending + refund.processed ────────────────────────────────
-    // refund.pending  — Paystack queued the refund (intermediate state)
-    // refund.processed — Paystack completed the refund (money returned)
-    // We update the DB only on refund.processed. refund.pending is logged
-    // for diagnostics only.
+    // Paystack fires refund.pending first (queued), then refund.processed
+    // (money confirmed returned). DB is only updated on refund.processed.
     if (event.event === 'refund.pending' || event.event === 'refund.processed') {
 
-      // ── Log full payload so we can see the exact shape ───────────────────
-      // Paystack's refund event payload shape varies — log it once so we
-      // know exactly which field holds the original transaction reference.
-      console.log(`[webhook] ${event.event} full data:`, JSON.stringify(event.data));
-
-      // ── Extract original transaction reference — try every known path ────
-      // Paystack test vs live mode sometimes differs. Try all known variants:
-      //   event.data.transaction_reference   (flat string — older format)
-      //   event.data.transaction.reference   (nested object — newer format)
-      //   event.data.reference               (some event types)
-      const ref =
-        event.data?.transaction_reference           ??   // flat string
-        event.data?.transaction?.reference          ??   // nested object
-        event.data?.reference                       ??   // top-level
-        event.data?.metadata?.transaction_reference ??   // metadata fallback
-        null
-
+      // Confirmed field from Paystack payload: event.data.transaction_reference
+      const ref       = event.data?.transaction_reference ?? null
       const refundGHS = (event.data?.amount ?? 0) / 100;
 
-      console.log(`[webhook] ${event.event} — extracted ref=${ref} ₵${refundGHS}`);
-
       if (!ref) {
-        // Log the full payload so you can see exactly which field to use
-        console.error(
-          `[webhook] ⚠️  Could not extract transaction reference from ${event.event}. ` +
-          `Full data: ${JSON.stringify(event.data)}`
-        );
-        // Don't update DB — wait for the next event or investigate payload
+        console.error(`[webhook] ⚠️  Could not extract ref from ${event.event}:`, JSON.stringify(event.data));
         return;
       }
 
-      // refund.pending — log only, do NOT update DB yet
-      // The refund is queued but money hasn't moved. Wait for refund.processed.
+      // refund.pending — acknowledge only, wait for refund.processed
       if (event.event === 'refund.pending') {
-        console.log(`[webhook] ↩️  Refund pending for ref=${ref} ₵${refundGHS} — waiting for refund.processed`);
+        console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — waiting for refund.processed`);
         return;
       }
 
@@ -538,13 +517,13 @@ const getMyBookings = async (req, res) => {
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await db.query(
-      `SELECT b.id, b.slot_label, b.booking_date AS date,
+      `SELECT b.id, b.slot_label,b.is_deleted, b.booking_date AS date,
               b.amount, b.status, b.payment_status,
               b.refund_amount, b.paystack_ref,
               t.name AS turf, t.id AS turf_id
        FROM bookings b
        LEFT JOIN turfs t ON t.id = b.turf_id
-       WHERE b.user_id = ?
+       WHERE b.user_id = ? AND b.is_deleted=0
        ORDER BY b.booking_date DESC, b.slot_label ASC`,
       [user_id]
     );
@@ -559,6 +538,45 @@ const getMyBookings = async (req, res) => {
   } catch (err) {
     console.error('getMyBookings error:', err);
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ── DELETE /api/bookings/:id ──────────────────────────────────────────────
+// Only allows deleting cancelled or completed bookings — not active ones.
+// This removes the record from the user's booking history only.
+const deleteBooking = async (req, res) => {
+  try {
+    const user_id    = req.user?.id;
+    const booking_id = parseInt(req.params.id);
+    if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
+
+    const [rows] = await db.query(
+      `SELECT id, status, payment_status FROM bookings
+       WHERE id = ? AND user_id = ? LIMIT 1`,
+      [booking_id, user_id]
+    );
+    if (!rows.length) return res.status(404).json({ message: 'Booking not found' });
+
+    const booking = rows[0];
+
+    // Block deletion of active paid bookings — must be cancelled first
+    if (booking.status === 'confirmed' && booking.payment_status === 'paid')
+      return res.status(400).json({
+        message: 'Cannot delete an active booking. Cancel it first.',
+      });
+
+    // Block deletion if a refund is still in progress
+    if (booking.payment_status === 'refund_pending')
+      return res.status(400).json({
+        message: 'Cannot delete while a refund is being processed.',
+      });
+
+    await db.query(`UPDATE bookings SET is_deleted=1 WHERE id = ? AND user_id = ?`, [booking_id, user_id]);
+
+    return res.json({ message: 'Booking Record Deleted ✔️' });
+  } catch (err) {
+    console.error('deleteBooking error:', err);
+    return res.status(500).json({ message: 'Server Error ⚠️' });
   }
 };
 
@@ -594,4 +612,4 @@ const getBookings = async (req, res) => {
   }
 };
 
-module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings };
+module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings, deleteBooking };

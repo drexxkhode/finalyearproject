@@ -58,24 +58,43 @@ function StatusBadge({ status }) {
 }
 
 function CancelModal({ booking, onConfirm, onClose, loading }) {
-  const info = penaltyInfo(booking)
-  const refundAmt = info ? (parseFloat(booking.amount) * info.refund).toFixed(2) : '0.00'
+  const info       = penaltyInfo(booking)
+  const refundAmt  = info ? (parseFloat(booking.amount) * info.refund).toFixed(2) : '0.00'
   const penaltyAmt = info ? (parseFloat(booking.amount) * (info.pct / 100)).toFixed(2) : booking.amount
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 2000,
-      background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 20,
-    }}>
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)',
+        // Bottom-sheet on mobile, centred dialog on desktop
+        display: 'flex',
+        alignItems: 'flex-end',        // mobile: stick to bottom
+        justifyContent: 'center',
+      }}
+    >
       <div style={{
-        background: '#fff', borderRadius: 20, padding: '28px 24px',
-        maxWidth: 400, width: '100%',
-        boxShadow: '0 16px 48px rgba(0,0,0,.2)',
-        animation: 'slideDown .2s ease',
-      }}>
-        <div style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>⚠️</div>
+        background: '#fff',
+        width: '100%',
+        // Mobile: full-width bottom sheet with rounded top corners
+        borderRadius: '20px 20px 0 0',
+        padding: '12px 20px 32px',
+        boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
+        animation: 'slideUp .25s ease',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        // Desktop override — centred card with all rounded corners
+        // achieved via @media inside the style tag below
+      }} className="modal-sheet">
+
+        {/* Drag handle — visual affordance on mobile */}
+        <div style={{
+          width: 40, height: 4, borderRadius: 2,
+          background: '#dee2e6', margin: '0 auto 20px',
+        }} />
+
+        <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 10 }}>⚠️</div>
         <h5 className="fw-bolder text-center mb-1">Cancel Booking?</h5>
         <p className="text-muted small text-center mb-3">{booking.turf} · {booking.slot_label}</p>
 
@@ -86,9 +105,9 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
             {info?.label}
           </div>
           {[
-            ['Amount Paid',    `₵${parseFloat(booking.amount).toFixed(2)}`],
-            ['Penalty',        `₵${penaltyAmt} (${info?.pct ?? 0}%)`],
-            ['Refund Amount',  `₵${refundAmt}`],
+            ['Amount Paid',   `₵${parseFloat(booking.amount).toFixed(2)}`],
+            ['Penalty',       `₵${penaltyAmt} (${info?.pct ?? 0}%)`],
+            ['Refund Amount', `₵${refundAmt}`],
           ].map(([k, v]) => (
             <div key={k} className="d-flex justify-content-between small py-1 border-bottom">
               <span className="text-muted">{k}</span>
@@ -100,19 +119,17 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
         {parseFloat(refundAmt) > 0 && (
           <p className="text-muted small text-center mb-3">
             <i className="bi bi-info-circle me-1"></i>
-            Refund of <strong>₵{refundAmt}</strong> will be processed to your original payment method within 5–10 business days.
+            Refund of <strong>₵{refundAmt}</strong> will be processed within 5–10 business days.
           </p>
         )}
 
         <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary fw-bold flex-grow-1" onClick={onClose} disabled={loading}>
+          <button className="btn btn-outline-secondary fw-bold flex-grow-1"
+            onClick={onClose} disabled={loading}>
             Keep Booking
           </button>
-          <button
-            className="btn btn-danger fw-bold flex-grow-1"
-            onClick={onConfirm}
-            disabled={loading}
-          >
+          <button className="btn btn-danger fw-bold flex-grow-1"
+            onClick={onConfirm} disabled={loading}>
             {loading
               ? <><span className="spinner-border spinner-border-sm me-2" />Cancelling…</>
               : 'Yes, Cancel'
@@ -120,23 +137,92 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
           </button>
         </div>
       </div>
-      <style>{`@keyframes slideDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }`}</style>
+
+      <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(40px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        /* On desktop (≥576px): centred dialog with all corners rounded */
+        @media (min-width: 576px) {
+          .modal-sheet {
+            border-radius: 20px !important;
+            max-width: 420px;
+            margin-bottom: auto;
+            margin-top: auto;
+          }
+        }
+      `}</style>
     </div>
   )
 }
 
-function BookingCard({ b, index, onCancel }) {
+function DeleteModal({ booking, onConfirm, onClose, loading }) {
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+      }}
+    >
+      <div style={{
+        background: '#fff',
+        width: '100%',
+        borderRadius: '20px 20px 0 0',
+        padding: '12px 20px 32px',
+        boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
+        animation: 'slideUp .25s ease',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+      }} className="modal-sheet">
+
+        {/* Drag handle */}
+        <div style={{
+          width: 40, height: 4, borderRadius: 2,
+          background: '#dee2e6', margin: '0 auto 20px',
+        }} />
+
+        <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 10 }}>🗑️</div>
+        <h5 className="fw-bolder text-center mb-1">Delete Booking?</h5>
+        <p className="text-muted small text-center mb-4">
+          {booking.turf} · {booking.slot_label}<br />
+          This removes the record from your history and cannot be undone.
+        </p>
+        <div className="d-flex gap-2">
+          <button className="btn btn-outline-secondary fw-bold flex-grow-1"
+            onClick={onClose} disabled={loading}>
+            Keep
+          </button>
+          <button className="btn btn-danger fw-bold flex-grow-1"
+            onClick={onConfirm} disabled={loading}>
+            {loading
+              ? <><span className="spinner-border spinner-border-sm me-2" />Deleting…</>
+              : 'Yes, Delete'
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BookingCard({ b, index, onCancel, onDelete }) {
   const photo  = FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]
   const status = (b.status ?? 'confirmed').toLowerCase()
   // Don't show cancel button once the slot time has already passed —
   // the server would still process it but the user gets 0 refund (100% penalty).
   // Better to hide it and avoid confusion.
   const info = penaltyInfo(b)
-  // If info is null (missing data), we can't determine timing — allow cancellation
-  // and let the server apply the correct penalty.
-  // Only hide the button when we can CONFIRM the slot time has already passed.
   const slotPast  = info !== null && info.pct === 100 && info.label.includes('passed')
   const canCancel = status === 'confirmed' && b.payment_status === 'paid' && !slotPast
+  // Can delete if booking is no longer active (cancelled or completed)
+  // and not mid-refund
+  const canDelete = (status === 'cancelled' || status === 'completed')
+    && b.payment_status !== 'refund_pending'
 
   return (
     <div className="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
@@ -197,7 +283,25 @@ function BookingCard({ b, index, onCancel }) {
           <span style={{ color: '#0d6efd', fontWeight: 900, fontSize: 17 }}>
             ₵{parseFloat(b.amount).toFixed(2)}
           </span>
-          <span style={{ color: '#adb5bd', fontSize: 10 }}>{b.id}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#adb5bd', fontSize: 10 }}>{b.id}</span>
+            {canDelete && (
+              <button
+                onClick={() => onDelete(b)}
+                title="Delete booking"
+                style={{
+                  border: 'none', background: 'none', padding: '2px 4px',
+                  cursor: 'pointer', color: '#dc3545', fontSize: 15,
+                  lineHeight: 1, borderRadius: 4,
+                  transition: 'background .15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(220,53,69,.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                <i className="bi bi-trash3"></i>
+              </button>
+            )}
+          </div>
         </div>
 
         {canCancel && (
@@ -221,6 +325,8 @@ export default function MyBookings({ onBack }) {
   const [activeTab,    setActiveTab]    = useState('all')
   const [cancelTarget, setCancelTarget] = useState(null)
   const [cancelling,   setCancelling]   = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting,     setDeleting]     = useState(false)
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -263,6 +369,25 @@ export default function MyBookings({ onBack }) {
     }
   }
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(
+        `${API}/bookings/${deleteTarget.raw_id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      setDeleteTarget(null)
+      await fetchBookings()
+    } catch (e) {
+      setError(e.response?.data?.message || 'Could not delete booking.')
+      setDeleteTarget(null)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const tabs = [
     { key: 'all',       label: 'All'       },
     { key: 'confirmed', label: 'Upcoming'  },
@@ -282,6 +407,14 @@ export default function MyBookings({ onBack }) {
           onConfirm={handleCancelConfirm}
           onClose={() => setCancelTarget(null)}
           loading={cancelling}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteModal
+          booking={deleteTarget}
+          onConfirm={handleDeleteConfirm}
+          onClose={() => setDeleteTarget(null)}
+          loading={deleting}
         />
       )}
 
@@ -343,7 +476,7 @@ export default function MyBookings({ onBack }) {
         <div className="row g-3">
           {filtered.map((b, i) => (
             <div key={b.id} className="col-12 col-sm-6 col-xl-4">
-              <BookingCard b={b} index={i} onCancel={setCancelTarget} />
+              <BookingCard b={b} index={i} onCancel={setCancelTarget} onDelete={setDeleteTarget} />
             </div>
           ))}
         </div>
