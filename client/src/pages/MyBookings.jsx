@@ -18,11 +18,13 @@ const STATUS_META = {
 
 // Separate map for payment_status display — shown as a secondary badge
 const PAYMENT_META = {
-  paid:            { color: '#198754', icon: 'bi-check-circle',       label: null              },  // default — no badge needed
-  refund_pending:  { color: '#fd7e14', icon: 'bi-hourglass-split',    label: 'Refund Pending'  },
-  refunded:        { color: '#0d6efd', icon: 'bi-arrow-return-left',  label: 'Refunded'        },
-  no_refund:       { color: '#6c757d', icon: 'bi-slash-circle',       label: 'No Refund'       },
-  partial_refund:  { color: '#0d6efd', icon: 'bi-arrow-return-left',  label: 'Partial Refund'  },
+  paid:           { color: '#198754', icon: 'bi-check-circle',      label: null              },  // no badge needed
+  pending:        { color: '#fd7e14', icon: 'bi-hourglass-split',   label: 'Pending'         },
+  refund:         { color: '#0d6efd', icon: 'bi-arrow-return-left', label: 'Refund'          },  // legacy
+  refund_pending: { color: '#fd7e14', icon: 'bi-hourglass-split',   label: 'Refund Pending'  },
+  refunded:       { color: '#0d6efd', icon: 'bi-arrow-return-left', label: 'Refunded'        },
+  no_refund:      { color: '#6c757d', icon: 'bi-slash-circle',      label: 'No Refund'       },
+  partial_refund: { color: '#0d6efd', icon: 'bi-arrow-return-left', label: 'Partial Refund'  },
 }
 
 // Penalty preview — mirrors server logic
@@ -181,7 +183,7 @@ function BookingCard({ b, index, onCancel }) {
               padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
               <i className={`bi ${pm.icon}`}></i>
               {pm.label}
-              {(b.payment_status === 'refund_pending' || b.payment_status === 'refunded' || b.payment_status === 'partial_refund')
+              {['refund','refund_pending','refunded','partial_refund'].includes(b.payment_status)
                 && parseFloat(b.refund_amount) > 0
                 && ` — ₵${parseFloat(b.refund_amount).toFixed(2)}`}
             </div>
@@ -348,4 +350,4 @@ export default function MyBookings({ onBack }) {
       )}
     </div>
   )
-};
+}
