@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import axios from 'axios'
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
@@ -62,151 +63,127 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
   const refundAmt  = info ? (parseFloat(booking.amount) * info.refund).toFixed(2) : '0.00'
   const penaltyAmt = info ? (parseFloat(booking.amount) * (info.pct / 100)).toFixed(2) : booking.amount
 
-  return (
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  return createPortal(
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 2000,
-        background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)',
-        // Bottom-sheet on mobile, centred dialog on desktop
-        display: 'flex',
-        alignItems: 'flex-end',        // mobile: stick to bottom
-        justifyContent: 'center',
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(10,10,20,.75)',
+        display: 'flex', flexDirection: 'column',
+        justifyContent: 'flex-end', alignItems: 'stretch',
       }}
     >
-      <div style={{
-        background: '#fff',
-        width: '100%',
-        // Mobile: full-width bottom sheet with rounded top corners
-        borderRadius: '20px 20px 0 0',
-        padding: '12px 20px 32px',
-        boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
-        animation: 'slideUp .25s ease',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        // Desktop override — centred card with all rounded corners
-        // achieved via @media inside the style tag below
-      }} className="modal-sheet">
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff',
+          borderRadius: '20px 20px 0 0',
+          boxShadow: '0 -4px 32px rgba(0,0,0,.22)',
+          maxHeight: '88vh',
+          display: 'flex', flexDirection: 'column',
+          animation: 'tfSlideUp .28s cubic-bezier(.32,1,.32,1)',
+        }}
+      >
+        <div style={{ overflowY: 'auto', padding: '12px 20px 8px', flex: 1 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#dee2e6', margin: '0 auto 18px' }} />
+          <div style={{ fontSize: 34, textAlign: 'center', marginBottom: 8 }}>⚠️</div>
+          <h5 className="fw-bolder text-center mb-1">Cancel Booking?</h5>
+          <p className="text-muted small text-center mb-3">{booking.turf} · {booking.slot_label}</p>
 
-        {/* Drag handle — visual affordance on mobile */}
-        <div style={{
-          width: 40, height: 4, borderRadius: 2,
-          background: '#dee2e6', margin: '0 auto 20px',
-        }} />
-
-        <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 10 }}>⚠️</div>
-        <h5 className="fw-bolder text-center mb-1">Cancel Booking?</h5>
-        <p className="text-muted small text-center mb-3">{booking.turf} · {booking.slot_label}</p>
-
-        <div className="card border-0 rounded-3 p-3 mb-3"
-          style={{ background: info?.pct === 0 ? 'rgba(25,135,84,.07)' : 'rgba(220,53,69,.07)' }}>
-          <div className="fw-bold small mb-2"
-            style={{ color: info?.pct === 0 ? '#198754' : '#dc3545' }}>
-            {info?.label}
-          </div>
-          {[
-            ['Amount Paid',   `₵${parseFloat(booking.amount).toFixed(2)}`],
-            ['Penalty',       `₵${penaltyAmt} (${info?.pct ?? 0}%)`],
-            ['Refund Amount', `₵${refundAmt}`],
-          ].map(([k, v]) => (
-            <div key={k} className="d-flex justify-content-between small py-1 border-bottom">
-              <span className="text-muted">{k}</span>
-              <span className="fw-bold">{v}</span>
+          <div className="rounded-3 p-3 mb-3" style={{
+            background: info?.pct === 0 ? 'rgba(25,135,84,.07)' : 'rgba(220,53,69,.07)',
+            border: `1px solid ${info?.pct === 0 ? 'rgba(25,135,84,.2)' : 'rgba(220,53,69,.2)'}`,
+          }}>
+            <div className="fw-bold small mb-2" style={{ color: info?.pct === 0 ? '#198754' : '#dc3545' }}>
+              {info?.label ?? 'Cancellation policy applies'}
             </div>
-          ))}
+            {[
+              ['Amount Paid',   `₵${parseFloat(booking.amount).toFixed(2)}`],
+              ['Penalty',       `₵${penaltyAmt} (${info?.pct ?? 0}%)`],
+              ['Refund Amount', `₵${refundAmt}`],
+            ].map(([k, v]) => (
+              <div key={k} className="d-flex justify-content-between small py-1 border-bottom">
+                <span className="text-muted">{k}</span>
+                <span className="fw-bold">{v}</span>
+              </div>
+            ))}
+          </div>
+
+          {parseFloat(refundAmt) > 0 && (
+            <p className="text-muted small text-center mb-2">
+              <i className="bi bi-info-circle me-1"></i>
+              Refund of <strong>₵{refundAmt}</strong> processed within 5–10 business days.
+            </p>
+          )}
         </div>
 
-        {parseFloat(refundAmt) > 0 && (
-          <p className="text-muted small text-center mb-3">
-            <i className="bi bi-info-circle me-1"></i>
-            Refund of <strong>₵{refundAmt}</strong> will be processed within 5–10 business days.
-          </p>
-        )}
-
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary fw-bold flex-grow-1"
-            onClick={onClose} disabled={loading}>
+        <div className="d-flex gap-2" style={{ padding: '12px 20px 28px', borderTop: '1px solid #f0f0f0', flexShrink: 0 }}>
+          <button className="btn btn-outline-secondary fw-bold flex-grow-1" onClick={onClose} disabled={loading}>
             Keep Booking
           </button>
-          <button className="btn btn-danger fw-bold flex-grow-1"
-            onClick={onConfirm} disabled={loading}>
-            {loading
-              ? <><span className="spinner-border spinner-border-sm me-2" />Cancelling…</>
-              : 'Yes, Cancel'
-            }
+          <button className="btn btn-danger fw-bold flex-grow-1" onClick={onConfirm} disabled={loading}>
+            {loading ? <><span className="spinner-border spinner-border-sm me-2" />Cancelling…</> : 'Yes, Cancel'}
           </button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(40px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        /* On desktop (≥576px): centred dialog with all corners rounded */
-        @media (min-width: 576px) {
-          .modal-sheet {
-            border-radius: 20px !important;
-            max-width: 420px;
-            margin-bottom: auto;
-            margin-top: auto;
-          }
-        }
-      `}</style>
-    </div>
+      <style>{`@keyframes tfSlideUp { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }`}</style>
+    </div>,
+    document.body
   )
 }
 
 function DeleteModal({ booking, onConfirm, onClose, loading }) {
-  return (
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  return createPortal(
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 2000,
-        background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(10,10,20,.75)',
+        display: 'flex', flexDirection: 'column',
+        justifyContent: 'flex-end', alignItems: 'stretch',
       }}
     >
-      <div style={{
-        background: '#fff',
-        width: '100%',
-        borderRadius: '20px 20px 0 0',
-        padding: '12px 20px 32px',
-        boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
-        animation: 'slideUp .25s ease',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-      }} className="modal-sheet">
-
-        {/* Drag handle */}
-        <div style={{
-          width: 40, height: 4, borderRadius: 2,
-          background: '#dee2e6', margin: '0 auto 20px',
-        }} />
-
-        <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 10 }}>🗑️</div>
-        <h5 className="fw-bolder text-center mb-1">Delete Booking?</h5>
-        <p className="text-muted small text-center mb-4">
-          {booking.turf} · {booking.slot_label}<br />
-          This removes the record from your history and cannot be undone.
-        </p>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary fw-bold flex-grow-1"
-            onClick={onClose} disabled={loading}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff',
+          borderRadius: '20px 20px 0 0',
+          boxShadow: '0 -4px 32px rgba(0,0,0,.22)',
+          animation: 'tfSlideUp .28s cubic-bezier(.32,1,.32,1)',
+        }}
+      >
+        <div style={{ padding: '12px 20px 4px' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#dee2e6', margin: '0 auto 18px' }} />
+          <div style={{ fontSize: 34, textAlign: 'center', marginBottom: 8 }}>🗑️</div>
+          <h5 className="fw-bolder text-center mb-1">Delete Booking?</h5>
+          <p className="text-muted small text-center mb-3">
+            {booking.turf} · {booking.slot_label}<br />
+            This removes the record from your history and cannot be undone.
+          </p>
+        </div>
+        <div className="d-flex gap-2" style={{ padding: '12px 20px 28px', borderTop: '1px solid #f0f0f0' }}>
+          <button className="btn btn-outline-secondary fw-bold flex-grow-1" onClick={onClose} disabled={loading}>
             Keep
           </button>
-          <button className="btn btn-danger fw-bold flex-grow-1"
-            onClick={onConfirm} disabled={loading}>
-            {loading
-              ? <><span className="spinner-border spinner-border-sm me-2" />Deleting…</>
-              : 'Yes, Delete'
-            }
+          <button className="btn btn-danger fw-bold flex-grow-1" onClick={onConfirm} disabled={loading}>
+            {loading ? <><span className="spinner-border spinner-border-sm me-2" />Deleting…</> : 'Yes, Delete'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
