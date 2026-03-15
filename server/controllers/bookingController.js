@@ -529,12 +529,12 @@ const getMyBookings = async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT b.id, b.slot_label, b.booking_date AS date,
-              b.amount, b.status, b.payment_status,
+              b.amount, b.status, b.payment_status,b.is_deleted,
               b.refund_amount, b.paystack_ref,b.created_at,
               t.name AS turf, t.id AS turf_id
        FROM bookings b
        LEFT JOIN turfs t ON t.id = b.turf_id
-       WHERE b.user_id = ?
+       WHERE b.user_id = ? AND is_deleted=0
        ORDER BY b.created_at DESC`,
       [user_id]
     );
