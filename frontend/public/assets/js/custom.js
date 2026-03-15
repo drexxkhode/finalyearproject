@@ -44,75 +44,104 @@ $.sidebarMenu($(".sidebar-menu"));
 
 // Custom Sidebar JS
 jQuery(function ($) {
-	//toggle sidebar
-	$("#toggle-sidebar").on("click", function () {
-		$(".page-wrapper").toggleClass("toggled");
-	});
 
-	// Pin sidebar on click
-	$("#pin-sidebar").on("click", function () {
-		if ($(".page-wrapper").hasClass("pinned")) {
-			// unpin sidebar when hovered
-			$(".page-wrapper").removeClass("pinned");
-			$("#sidebar").unbind("hover");
-		} else {
-			$(".page-wrapper").addClass("pinned");
-			$("#sidebar").hover(
-				function () {
-					console.log("mouseenter");
-					$(".page-wrapper").addClass("sidebar-hovered");
-				},
-				function () {
-					console.log("mouseout");
-					$(".page-wrapper").removeClass("sidebar-hovered");
+	function initSidebar() {
+		var pageWrapper = $(".page-wrapper");
+		var sidebar     = $("#sidebar");
+		var toggleBtn   = $("#toggle-sidebar");
+		var pinBtn      = $("#pin-sidebar");
+		var overlay     = $("#overlay");
+
+		// If the key elements aren't in the DOM yet, do nothing
+		if (!toggleBtn.length || !pageWrapper.length) return;
+
+		// ── Strip old listeners before re-binding (prevents stacking) ──
+		toggleBtn.off("click.sidebar");
+		pinBtn.off("click.sidebar");
+		overlay.off("click.sidebar");
+		sidebar.off("mouseenter.sidebar mouseleave.sidebar");
+		$(window).off("resize.sidebar");
+
+		// ── Toggle sidebar open / close ─────────────────────────────────
+		toggleBtn.on("click.sidebar", function () {
+			pageWrapper.toggleClass("toggled");
+		});
+
+		// ── Pin sidebar ─────────────────────────────────────────────────
+		pinBtn.on("click.sidebar", function () {
+			if (pageWrapper.hasClass("pinned")) {
+				pageWrapper.removeClass("pinned");
+				sidebar.off("mouseenter.sidebar mouseleave.sidebar");
+			} else {
+				pageWrapper.addClass("pinned");
+				sidebar.on("mouseenter.sidebar", function () {
+					pageWrapper.addClass("sidebar-hovered");
+				});
+				sidebar.on("mouseleave.sidebar", function () {
+					pageWrapper.removeClass("sidebar-hovered");
+				});
+			}
+		});
+
+		// ── Pinned sidebar hover (active on load if already pinned) ─────
+		if (pageWrapper.hasClass("pinned")) {
+			sidebar.on("mouseenter.sidebar", function () {
+				pageWrapper.addClass("sidebar-hovered");
+			});
+			sidebar.on("mouseleave.sidebar", function () {
+				pageWrapper.removeClass("sidebar-hovered");
+			});
+		}
+
+		// ── Overlay tap — closes sidebar on mobile ──────────────────────
+		overlay.on("click.sidebar", function () {
+			pageWrapper.toggleClass("toggled");
+		});
+
+		// ── Responsive resize ───────────────────────────────────────────
+		$(window).on("resize.sidebar", function () {
+			if ($(window).width() <= 768) {
+				pageWrapper.removeClass("pinned");
+			} else {
+				pageWrapper.removeClass("toggled");
+			}
+		});
+	}
+
+	// ── Run once on first load ──────────────────────────────────────────
+	initSidebar();
+
+	// ── Re-run whenever React re-renders the sidebar buttons ───────────
+	// Watches for #toggle-sidebar being re-inserted into the DOM
+	// after a route change or React state update
+	var observer = new MutationObserver(function (mutations) {
+		for (var i = 0; i < mutations.length; i++) {
+			var addedNodes = mutations[i].addedNodes;
+			for (var j = 0; j < addedNodes.length; j++) {
+				var node = addedNodes[j];
+				if (
+					node.nodeType === 1 && // Element node only
+					(node.id === "toggle-sidebar" ||
+					(node.querySelector && node.querySelector("#toggle-sidebar")))
+				) {
+					initSidebar();
+					return;
 				}
-			);
+			}
 		}
 	});
 
-	// Pinned sidebar
-	$(function () {
-		$(".page-wrapper").hasClass("pinned");
-		$("#sidebar").hover(
-			function () {
-				console.log("mouseenter");
-				$(".page-wrapper").addClass("sidebar-hovered");
-			},
-			function () {
-				console.log("mouseout");
-				$(".page-wrapper").removeClass("sidebar-hovered");
-			}
-		);
+	observer.observe(document.body, {
+		childList: true,
+		subtree:   true,
 	});
 
-	// Toggle sidebar overlay
-	$("#overlay").on("click", function () {
-		$(".page-wrapper").toggleClass("toggled");
-	});
-
-	// Added by Srinu
-	$(function () {
-		// When the window is resized,
-		$(window).resize(function () {
-			// When the width and height meet your specific requirements or lower
-			if ($(window).width() <= 768) {
-				$(".page-wrapper").removeClass("pinned");
-			}
-		});
-		// When the window is resized,
-		$(window).resize(function () {
-			// When the width and height meet your specific requirements or lower
-			if ($(window).width() >= 768) {
-				$(".page-wrapper").removeClass("toggled");
-			}
-		});
-	});
 });
 
 /***********
 ***********
 ***********
-	Bootstrap JS 
+	Bootstrap JS
 ***********
 ***********
 ***********/

@@ -321,10 +321,21 @@ const paystackWebhook = async (req, res) => {
         return;
       }
 
-      // refund.pending — acknowledge only, wait for refund.processed
+      // ── refund.pending ───────────────────────────────────────────────────
       if (event.event === 'refund.pending') {
-        console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — waiting for refund.processed`);
-        return;
+        // In LIVE mode: Paystack fires refund.processed later — wait for it.
+        // In TEST mode: refund.processed never fires automatically from Paystack.
+        // So in test mode we treat refund.pending as the final confirmation
+        // and update the DB immediately, mirroring what live mode will do.
+        const isTestMode = (process.env.PAYSTACK_SECRET_KEY ?? '').startsWith('sk_test_')
+
+        if (!isTestMode) {
+          console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — live mode, waiting for refund.processed`);
+          return;
+        }
+
+        console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — test mode, treating as processed`);
+        // Fall through to the refund.processed logic below
       }
 
       // ── refund.processed — money confirmed returned, update DB ───────────
@@ -517,14 +528,14 @@ const getMyBookings = async (req, res) => {
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
     const [rows] = await db.query(
-      `SELECT b.id, b.slot_label,b.is_deleted, b.booking_date AS date,
+      `SELECT b.id, b.slot_label, b.booking_date AS date,
               b.amount, b.status, b.payment_status,
-              b.refund_amount, b.paystack_ref,
+              b.refund_amount, b.paystack_ref,b.created_at,
               t.name AS turf, t.id AS turf_id
        FROM bookings b
        LEFT JOIN turfs t ON t.id = b.turf_id
-       WHERE b.user_id = ? AND b.is_deleted=0
-       ORDER BY b.booking_date DESC, b.slot_label ASC`,
+       WHERE b.user_id = ?
+       ORDER BY b.created_at DESC`,
       [user_id]
     );
 
@@ -573,10 +584,10 @@ const deleteBooking = async (req, res) => {
 
     await db.query(`UPDATE bookings SET is_deleted=1 WHERE id = ? AND user_id = ?`, [booking_id, user_id]);
 
-    return res.json({ message: 'Booking Record Deleted ✔️' });
+    return res.json({ message: 'Booking deleted' });
   } catch (err) {
     console.error('deleteBooking error:', err);
-    return res.status(500).json({ message: 'Server Error ⚠️' });
+    return res.status(500).json({ message: 'Server error' });
   }
 };
 

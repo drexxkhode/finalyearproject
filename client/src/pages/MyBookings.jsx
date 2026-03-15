@@ -339,6 +339,12 @@ export default function MyBookings({ onBack, notify }) {
       setCancelTarget(null)
       await fetchBookings()
       notify?.('Booking cancelled. Refund is being processed.', 's')
+
+      // In test mode Paystack fires the refund webhook within a few seconds.
+      // Re-fetch twice after short delays so the UI reflects 'refunded'
+      // without the user needing to manually refresh.
+      setTimeout(async () => { await fetchBookings() }, 3000)
+      setTimeout(async () => { await fetchBookings() }, 8000)
     } catch (e) {
       const msg = e.response?.data?.message || 'Cancellation failed. Please try again.'
       setError(msg)

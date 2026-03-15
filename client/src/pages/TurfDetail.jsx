@@ -187,21 +187,21 @@ export default function TurfDetail({
 
           {myLockedHere.length > 0 && (
             <div className="card border-0 shadow-sm rounded-4 p-3 mb-3"
-              style={{ borderLeft: '4px solid #856404' }}>
+              style={{ borderLeft: '4px solid #f5bd16' }}>
               <div className="fw-bold mb-2">🔒 Selected Slots</div>
 
               <div className="d-flex flex-column gap-2 mb-3">
                 {myLockedHere.map(lock => (
                   <div key={lock.slotId}
                     className="d-flex justify-content-between align-items-center rounded-3 px-3 py-2"
-                    style={{ background: 'rgba(166, 235, 5, 0.93)', border: '1px solid rgba(255,193,7,.4)' }}
+                    style={{ background: '#f5bd16', border: '1px solid rgba(241, 209, 46, 0.4)' }}
                   >
                     <div>
                       <div className="fw-bold small">{lock.label}</div>
                       <div className="text-muted" style={{ fontSize: 10 }}>₵{turf.pricePerHour}</div>
                     </div>
                     <div className="d-flex align-items-center gap-2">
-                      <span className="fw-bolder small" style={{ color: '#856404', minWidth: 36 }}>
+                      <span className="fw-bolder small" style={{ color: '#fff', minWidth: 36 }}>
                         {fmtCountdown(lock.countdown ?? 300)}
                       </span>
                       <button
