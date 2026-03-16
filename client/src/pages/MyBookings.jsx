@@ -344,7 +344,7 @@ export default function MyBookings({ onBack, notify }) {
       // Re-fetch twice after short delays so the UI reflects 'refunded'
       // without the user needing to manually refresh.
       setTimeout(async () => { await fetchBookings() }, 30000)
-      setTimeout(async () => { await fetchBookings() }, 60000)
+      setTimeout(async () => { await fetchBookings() }, 90000)
     } catch (e) {
       const msg = e.response?.data?.message || 'Cancellation failed. Please try again.'
       setError(msg)
