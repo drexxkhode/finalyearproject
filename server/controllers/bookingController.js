@@ -2,7 +2,7 @@ const db     = require('../config/db');
 const crypto = require('crypto');
 const axios  = require('axios');
 const redis  = require('../config/RedisClient');
-
+const sendEmail = require('../utils/userMail');
 
 // ── GET /api/bookings/slots ────────────────────────────────────────────────
 const getBookedSlots = async (req, res) => {
