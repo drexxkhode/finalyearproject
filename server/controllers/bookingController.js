@@ -355,7 +355,7 @@ const paystackWebhook = async (req, res) => {
            style="max-width:600px;background:#fff;border-radius:8px;overflow:hidden;">
       <tr>
         <td style="text-align:center;padding:28px 20px 10px;">
-          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1/turfArena_oogeyt.png"
+          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
                alt="TurfArena" width="110" style="display:block;margin:0 auto;" />
         </td>
       </tr>

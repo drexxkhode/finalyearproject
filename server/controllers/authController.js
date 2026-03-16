@@ -427,7 +427,7 @@ exports.forgotPassword = async (req, res) => {
            style="max-width: 600px; background: #ffffff; border-radius: 8px; overflow: hidden;">
       <tr>
         <td style="text-align: center; padding: 30px 20px 10px 20px;">
-          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1/turfArena_oogeyt.png"
+          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
                alt="Company Logo" width="120" style="display: block; margin: 0 auto;" />
         </td>
       </tr>
