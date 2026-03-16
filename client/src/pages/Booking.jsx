@@ -73,6 +73,17 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const payingRef  = useRef(false)
   const snapRef    = useRef({ slots: [], amount: 0 })  // sync snapshot for callback closure
 
+  const resendVerification = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API}/users/resend-verification`, {},
+        { headers: { Authorization: `Bearer ${token}` } })
+      setErr('RESENT')
+    } catch {
+      setErr('Could not resend verification code. Please try again.')
+    }
+  }
+
   // Persist step + info across refreshes
   useEffect(() => { sessionStorage.setItem(SK_STEP, String(step)) }, [step])
   useEffect(() => { sessionStorage.setItem(SK_INFO, JSON.stringify(info)) }, [info])
@@ -492,11 +503,31 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
                   }
                 </button>
 
-                {err && (
+                {err === 'EMAIL_NOT_VERIFIED' ? (
+                  <div className="alert alert-warning py-2 small mt-3 text-start">
+                    <div className="fw-bold mb-1">
+                      <i className="bi bi-envelope-exclamation me-1"></i>
+                      Email not verified
+                    </div>
+                    <div className="mb-2">
+                      Please verify your email before paying.
+                      Check your inbox for the verification link.
+                    </div>
+                    <button className="btn btn-sm btn-outline-primary fw-bold"
+                      onClick={resendVerification}>
+                      <i className="bi bi-envelope me-1"></i>Resend verification email
+                    </button>
+                  </div>
+                ) : err === 'RESENT' ? (
+                  <div className="alert alert-success py-2 small mt-3 text-start">
+                    <i className="bi bi-check-circle me-1"></i>
+                    New verification code sent! Check your inbox, then come back here to pay.
+                  </div>
+                ) : err ? (
                   <div className="alert alert-danger py-2 small mt-3 text-start">
                     <i className="bi bi-exclamation-circle me-1"></i>{err}
                   </div>
-                )}
+                ) : null}
 
                 <p className="text-muted small mt-3 mb-0">
                   <i className="bi bi-lock-fill me-1"></i>256-bit SSL · Secured by Paystack

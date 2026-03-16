@@ -1,6 +1,7 @@
 // controllers/turfImageController.js
 const db                  = require('../config/db');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../middleware/upload');
+const redis               = require('../config/RedisClient');
 
 // ── GET /api/turf/:id/images ──────────────────────────────────────────────
 // Returns all images for a turf ordered by sort_order
@@ -69,6 +70,7 @@ const uploadTurfImages = async (req, res) => {
       });
 
       console.log(`[turf-image] uploaded turf=${turf_id} public_id=${result.public_id} cover=${isCover}`);
+      await redis.del(redis.KEYS.turf(turf_id), redis.KEYS.allTurfs);
     }
 
     return res.status(201).json({ message: 'Images uploaded', images: uploaded });
@@ -101,6 +103,7 @@ const setTurfCover = async (req, res) => {
       `UPDATE turf_images SET is_cover = 1 WHERE id = ?`, [image_id]
     );
 
+    await redis.del(redis.KEYS.turf(turf_id), redis.KEYS.allTurfs);
     console.log(`[turf-image] cover set turf=${turf_id} image=${image_id}`);
     return res.json({ message: 'Cover image updated' });
   } catch (err) {

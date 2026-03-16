@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
-export default function Navbar({ TABS, activeTab, onTabChange, user, logout, notify, onProfile }) {
+export default function Navbar({ TABS, activeTab, onTabChange, user, logout, notify, onProfile, onSignIn, onResendOtp }) {
   const navigate      = useNavigate()
   const location      = useLocation()
   const [open, setOpen] = useState(false)
@@ -19,7 +19,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
     logout()
     notify('Signed out')
     setOpen(false)
-    navigate('/login')
+    navigate('/')   // half-auth: guests land on home, not login
   }
 
   const closeAndGo = (path) => { setOpen(false); navigate(path) }
@@ -57,8 +57,39 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
     )
   }
 
+  const isUnverified = user && user.email_verified === 0
+
   return (
     <>
+      {/* Unverified email banner — shown below navbar for logged-in unverified users */}
+      {isUnverified && (
+        <div style={{
+          background: 'linear-gradient(90deg, #fff3cd, #fef9e7)',
+          borderBottom: '1px solid #ffc107',
+          padding: '7px 16px',
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 10,
+          fontSize: 13, flexWrap: 'wrap',
+        }}>
+          <i className="bi bi-envelope-exclamation-fill" style={{ color: '#856404' }}></i>
+          <span style={{ color: '#856404', fontWeight: 600 }}>
+            Your email is not verified. Verification is required before payment.
+          </span>
+          <button
+            onClick={() => onResendOtp?.()}
+            style={{
+              border: '1px solid #856404', borderRadius: 20,
+              background: 'transparent', color: '#856404',
+              fontSize: 12, fontWeight: 700,
+              padding: '2px 12px', cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <i className="bi bi-arrow-clockwise me-1"></i>Resend code
+          </button>
+        </div>
+      )}
+
       <nav className="tf-navbar">
         <div className="container-fluid px-4">
           <div className="d-flex align-items-center justify-content-between py-2">
@@ -68,7 +99,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
               className="d-flex align-items-center gap-2 border-0 bg-transparent p-0"
               onClick={() => navigate('/')}
             >
-              <div className="tf-brand-icon"><img src='/assets/img/logo/logo.png' /></div>
+              <div className="tf-brand-icon">⚽</div>
               <div className="text-start">
                 <div className="tf-brand-title">TURFARENA</div>
                 <div className="tf-brand-sub">Accra Metropolitan Assembly</div>
@@ -109,12 +140,21 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
                 </div>
               )}
 
-              <button
-                className="btn btn-outline-primary btn-sm fw-bold d-none d-md-inline-flex"
-                onClick={() => navigate('/mybookings')}
-              >
-                <i className="bi bi-calendar2-check me-1"></i>Bookings
-              </button>
+              {user ? (
+                <button
+                  className="btn btn-outline-primary btn-sm fw-bold d-none d-md-inline-flex"
+                  onClick={() => navigate('/mybookings')}
+                >
+                  <i className="bi bi-calendar2-check me-1"></i>Bookings
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary btn-sm fw-bold d-none d-md-inline-flex"
+                  onClick={onSignIn}
+                >
+                  <i className="bi bi-person-fill me-1"></i>Sign In
+                </button>
+              )}
 
               {user && (
                 <button
@@ -237,12 +277,21 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button
-                className="btn btn-outline-primary fw-bold w-100"
-                onClick={() => closeAndGo('/mybookings')}
-              >
-                <i className="bi bi-calendar2-check me-2"></i>My Bookings
-              </button>
+              {user ? (
+                <button
+                  className="btn btn-outline-primary fw-bold w-100"
+                  onClick={() => closeAndGo('/mybookings')}
+                >
+                  <i className="bi bi-calendar2-check me-2"></i>My Bookings
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary fw-bold w-100"
+                  onClick={() => { setOpen(false); onSignIn?.() }}
+                >
+                  <i className="bi bi-person-fill me-2"></i>Sign In / Register
+                </button>
+              )}
 
               {user && (
                 <button

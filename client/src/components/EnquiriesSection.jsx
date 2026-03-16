@@ -173,4 +173,4 @@ export default function EnquiriesSection({ turfId, user }) {
       </div>
     </div>
   )
-}
+};

@@ -52,25 +52,29 @@ const Settings = () => {
   const [isUpdating, setIsUpdating]     = useState(false);
   const [errors, setErrors]             = useState({});
 
-  // turf id — fetched once from turf-details
   const [turfId, setTurfId] = useState(null);
 
   const [formData, setFormData] = useState({
     turfName: "", location: "", district: "",
     longitude: "", latitude: "", email: "",
-    contact: "", about: "", price: "",
+    contact: "", about: "", price: "", capacity: "",
+    amenities: [],   // always an array
   });
 
+  // Raw string for the amenities textarea — keeps comma typing natural.
+  // Converted to array only on blur or save.
+  const [amenitiesRaw, setAmenitiesRaw] = useState("");
+
   // ── Gallery state ────────────────────────────────────────────────────────
-  const [images,        setImages]        = useState([]);   // { id, url, public_id, is_cover, sort_order }
-  const [loadingImages, setLoadingImages] = useState(false);
-  const [uploading,     setUploading]     = useState(false);
-  const [deletingId,    setDeletingId]    = useState(null); // id being deleted
+  const [images,         setImages]         = useState([]);
+  const [loadingImages,  setLoadingImages]  = useState(false);
+  const [uploading,      setUploading]      = useState(false);
+  const [deletingId,     setDeletingId]     = useState(null);
   const [settingCoverId, setSettingCoverId] = useState(null);
-  const [replacingId,    setReplacingId]    = useState(null); // id being replaced
+  const [replacingId,    setReplacingId]    = useState(null);
   const replaceInputRef  = useRef(null);
-  const replaceTargetId  = useRef(null);  // which image id is being replaced
-  const [confirmModal,  setConfirmModal]  = useState({ show: false, imageId: null });
+  const replaceTargetId  = useRef(null);
+  const [confirmModal,   setConfirmModal]   = useState({ show: false, imageId: null });
   const fileInputRef = useRef(null);
 
   // ── Validation ───────────────────────────────────────────────────────────
@@ -78,26 +82,22 @@ const Settings = () => {
     const newErrors = {};
     const requiredFields = ["turfName", "location", "district", "longitude", "latitude", "price"];
     let hasError = false;
-
     requiredFields.forEach((field) => {
       if (!formData[field] || formData[field].toString().trim() === "") {
         newErrors[field] = "This field is required";
         hasError = true;
       }
     });
-
-    if (hasError) { toast.warning("Please fill in the highlighted fields."); }
-
+    if (hasError) toast.warning("Please fill in the highlighted fields.");
     if (formData.contact && !/^\d{10,15}$/.test(formData.contact)) {
       newErrors.contact = "Enter a valid phone number";
       toast.warning("Please enter a valid phone number");
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ── Fetch turf details (also gets turfId) ────────────────────────────────
+  // ── Fetch turf details ───────────────────────────────────────────────────
   const fetchDetail = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -115,7 +115,21 @@ const Settings = () => {
         price:     res.data.price_per_hour || "",
         about:     res.data.about          || "",
         contact:   res.data.contact        || "",
+        capacity:  res.data.capacity       || "",
+        // Always store as array regardless of what DB returns
+        amenities: Array.isArray(res.data.amenities)
+          ? res.data.amenities
+          : typeof res.data.amenities === 'string' && res.data.amenities
+            ? res.data.amenities.split(',').map(a => a.trim()).filter(Boolean)
+            : [],
       });
+      // Sync raw string for textarea
+      const fetched = Array.isArray(res.data.amenities)
+        ? res.data.amenities
+        : typeof res.data.amenities === 'string' && res.data.amenities
+          ? res.data.amenities.split(',').map(a => a.trim()).filter(Boolean)
+          : [];
+      setAmenitiesRaw(fetched.join(', '));
     } catch (err) {
       console.error("Fetch failed:", err);
       toast.error("Failed to fetch turf details!");
@@ -141,20 +155,33 @@ const Settings = () => {
   };
 
   useEffect(() => { fetchDetail(); }, []);
+  useEffect(() => { if (turfId) fetchImages(turfId); }, [turfId]);
+  useEffect(() => { if (activeTab === "threeA" && turfId) fetchImages(turfId); }, [activeTab]);
 
-  // Fetch images once turfId is known
-  useEffect(() => {
-    if (turfId) fetchImages(turfId);
-  }, [turfId]);
-
-  // Also fetch images when switching to the gallery tab
-  useEffect(() => {
-    if (activeTab === "threeA" && turfId) fetchImages(turfId);
-  }, [activeTab]);
-
+  // Standard field handler — for non-amenities fields
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  // Amenities textarea — update raw string freely while typing
+  const handleAmenitiesChange = (e) => {
+    setAmenitiesRaw(e.target.value);
+  };
+
+  // On blur — commit raw string to the array in formData
+  const handleAmenitiesBlur = () => {
+    const arr = amenitiesRaw.split(',').map(a => a.trim()).filter(Boolean);
+    setFormData(prev => ({ ...prev, amenities: arr }));
+  };
+
+  // Remove a single amenity tag
+  const removeAmenity = (idx) => {
+    setFormData(prev => {
+      const updated = prev.amenities.filter((_, i) => i !== idx);
+      setAmenitiesRaw(updated.join(', '));
+      return { ...prev, amenities: updated };
+    });
   };
 
   // ── Change password ──────────────────────────────────────────────────────
@@ -180,19 +207,24 @@ const Settings = () => {
   // ── Save turf details ────────────────────────────────────────────────────
   const handleTurfDetailSubmit = async (e) => {
     e.preventDefault();
+    // Flush raw textarea to array before validation/save
+    const flushedAmenities = amenitiesRaw.split(',').map(a => a.trim()).filter(Boolean);
+    setFormData(prev => ({ ...prev, amenities: flushedAmenities }));
     if (!validateForm()) return;
     try {
       const token   = localStorage.getItem("token");
       const payload = {
-        name:          formData.turfName,
-        email:         formData.email,
-        contact:       formData.contact,
-        district:      formData.district,
-        latitude:      formData.latitude,
-        longitude:     formData.longitude,
-        location:      formData.location,
+        name:           formData.turfName,
+        email:          formData.email,
+        contact:        formData.contact,
+        district:       formData.district,
+        latitude:       formData.latitude,
+        longitude:      formData.longitude,
+        location:       formData.location,
         price_per_hour: formData.price,
-        about:         formData.about,
+        about:          formData.about,
+        capacity:       formData.capacity,
+        amenities:      flushedAmenities,      // send as array — server handles JSON.stringify
       };
       const res = await axios.put(`${API}/api/turf/update-turf`, payload, {
         headers: { Authorization: `Bearer ${token}` },
@@ -207,20 +239,15 @@ const Settings = () => {
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length || !turfId) return;
-
     setUploading(true);
     try {
       const token    = localStorage.getItem("token");
-      const formData = new FormData();
-      files.forEach((f) => formData.append("images", f));
-
-      const res = await axios.post(
-        `${API}/api/turf/${turfId}/images`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
-      );
+      const fd = new FormData();
+      files.forEach((f) => fd.append("images", f));
+      const res = await axios.post(`${API}/api/turf/${turfId}/images`, fd, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
       toast.success(`${res.data.images.length} image(s) uploaded!`);
-      // Merge new images into state
       setImages((prev) => [...prev, ...res.data.images]);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Upload failed!");
@@ -230,60 +257,40 @@ const Settings = () => {
     }
   };
 
-  // ── Replace a single image ──────────────────────────────────────────────
+  // ── Replace image ────────────────────────────────────────────────────────
   const openReplace = (imageId) => {
     replaceTargetId.current = imageId;
-    if (replaceInputRef.current) {
-      replaceInputRef.current.value = "";
-      replaceInputRef.current.click();
-    }
+    if (replaceInputRef.current) { replaceInputRef.current.value = ""; replaceInputRef.current.click(); }
   };
 
   const handleImageReplace = async (e) => {
     const file    = e.target.files?.[0];
     const imageId = replaceTargetId.current;
     if (!file || !imageId || !turfId) return;
-
     setReplacingId(imageId);
     try {
       const token = localStorage.getItem("token");
-
-      // 1. Upload new image
-      const formData = new FormData();
-      formData.append("images", file);
-      const uploadRes = await axios.post(
-        `${API}/api/turf/${turfId}/images`,
-        formData,
-        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
-      );
-      const newImage = uploadRes.data.images[0];
-
-      // 2. If the replaced image was the cover, make the new image the cover
-      const wascover = images.find((img) => img.id === imageId)?.is_cover;
+      const fd = new FormData();
+      fd.append("images", file);
+      const uploadRes = await axios.post(`${API}/api/turf/${turfId}/images`, fd, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+      const newImage   = uploadRes.data.images[0];
+      const wascover   = images.find((img) => img.id === imageId)?.is_cover;
       if (wascover) {
-        await axios.put(
-          `${API}/api/turf/${turfId}/images/${newImage.id}/cover`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await axios.put(`${API}/api/turf/${turfId}/images/${newImage.id}/cover`, {},
+          { headers: { Authorization: `Bearer ${token}` } });
         newImage.is_cover = 1;
       }
-
-      // 3. Delete old image
-      await axios.delete(
-        `${API}/api/turf/${turfId}/images/${imageId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // 4. Swap in local state — keep same position in the list
+      await axios.delete(`${API}/api/turf/${turfId}/images/${imageId}`,
+        { headers: { Authorization: `Bearer ${token}` } });
       setImages((prev) =>
         prev.map((img) => {
           if (img.id === imageId) return { ...newImage, is_cover: wascover ? 1 : newImage.is_cover };
-          if (wascover) return { ...img, is_cover: 0 }; // unset old cover on others
+          if (wascover) return { ...img, is_cover: 0 };
           return img;
         })
       );
-
       toast.success("Image replaced!");
     } catch (err) {
       toast.error(err?.response?.data?.message || "Replace failed.");
@@ -300,15 +307,9 @@ const Settings = () => {
     setSettingCoverId(imageId);
     try {
       const token = localStorage.getItem("token");
-      await axios.put(
-        `${API}/api/turf/${turfId}/images/${imageId}/cover`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      // Update local state — unset all covers, set new one
-      setImages((prev) =>
-        prev.map((img) => ({ ...img, is_cover: img.id === imageId ? 1 : 0 }))
-      );
+      await axios.put(`${API}/api/turf/${turfId}/images/${imageId}/cover`, {},
+        { headers: { Authorization: `Bearer ${token}` } });
+      setImages((prev) => prev.map((img) => ({ ...img, is_cover: img.id === imageId ? 1 : 0 })));
       toast.success("Cover image updated!");
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to set cover.");
@@ -317,10 +318,8 @@ const Settings = () => {
     }
   };
 
-  // ── Delete image (opens modal) ───────────────────────────────────────────
-  const openDeleteConfirm = (imageId) => {
-    setConfirmModal({ show: true, imageId });
-  };
+  // ── Delete image ─────────────────────────────────────────────────────────
+  const openDeleteConfirm = (imageId) => setConfirmModal({ show: true, imageId });
 
   const confirmDelete = async () => {
     const imageId = confirmModal.imageId;
@@ -328,17 +327,12 @@ const Settings = () => {
     setDeletingId(imageId);
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(
-        `${API}/api/turf/${turfId}/images/${imageId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      // Remove from local state and re-assign cover if needed
+      await axios.delete(`${API}/api/turf/${turfId}/images/${imageId}`,
+        { headers: { Authorization: `Bearer ${token}` } });
       setImages((prev) => {
-        const filtered = prev.filter((img) => img.id !== imageId);
+        const filtered       = prev.filter((img) => img.id !== imageId);
         const deletedWasCover = prev.find((img) => img.id === imageId)?.is_cover;
-        if (deletedWasCover && filtered.length > 0) {
-          filtered[0] = { ...filtered[0], is_cover: 1 };
-        }
+        if (deletedWasCover && filtered.length > 0) filtered[0] = { ...filtered[0], is_cover: 1 };
         return filtered;
       });
       toast.success("Image deleted.");
@@ -519,6 +513,7 @@ const Settings = () => {
                                 value={formData.latitude} onChange={handleChange} />
                               {errors.latitude && <div className="invalid-feedback">{errors.latitude}</div>}
                             </div>
+
                             <div className="col-6 mt-3">
                               <label htmlFor="price" className="form-label">Price per hour</label>
                               <input id="price" type="text"
@@ -526,6 +521,7 @@ const Settings = () => {
                                 value={formData.price} onChange={handleChange} />
                               {errors.price && <div className="invalid-feedback">{errors.price}</div>}
                             </div>
+
                             <div className="col-6 mt-3">
                               <label htmlFor="district" className="form-label">District</label>
                               <input id="district"
@@ -533,20 +529,63 @@ const Settings = () => {
                                 value={formData.district} onChange={handleChange} />
                               {errors.district && <div className="invalid-feedback">{errors.district}</div>}
                             </div>
+
                             <div className="col-6 mt-3">
-                              <label htmlFor="district" className="form-label">District</label>
-                              <input id="district"
-                                className={`form-control ${errors.district ? "is-invalid" : ""}`}
-                                value={formData.district} onChange={handleChange} />
-                              {errors.district && <div className="invalid-feedback">{errors.district}</div>}
+                              <label htmlFor="capacity" className="form-label">Capacity</label>
+                              <input id="capacity"
+                                className={`form-control ${errors.capacity ? "is-invalid" : ""}`}
+                                value={formData.capacity} onChange={handleChange} />
+                              {errors.capacity && <div className="invalid-feedback">{errors.capacity}</div>}
                             </div>
+
+                            {/* ── Amenities — fixed ── */}
                             <div className="col-6 mt-3">
-                              <label htmlFor="district" className="form-label">District</label>
-                              <input id="district"
-                                className={`form-control ${errors.district ? "is-invalid" : ""}`}
-                                value={formData.district} onChange={handleChange} />
-                              {errors.district && <div className="invalid-feedback">{errors.district}</div>}
+                              <label htmlFor="amenities" className="form-label">
+                                Amenities
+                                <span className="text-muted small ms-2">(comma-separated)</span>
+                              </label>
+                              <textarea
+                                id="amenities"
+                                rows={3}
+                                className={`form-control ${errors.amenities ? "is-invalid" : ""}`}
+                                placeholder="e.g. Floodlights, Parking, Changing Rooms"
+                                value={amenitiesRaw}
+                                onChange={handleAmenitiesChange}
+                                onBlur={handleAmenitiesBlur}
+                              />
+                              {errors.amenities && <div className="invalid-feedback">{errors.amenities}</div>}
+
+                              {/* Tag preview with remove buttons */}
+                              {Array.isArray(formData.amenities) && formData.amenities.length > 0 && (
+                                <div className="d-flex flex-wrap gap-1 mt-2">
+                                  {formData.amenities.map((a, i) => (
+                                    <span
+                                      key={i}
+                                      className="badge d-inline-flex align-items-center gap-1"
+                                      style={{
+                                        background: 'rgba(13,110,253,.1)',
+                                        color: '#0d6efd',
+                                        border: '1px solid rgba(13,110,253,.25)',
+                                        fontSize: 11, fontWeight: 600,
+                                        padding: '4px 8px', borderRadius: 20,
+                                      }}
+                                    >
+                                      {a}
+                                      <button
+                                        type="button"
+                                        onClick={() => removeAmenity(i)}
+                                        style={{
+                                          border: 'none', background: 'none', padding: 0,
+                                          cursor: 'pointer', color: '#0d6efd',
+                                          fontSize: 13, lineHeight: 1,
+                                        }}
+                                      >×</button>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
+
                           </div>
                           <div className="d-flex gap-2 justify-content-end p-3">
                             <button type="button" className="btn btn-primary"
@@ -557,9 +596,7 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  {/* ══════════════════════════════════════════════════════════
-                      ── Turf Photos Tab (threeA) ──────────────────────────
-                  ══════════════════════════════════════════════════════════ */}
+                  {/* ── Turf Photos Tab ── */}
                   <div className={`tab-pane ${activeTab === "threeA" ? "show active" : "d-none"}`}>
                     <div className="card mb-3">
                       <div className="card-header d-flex align-items-center justify-content-between">
@@ -568,7 +605,6 @@ const Settings = () => {
                           <span className="text-muted small">
                             {images.length} image{images.length !== 1 ? "s" : ""}
                           </span>
-                          {/* Upload button */}
                           <button
                             className="btn btn-primary btn-sm d-flex align-items-center gap-1"
                             onClick={() => fileInputRef.current?.click()}
@@ -579,36 +615,22 @@ const Settings = () => {
                               : <><i className="bi bi-cloud-upload" /> Upload Images</>
                             }
                           </button>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
+                          <input ref={fileInputRef} type="file"
+                            accept="image/jpeg,image/png,image/webp" multiple
+                            style={{ display: "none" }} onChange={handleImageUpload} />
+                          <input ref={replaceInputRef} type="file"
                             accept="image/jpeg,image/png,image/webp"
-                            multiple
-                            style={{ display: "none" }}
-                            onChange={handleImageUpload}
-                          />
-                          {/* Hidden single-file input for replacing a specific image */}
-                          <input
-                            ref={replaceInputRef}
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            style={{ display: "none" }}
-                            onChange={handleImageReplace}
-                          />
+                            style={{ display: "none" }} onChange={handleImageReplace} />
                         </div>
                       </div>
 
                       <div className="card-body">
-
-                        {/* Loading */}
                         {loadingImages && (
                           <div className="text-center py-5">
                             <ClipLoader color="#1d20e0" size={40} />
                             <p className="text-muted mt-2 small">Loading images…</p>
                           </div>
                         )}
-
-                        {/* Empty state */}
                         {!loadingImages && images.length === 0 && (
                           <div className="text-center py-5 text-muted">
                             <i className="bi bi-images" style={{ fontSize: 48, opacity: 0.3 }}></i>
@@ -616,84 +638,49 @@ const Settings = () => {
                             <p className="small">Upload images using the button above. The first image automatically becomes the cover.</p>
                           </div>
                         )}
-
-                        {/* Image grid */}
                         {!loadingImages && images.length > 0 && (
                           <div className="row g-3">
                             {images.map((img) => (
                               <div key={img.id} className="col-6 col-sm-4 col-md-3">
-                                <div
-                                  className="position-relative rounded-3 overflow-hidden"
+                                <div className="position-relative rounded-3 overflow-hidden"
                                   style={{
-                                    aspectRatio: "1 / 1",
-                                    background: "#f0f0f0",
+                                    aspectRatio: "1 / 1", background: "#f0f0f0",
                                     border: img.is_cover ? "3px solid #0d6efd" : "3px solid transparent",
                                     transition: "border .2s",
                                   }}
                                 >
-                                  <img
-                                    src={img.url}
-                                    alt="turf"
-                                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                                  />
-
-                                  {/* Cover badge */}
-                                  {img.is_cover ? (
-                                    <span
-                                      className="badge bg-primary position-absolute"
-                                      style={{ top: 6, left: 6, fontSize: 10 }}
-                                    >
+                                  <img src={img.url} alt="turf"
+                                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                  {img.is_cover && (
+                                    <span className="badge bg-primary position-absolute"
+                                      style={{ top: 6, left: 6, fontSize: 10 }}>
                                       <i className="bi bi-star-fill me-1"></i>Cover
                                     </span>
-                                  ) : null}
-
-                                  {/* Action overlay — shows on hover via CSS class */}
-                                  <div
-                                    className="position-absolute bottom-0 start-0 end-0 d-flex gap-1 p-1 justify-content-center"
-                                    style={{ background: "rgba(0,0,0,0.55)" }}
-                                  >
-                                    {/* Set cover (hidden if already cover) */}
+                                  )}
+                                  <div className="position-absolute bottom-0 start-0 end-0 d-flex gap-1 p-1 justify-content-center"
+                                    style={{ background: "rgba(0,0,0,0.55)" }}>
                                     {!img.is_cover && (
-                                      <button
-                                        className="btn btn-sm btn-warning py-0 px-2"
-                                        title="Set as cover"
-                                        onClick={() => handleSetCover(img.id)}
-                                        disabled={settingCoverId === img.id}
-                                        style={{ fontSize: 11 }}
-                                      >
+                                      <button className="btn btn-sm btn-warning py-0 px-2"
+                                        title="Set as cover" onClick={() => handleSetCover(img.id)}
+                                        disabled={settingCoverId === img.id} style={{ fontSize: 11 }}>
                                         {settingCoverId === img.id
                                           ? <span className="spinner-border spinner-border-sm" style={{ width: 10, height: 10 }} />
-                                          : <><i className="bi bi-star" /> Cover</>
-                                        }
+                                          : <><i className="bi bi-star" /> Cover</>}
                                       </button>
                                     )}
-
-                                    {/* Replace */}
-                                    <button
-                                      className="btn btn-sm btn-info py-0 px-2"
-                                      title="Replace image"
-                                      onClick={() => openReplace(img.id)}
-                                      disabled={replacingId === img.id}
-                                      style={{ fontSize: 11 }}
-                                    >
+                                    <button className="btn btn-sm btn-info py-0 px-2"
+                                      title="Replace image" onClick={() => openReplace(img.id)}
+                                      disabled={replacingId === img.id} style={{ fontSize: 11 }}>
                                       {replacingId === img.id
                                         ? <span className="spinner-border spinner-border-sm" style={{ width: 10, height: 10 }} />
-                                        : <><i className="bi bi-arrow-repeat" /> Replace</>
-                                      }
+                                        : <><i className="bi bi-arrow-repeat" /> Replace</>}
                                     </button>
-
-                                    {/* Delete */}
-                                    <button
-                                      className="btn btn-sm btn-danger py-0 px-2"
-                                      title="Delete image"
-                                      onClick={() => openDeleteConfirm(img.id)}
-                                      disabled={deletingId === img.id}
-                                      style={{ fontSize: 11 }}
-                                    >
+                                    <button className="btn btn-sm btn-danger py-0 px-2"
+                                      title="Delete image" onClick={() => openDeleteConfirm(img.id)}
+                                      disabled={deletingId === img.id} style={{ fontSize: 11 }}>
                                       {deletingId === img.id
                                         ? <span className="spinner-border spinner-border-sm" style={{ width: 10, height: 10 }} />
-                                        : <i className="bi bi-trash" />
-                                      }
+                                        : <i className="bi bi-trash" />}
                                     </button>
                                   </div>
                                 </div>
@@ -704,7 +691,6 @@ const Settings = () => {
                       </div>
                     </div>
                   </div>
-                  {/* ── End threeA ── */}
 
                 </div>
               </div>

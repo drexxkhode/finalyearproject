@@ -18,8 +18,8 @@ router.put("/update-turf",      auth, updateTurfDetails);
 router.get("/turf-name",        auth, getTurfName);
 router.get("/dashboard",        auth, getDashboardDetails);
 
-// ── Client routes (auth required) ────────────────────────────────────────
-router.get("/turf-data",        auth, getTurfData);      // ← NEW — Home + Map
-router.get("/turf-data/:id",    auth, getSingleTurf);    // ← NEW — TurfDetail Gallery
+// ── Client routes (public — guests must be able to browse) ──────────────
+router.get("/turf-data",        getTurfData);            // Home + Map — no auth required
+router.get("/turf-data/:id",    getSingleTurf);          // TurfDetail Gallery — no auth required
 
 module.exports = router;

@@ -7,7 +7,9 @@ const {
   deleteUser,
   changePassword,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  verifyEmail,
+  resendVerification,
 } = require("../../controllers/userController");
 
 const { upload }               = require('../../middleware/upload');
@@ -24,6 +26,8 @@ const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
+router.post("/verify-otp", protect, verifyEmail);             // verify 6-digit OTP
+router.post("/resend-verification", protect, resendVerification);  // resend OTP
 
 /* USER ROUTES */
 
@@ -44,4 +48,3 @@ router.post("/forgot-password", RateLimit, forgotPassword);
 router.post("/reset-password", resetPassword);
 
 module.exports = router;
-

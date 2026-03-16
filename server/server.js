@@ -85,6 +85,9 @@ setupAnalyticsSocket(io);
 registerSlotLockSocket(io);
 registerAdminNotificationSocket(io);
 
+// Connect Redis (non-blocking — server starts even if Redis is unavailable)
+const redis = require('./config/RedisClient');
+redis.connect();
 // Start server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT,"0.0.0.0", () => console.log(`Server running on port ${PORT}`));

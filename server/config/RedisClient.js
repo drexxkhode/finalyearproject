@@ -1,13 +1,103 @@
-import { createClient } from "redis";
+/**
+ * RedisClient.js — CommonJS, graceful fallback
+ *
+ * If Redis is unavailable (no REDIS_URL, connection failure) the client
+ * degrades silently — all cache operations become no-ops and the server
+ * continues serving requests directly from the DB.
+ *
+ * redis v5 API: createClient(), client.connect(), client.get/set/del/keys
+ */
+const { createClient } = require('redis');
 
-const redisClient = createClient({
-  url: "redis://localhost:6379",
-});
+let client   = null;
+let ready    = false;
 
-redisClient.on("error", (err) => {
-  console.error("Redis Error", err);
-});
+// ── Connect ──────────────────────────────────────────────────────────────────
+async function connect() {
+  const url = process.env.REDIS_URL;
+  if (!url) {
+    console.log('[redis] REDIS_URL not set — caching disabled');
+    return;
+  }
 
-await redisClient.connect();
+  try {
+    client = createClient({ url });
 
-export default redisClient;
+    client.on('error',        (err) => {
+      // Only log once when it first goes offline — not every retry
+      if (ready) console.warn('[redis] connection lost:', err.message);
+      ready = false;
+    });
+    client.on('ready',        () => { ready = true;  console.log('[redis] ✅ Connected'); });
+    client.on('reconnecting', () => console.log('[redis] reconnecting…'));
+
+    await client.connect();
+  } catch (err) {
+    console.warn('[redis] Could not connect:', err.message, '— caching disabled');
+    client = null;
+    ready  = false;
+  }
+}
+
+// ── Safe wrappers — all return null / false on error ─────────────────────────
+async function get(key) {
+  if (!ready || !client) return null;
+  try {
+    const val = await client.get(key);
+    return val ? JSON.parse(val) : null;
+  } catch (err) {
+    console.warn('[redis] get error:', err.message);
+    return null;
+  }
+}
+
+async function set(key, value, ttlSeconds = 300) {
+  if (!ready || !client) return false;
+  try {
+    await client.set(key, JSON.stringify(value), { EX: ttlSeconds });
+    return true;
+  } catch (err) {
+    console.warn('[redis] set error:', err.message);
+    return false;
+  }
+}
+
+async function del(...keys) {
+  if (!ready || !client) return false;
+  try {
+    await Promise.all(keys.map(k => client.del(k)));
+    return true;
+  } catch (err) {
+    console.warn('[redis] del error:', err.message);
+    return false;
+  }
+}
+
+// Delete all keys matching a pattern — used for bulk invalidation
+async function delPattern(pattern) {
+  if (!ready || !client) return false;
+  try {
+    const keys = await client.keys(pattern);
+    if (keys.length) await Promise.all(keys.map(k => client.del(k)));
+    return true;
+  } catch (err) {
+    console.warn('[redis] delPattern error:', err.message);
+    return false;
+  }
+}
+
+// ── Cache key constants ───────────────────────────────────────────────────────
+const KEYS = {
+  allTurfs:    'turfs:all',
+  turf:        (id) => `turfs:${id}`,
+  dashboard:   (turfId) => `dashboard:${turfId}`,
+};
+
+// TTLs in seconds
+const TTL = {
+  allTurfs:  5  * 60,   // 5 minutes
+  turf:      5  * 60,   // 5 minutes
+  dashboard: 2  * 60,   // 2 minutes
+};
+
+module.exports = { connect, get, set, del, delPattern, KEYS, TTL };

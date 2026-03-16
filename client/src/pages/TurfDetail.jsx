@@ -9,6 +9,7 @@ export default function TurfDetail({
   onBack, onBook, onDirections,
   lockSlot, releaseSlot,
   fmtCountdown, notify, onDateChange,
+  openAuth,
 }) {
   const turfSlots  = slots[turf.id] ?? []
   const isLoaded   = loadedTurfs?.has(turf.id) ?? false
@@ -16,9 +17,7 @@ export default function TurfDetail({
   const myLockedHere = Object.values(lockedSlots).filter(l => l.turfId === turf.id)
   const totalAmount  = myLockedHere.length * (turf.pricePerHour ?? 0)
 
-  const amenities = Array.isArray(turf.amenities)
-    ? turf.amenities
-    : turf.amenities ? turf.amenities.split(',').map(a => a.trim()) : []
+  const amenities = Array.isArray(turf.amenities) ? turf.amenities : []
 
   const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
   const [turfImages, setTurfImages] = useState(turf.images ?? [])
@@ -28,17 +27,20 @@ export default function TurfDetail({
 
   useEffect(() => {
     if (!turf?.id) return
-    const token = localStorage.getItem('token')
-    axios.get(`${API}/turf/turf-data/${turf.id}`, {  // ← fixed: was missing /api/
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    .then(res => { if (res.data.images) setTurfImages(res.data.images) })
-    .catch(() => {})
+    const token   = localStorage.getItem('token')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    axios.get(`${API}/turf/turf-data/${turf.id}`, { headers })
+      .then(res => { if (res.data.images) setTurfImages(res.data.images) })
+      .catch(() => {})
   }, [turf.id])
 
   // ── Slot click ────────────────────────────────────────────────────────────
   const handleSlotClick = s => {
-    if (!user)                                           { notify('Please sign in to book', 'e'); return }
+    if (!user) {
+      // Store the slot intent and open auth modal — after login the slot will be locked
+      openAuth?.({ turfId: turf.id, slotId: s.id, slotLabel: s.label })
+      return
+    }
     if (s.status === 'booked')                           return
     if (s.status === 'past')                             return
     if (s.status === 'locked' && s.lockedBy !== 'you')  return
@@ -187,21 +189,21 @@ export default function TurfDetail({
 
           {myLockedHere.length > 0 && (
             <div className="card border-0 shadow-sm rounded-4 p-3 mb-3"
-              style={{ borderLeft: '4px solid #f5bd16' }}>
+              style={{ borderLeft: '4px solid #856404' }}>
               <div className="fw-bold mb-2">🔒 Selected Slots</div>
 
               <div className="d-flex flex-column gap-2 mb-3">
                 {myLockedHere.map(lock => (
                   <div key={lock.slotId}
                     className="d-flex justify-content-between align-items-center rounded-3 px-3 py-2"
-                    style={{ background: '#f5bd16', border: '1px solid rgba(241, 209, 46, 0.4)' }}
+                    style={{ background: 'rgba(166, 235, 5, 0.93)', border: '1px solid rgba(255,193,7,.4)' }}
                   >
                     <div>
                       <div className="fw-bold small">{lock.label}</div>
                       <div className="text-muted" style={{ fontSize: 10 }}>₵{turf.pricePerHour}</div>
                     </div>
                     <div className="d-flex align-items-center gap-2">
-                      <span className="fw-bolder small" style={{ color: '#fff', minWidth: 36 }}>
+                      <span className="fw-bolder small" style={{ color: '#856404', minWidth: 36 }}>
                         {fmtCountdown(lock.countdown ?? 300)}
                       </span>
                       <button
@@ -232,4 +234,4 @@ export default function TurfDetail({
       </div>
     </div>
   )
-}
+};

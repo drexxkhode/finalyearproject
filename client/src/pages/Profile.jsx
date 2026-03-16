@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 
@@ -57,6 +57,9 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
     email:   user?.email   ?? '',
     contact: user?.contact ?? user?.phone ?? '',
   })
+  // Resend OTP from profile — with cooldown display
+  const [resendCooldown, setResendCooldown] = useState(0)  // seconds remaining
+  const [resending,      setResending]      = useState(false)
   const [pwd,          setPwd]     = useState({ current: '', next: '', confirm: '' })
   const [showPwd,      setShowPwd] = useState({ current: false, next: false, confirm: false })
   const [currentPhoto, setCurrentPhoto] = useState(user?.photo ?? null)
@@ -72,6 +75,36 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
     const t = setTimeout(() => { setErr(''); setSuccess('') }, 4000)
     return () => clearTimeout(t)
   }, [err, success])
+
+  // ── Resend OTP from profile page ────────────────────────────────────────
+  const resendOtp = async () => {
+    if (resendCooldown > 0 || resending) return
+    setResending(true)
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API}/users/resend-verification`, {},
+        { headers: { Authorization: `Bearer ${token}` } })
+      setSuccess('Verification code sent! Check your inbox.')
+      setResendCooldown(120)  // 2 min cooldown matches server
+    } catch (e) {
+      const retryAfter = e.response?.data?.retryAfter
+      if (retryAfter) {
+        setResendCooldown(retryAfter)
+        setErr(`Please wait ${retryAfter}s before requesting another code.`)
+      } else {
+        setErr(e.response?.data?.message ?? 'Could not send code. Try again.')
+      }
+    } finally {
+      setResending(false)
+    }
+  }
+
+  // Countdown ticker for resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = setInterval(() => setResendCooldown(s => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(t)
+  }, [resendCooldown])
 
   // ── Save profile info ───────────────────────────────────────────────────
   const saveInfo = async () => {
@@ -243,9 +276,8 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
 
               <div className="d-flex flex-column gap-2 text-start">
                 {[
-                  { icon: 'bi-phone',        label: 'Phone',        val: form.contact || '—' },
-                  { icon: 'bi-calendar3',    label: 'Member since', val: memberSince },
-                  { icon: 'bi-shield-check', label: 'Account',      val: 'Verified' },
+                  { icon: 'bi-phone',     label: 'Phone',        val: form.contact || '—' },
+                  { icon: 'bi-calendar3', label: 'Member since', val: memberSince },
                 ].map(({ icon, label, val }) => (
                   <div key={label} className="d-flex align-items-center gap-2">
                     <i className={`bi ${icon} text-primary`} style={{ width: 18 }}></i>
@@ -255,6 +287,39 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
                     </div>
                   </div>
                 ))}
+
+                {/* Email verification status — real from DB */}
+                <div className="d-flex align-items-center gap-2">
+                  <i className={`bi ${user?.email_verified ? 'bi-shield-check' : 'bi-shield-exclamation'}`}
+                     style={{ width: 18, color: user?.email_verified ? '#198754' : '#fd7e14' }}></i>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: '#6c757d', textTransform: 'uppercase', letterSpacing: 1 }}>Email</div>
+                    {user?.email_verified ? (
+                      <div className="fw-bold small" style={{ color: '#198754' }}>
+                        <i className="bi bi-check-circle-fill me-1"></i>Verified
+                      </div>
+                    ) : (
+                      <>
+                        <div className="fw-bold small" style={{ color: '#fd7e14' }}>
+                          Not verified
+                        </div>
+                        <button
+                          className="btn btn-link p-0 mt-1"
+                          style={{ fontSize: 11, color: '#0d6efd', textDecoration: 'underline', fontWeight: 700 }}
+                          onClick={resendOtp}
+                          disabled={resendCooldown > 0 || resending}
+                        >
+                          {resending
+                            ? 'Sending…'
+                            : resendCooldown > 0
+                            ? `Resend in ${resendCooldown}s`
+                            : 'Send verification code'
+                          }
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="mt-3">

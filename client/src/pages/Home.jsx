@@ -14,14 +14,13 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
   const [turfs,    setTurfs]   = useState([])
   const [loading,  setLoading] = useState(true)
 
-  const REC_PAGE_SIZE = 4
+  const REC_PAGE_SIZE = 6
 
   useEffect(() => {
     const token = localStorage.getItem('token')
     const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
-    axios.get(`${API}/turf/turf-data`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).then(res => {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    axios.get(`${API}/turf/turf-data`, { headers }).then(res => {
       setTurfs(res.data.data.map(t => ({
         ...t,
         pricePerHour: t.price_per_hour,
@@ -33,7 +32,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
         rating:       t.rating   ?? 4.5,
         capacity:     t.capacity ?? '5',
         surface:      t.surface  ?? 'Astro Turf',
-        amenities:    t.amenities ? t.amenities.split(',').map(a => a.trim()) : [],
+        amenities:    Array.isArray(t.amenities) ? t.amenities : [],
         about:        t.about    ?? '',
       })))
       setLoading(false)
@@ -275,8 +274,8 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
                       <div style={{
                         width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: isTop3 ? rankColors[globalRank - 1] : '#b9a9a9',
-                        color: isTop3 ? (globalRank === 1 ? '#000' : '#927f7f') : '#6c757d',
+                        background: isTop3 ? rankColors[globalRank - 1] : '#f0f0f0',
+                        color: isTop3 ? (globalRank === 1 ? '#000' : '#fff') : '#6c757d',
                         fontWeight: 800, fontSize: 12,
                       }}>
                         {globalRank}
@@ -316,7 +315,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
                 <div className="d-flex justify-content-between align-items-center pt-3 mt-2"
                   style={{ borderTop: '1px solid #f0f0f0' }}>
                   <button
-                    className="btn btn-sm btn-outline-primary px-1"
+                    className="btn btn-sm btn-outline-primary px-3"
                     onClick={() => setRecPage(p => Math.max(1, p - 1))}
                     disabled={recPage === 1}
                   >
@@ -344,7 +343,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab }) {
                   </div>
 
                   <button
-                    className="btn btn-sm btn-outline-primary px-1"
+                    className="btn btn-sm btn-outline-primary px-3"
                     onClick={() => setRecPage(p => Math.min(recTotal, p + 1))}
                     disabled={recPage === recTotal}
                   >

@@ -26,16 +26,237 @@ exports.register = [
 
       const hashed = await bcrypt.hash(password, 10);
 
-      await db.query(
-        `INSERT INTO users (name, email, contact, password) VALUES (?, ?, ?, ?)`,
-        [name, email, contact, hashed]
+      // Generate 6-digit OTP for email verification
+      const verificationToken  = String(Math.floor(100000 + Math.random() * 900000));
+      const tokenExpiry        = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      const [result] = await db.query(
+        `INSERT INTO users
+           (name, email, contact, password, email_verified, verification_token, verification_token_expiry)
+         VALUES (?, ?, ?, ?, 0, ?, ?)`,
+        [name, email, contact, hashed, verificationToken, tokenExpiry]
       );
-      res.status(201).json({ message: "Registration successful" });
+
+      const userId = result.insertId;
+
+      // Send OTP email — non-blocking, don't fail registration if email fails
+      sendEmail(email, 'Your TurfArena verification code', `
+  <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 40px 0;">
+    <table align="center" width="100%" cellpadding="0" cellspacing="0"
+           style="max-width: 600px; background: #ffffff; border-radius: 8px; overflow: hidden;">
+      <tr>
+        <td style="text-align: center; padding: 30px 20px 10px 20px;">
+          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1/turfArena_oogeyt.png"
+               alt="TurfArena Logo" width="120" style="display: block; margin: 0 auto;" />
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color: #0d6efd; padding: 20px; text-align: center;">
+          <h2 style="color: #ffffff; margin: 0;">Verify Your Email</h2>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 30px 30px 20px 30px; color: #333333;">
+          <p style="font-size: 16px; margin: 0 0 10px 0;">
+            Hello, <span style="color: #0d6efd; font-weight: bold">${name}!</span>
+          </p>
+          <p style="font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">
+            Enter this 6-digit code in the TurfArena app to verify your email address.
+          </p>
+          <div style="text-align: center; margin: 24px 0;">
+            <div style="
+              display: inline-block;
+              background: #f0f4ff;
+              border: 2px solid #0d6efd;
+              border-radius: 12px;
+              padding: 16px 40px;
+            ">
+              <span style="
+                font-size: 42px;
+                font-weight: 900;
+                letter-spacing: 12px;
+                color: #0d6efd;
+                font-family: 'Courier New', monospace;
+              ">${verificationToken}</span>
+            </div>
+          </div>
+          <p style="font-size: 14px; color: #666; text-align: center; margin: 0 0 10px 0;">
+            ⏱️ This code expires in <strong>15 minutes</strong>.
+          </p>
+          <p style="font-size: 13px; color: #999; text-align: center; margin: 0;">
+            If you did not create a TurfArena account, you can safely ignore this email.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background: #f8fafd; padding: 20px; text-align: center;">
+          <p style="font-size: 13px; color: #8a9bb5; margin: 0;">
+            © ${new Date().getFullYear()}
+            <span style="color:#198754; font-weight:bold">Turf</span><span style="color:#0d6efd; font-weight:bold">Arena</span>.
+            All rights reserved.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </div>
+      `).catch(emailErr => {
+        console.error('[register] Verification email failed:', emailErr.message);
+      });
+
+      // Auto-login — return token so client connects socket immediately
+      const token = generateToken({
+        id:             userId,
+        email_verified: 0,
+      });
+
+      return res.status(201).json({
+        message: 'Registration successful. Please check your email to verify your account.',
+        token,
+        user: {
+          id:             userId,
+          name,
+          email,
+          contact,
+          photo:          null,
+          email_verified: 0,
+        },
+      });
     } catch (err) {
+      console.error('[register] error:', err);
       res.status(500).json({ error: err.message });
     }
   },
 ];
+
+/* ================= VERIFY EMAIL (OTP) ================= */
+// POST /api/users/verify-otp  { otp: "123456" }  (requires auth token)
+exports.verifyEmail = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const { otp } = req.body;
+    if (!otp) return res.status(400).json({ message: 'OTP is required' });
+
+    const [rows] = await db.query(
+      `SELECT id, email FROM users
+       WHERE id = ?
+         AND verification_token = ?
+         AND verification_token_expiry > NOW()
+         AND email_verified = 0
+       LIMIT 1`,
+      [userId, String(otp).trim()]
+    );
+
+    if (!rows.length)
+      return res.status(400).json({ message: 'Invalid or expired code. Please request a new one.' });
+
+    const user = rows[0];
+
+    await db.query(
+      `UPDATE users
+       SET email_verified = 1,
+           verification_token = NULL,
+           verification_token_expiry = NULL
+       WHERE id = ?`,
+      [user.id]
+    );
+
+    console.log(`[verify] User ${user.id} (${user.email}) verified via OTP`);
+
+    // Return fresh token with email_verified = 1
+    const newToken = generateToken({
+      id:             user.id,
+      email_verified: 1,
+    });
+
+    return res.json({
+      message:  'Email verified successfully!',
+      token:    newToken,
+      verified: true,
+    });
+  } catch (err) {
+    console.error('[verifyEmail] error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/* ================= RESEND VERIFICATION ================= */
+exports.resendVerification = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const [rows] = await db.query(
+      `SELECT id, name, email, email_verified, verification_resend_at
+       FROM users WHERE id = ? LIMIT 1`,
+      [userId]
+    );
+    if (!rows.length) return res.status(404).json({ message: 'User not found' });
+
+    const user = rows[0];
+    if (user.email_verified)
+      return res.status(400).json({ message: 'Email is already verified' });
+
+    // ── Rate limit: 2 minute cooldown between resends ─────────────────────
+    const RESEND_COOLDOWN_SECS = 2 * 60; // 2 minutes
+    if (user.verification_resend_at) {
+      const secondsSinceLast = (Date.now() - new Date(user.verification_resend_at)) / 1000;
+      if (secondsSinceLast < RESEND_COOLDOWN_SECS) {
+        const secsLeft = Math.ceil(RESEND_COOLDOWN_SECS - secondsSinceLast);
+        return res.status(429).json({
+          message: `Please wait ${secsLeft} second${secsLeft !== 1 ? 's' : ''} before requesting another code.`,
+          retryAfter: secsLeft,
+        });
+      }
+    }
+
+    const verificationToken = String(Math.floor(100000 + Math.random() * 900000));
+    const tokenExpiry       = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const now               = new Date();
+
+    await db.query(
+      `UPDATE users
+       SET verification_token = ?,
+           verification_token_expiry = ?,
+           verification_resend_at = ?
+       WHERE id = ?`,
+      [verificationToken, tokenExpiry, now, userId]
+    );
+
+    await sendEmail(user.email, 'Your TurfArena verification code', `
+      <div style="font-family:Arial,sans-serif;padding:40px 0;background:#f4f6f8;">
+        <table align="center" width="100%" cellpadding="0" cellspacing="0"
+               style="max-width:600px;background:#fff;border-radius:8px;overflow:hidden;">
+          <tr><td style="background:#0d6efd;padding:20px;text-align:center;">
+            <h2 style="color:#fff;margin:0;">Your Verification Code</h2>
+          </td></tr>
+          <tr><td style="padding:30px;text-align:center;">
+            <p style="font-size:16px;margin:0 0 16px 0;">Hi <strong>${user.name}</strong>,</p>
+            <p style="font-size:15px;color:#555;margin:0 0 24px 0;">
+              Here is your new verification code:
+            </p>
+            <div style="
+              display:inline-block;background:#f0f4ff;
+              border:2px solid #0d6efd;border-radius:12px;padding:16px 40px;
+            ">
+              <span style="
+                font-size:42px;font-weight:900;letter-spacing:12px;
+                color:#0d6efd;font-family:'Courier New',monospace;
+              ">${verificationToken}</span>
+            </div>
+            <p style="color:#666;font-size:14px;margin:20px 0 0 0;">
+              ⏱️ Expires in <strong>15 minutes</strong>.
+            </p>
+          </td></tr>
+        </table>
+      </div>
+    `);
+
+    return res.json({ message: 'New verification code sent. Please check your inbox.' });
+  } catch (err) {
+    console.error('[resendVerification] error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
 
 /* ================= LOGIN ================= */
 exports.login = async (req, res) => {
@@ -52,21 +273,23 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
 
     const token = generateToken({
-      id:      user.id,
-      name:    user.name,
-      contact: user.contact,
+      id:             user.id,
+      name:           user.name,
+      contact:        user.contact,
+      email_verified: user.email_verified ?? 0,
     });
 
     res.json({
       message: "Login successful",
       token,
       user: {
-        id:         user.id,
-        email:      user.email,
-        name:       user.name,
-        contact:    user.contact,
-        photo:      user.photo ?? null,   // Cloudinary URL already stored as-is
-        created_at: user.created_at,
+        id:             user.id,
+        email:          user.email,
+        name:           user.name,
+        contact:        user.contact,
+        photo:          user.photo ?? null,
+        email_verified: user.email_verified ?? 0,
+        created_at:     user.created_at,
       },
     });
   } catch (err) {
@@ -103,7 +326,7 @@ exports.updateUser = async (req, res) => {
 
     // Return updated user so frontend can sync AuthContext immediately
     const [updated] = await db.query(
-      `SELECT id, name, email, contact, photo, created_at FROM users WHERE id = ?`,
+      `SELECT id, name, email, contact, photo, email_verified, created_at FROM users WHERE id = ?`,
       [userId]
     );
 
@@ -116,7 +339,7 @@ exports.updateUser = async (req, res) => {
 /* ================= DELETE USER =========================================== */
 exports.deleteUser = async (req, res) => {
   try {
-    await db.query("DELETE FROM users WHERE id = ?", [req.user.id]);
+    await db.query("UPDATE users SET is_deleted=1 WHERE id = ?", [req.user.id]);
     res.json({ message: "User deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -129,14 +352,14 @@ exports.getMe = async (req, res) => {
     const userId = req.user?.id;
 
     const [rows] = await db.query(
-      `SELECT id, name, email, contact, photo, created_at FROM users WHERE id = ?`,
+      `SELECT id, name, email, contact, photo, email_verified, created_at FROM users WHERE id = ?`,
       [userId]
     );
 
     if (!rows.length)
       return res.status(404).json({ message: "Account not found" });
 
-    res.json(rows[0]); // photo is already a Cloudinary URL or null
+    res.json(rows[0]);
   } catch (err) {
     console.error("GET /me error:", err);
     res.status(500).json({ message: "Failed to load user" });

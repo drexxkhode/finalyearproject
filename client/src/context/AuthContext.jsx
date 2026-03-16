@@ -21,11 +21,29 @@ export const AuthProvider = ({ children }) => {
     return res.user
   }
 
+  // register now returns token + user from server (auto-login)
+  // After register the user is logged in but email_verified = 0
   const register = async (data) => {
-    return await registerRequest({
+    const res = await registerRequest({
       name: data.name, email: data.email,
-      contact: data.phone, password: data.password,
+      contact: data.phone ?? data.contact, password: data.password,
     })
+    // Auto-login — store token and user just like login does
+    if (res.token && res.user) {
+      localStorage.setItem('token', res.token)
+      localStorage.setItem('user',  JSON.stringify(res.user))
+      setUserState(res.user)
+    }
+    return res
+  }
+
+  // Called after email verification — update stored token + user
+  // so email_verified flips to 1 without requiring a full re-login
+  const updateVerified = (token, updatedUser) => {
+    localStorage.setItem('token', token)
+    const merged = { ...(JSON.parse(localStorage.getItem('user') ?? '{}')), ...updatedUser }
+    localStorage.setItem('user', JSON.stringify(merged))
+    setUserState(merged)
   }
 
   const logout = () => {
@@ -35,7 +53,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, register, logout, updateVerified }}>
       {children}
     </AuthContext.Provider>
   )

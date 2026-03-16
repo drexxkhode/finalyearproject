@@ -1,6 +1,7 @@
 const db     = require('../config/db');
 const crypto = require('crypto');
 const axios  = require('axios');
+const redis  = require('../config/RedisClient');
 
 
 // ── GET /api/bookings/slots ────────────────────────────────────────────────
@@ -57,6 +58,14 @@ const initiateBooking = async (req, res) => {
   try {
     const user_id = req.user?.id;
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
+
+    // Email must be verified before payment can be initiated
+    if (!req.user?.email_verified) {
+      return res.status(403).json({
+        message: 'Please verify your email address before booking.',
+        code:    'EMAIL_NOT_VERIFIED',
+      });
+    }
 
     const { turf_id, slots, date, total_amount } = req.body;
 
@@ -275,6 +284,10 @@ const paystackWebhook = async (req, res) => {
       );
       console.log(`[webhook] Payment row insertId=${payResult.insertId} amount=₵${amountGHS}`);
 
+      // Invalidate dashboard cache — total_bookings + total_payments changed
+      await redis.del(redis.KEYS.dashboard(p.turf_id));
+      console.log(`[cache] Invalidated dashboard:${p.turf_id} after new booking`);
+
       // Delete lock rows — booking rows in `bookings` are now the permanent record
       if (slotIds.length) {
         await db.query(
@@ -302,6 +315,142 @@ const paystackWebhook = async (req, res) => {
           date:     p.booking_date,
           turf_id:  p.turf_id,
         })
+      }
+
+      // ── Send booking confirmation email to user ────────────────────────
+      // Non-blocking — don't fail webhook processing if email fails
+      try {
+        const [userRow] = await db.query(
+          'SELECT name, email FROM users WHERE id = ? LIMIT 1', [p.user_id]
+        );
+        const [turfRow] = await db.query(
+          'SELECT name FROM turfs WHERE id = ? LIMIT 1', [p.turf_id]
+        );
+
+        if (userRow.length && userRow[0].email) {
+          const userName  = userRow[0].name;
+          const userEmail = userRow[0].email;
+          const turfName  = turfRow[0]?.name ?? 'TurfArena Facility';
+          const bookDate  = new Date(p.booking_date).toLocaleDateString('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+          });
+
+          // Build slot list rows
+          const slotRows = bookingIds.map((id, idx) => {
+            const s   = slots[idx];
+            const sr  = slotMap[s?.time_slot_id];
+            const lbl = sr
+              ? `${sr.start_time.slice(0, 5)} – ${sr.end_time.slice(0, 5)}`
+              : 'Slot';
+            const amt = parseFloat(s?.amount ?? (amountGHS / slots.length)).toFixed(2);
+            return `<tr>
+              <td style="padding:8px 12px;border-bottom:1px solid #e9ecef;font-size:14px;">${lbl}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #e9ecef;font-size:14px;text-align:right;font-weight:700;color:#0d6efd;">₵${amt}</td>
+            </tr>`;
+          }).join('');
+
+          await sendEmail(userEmail, `Booking Confirmed — ${turfName}`, `
+  <div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:40px 0;">
+    <table align="center" width="100%" cellpadding="0" cellspacing="0"
+           style="max-width:600px;background:#fff;border-radius:8px;overflow:hidden;">
+      <tr>
+        <td style="text-align:center;padding:28px 20px 10px;">
+          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1/turfArena_oogeyt.png"
+               alt="TurfArena" width="110" style="display:block;margin:0 auto;" />
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#0d6efd;padding:20px;text-align:center;">
+          <h2 style="color:#fff;margin:0;font-size:20px;">✅ Booking Confirmed!</h2>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:28px 30px 10px;">
+          <p style="font-size:16px;margin:0 0 6px 0;">
+            Hi <span style="color:#0d6efd;font-weight:bold;">${userName}</span>,
+          </p>
+          <p style="font-size:14px;color:#555;margin:0 0 20px 0;">
+            Your booking has been confirmed. See you on the pitch!
+          </p>
+
+          <!-- Booking summary card -->
+          <table width="100%" cellpadding="0" cellspacing="0"
+                 style="background:#f8faff;border:1px solid #d0e0ff;border-radius:10px;margin-bottom:20px;">
+            <tr>
+              <td style="padding:16px 20px;">
+                <div style="font-size:13px;color:#6c757d;text-transform:uppercase;
+                            letter-spacing:1px;font-weight:700;margin-bottom:12px;">
+                  Booking Details
+                </div>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="font-size:13px;color:#6c757d;padding:4px 0;">Facility</td>
+                    <td style="font-size:13px;font-weight:700;text-align:right;padding:4px 0;">${turfName}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:13px;color:#6c757d;padding:4px 0;">Date</td>
+                    <td style="font-size:13px;font-weight:700;text-align:right;padding:4px 0;">${bookDate}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:13px;color:#6c757d;padding:4px 0;">Reference</td>
+                    <td style="font-size:13px;font-weight:700;text-align:right;padding:4px 0;color:#0d6efd;">${ref}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Slot rows -->
+          <table width="100%" cellpadding="0" cellspacing="0"
+                 style="border:1px solid #e9ecef;border-radius:8px;margin-bottom:20px;overflow:hidden;">
+            <thead>
+              <tr style="background:#f8f9fa;">
+                <th style="padding:10px 12px;font-size:12px;color:#6c757d;text-align:left;
+                           font-weight:700;text-transform:uppercase;letter-spacing:1px;">
+                  Time Slot
+                </th>
+                <th style="padding:10px 12px;font-size:12px;color:#6c757d;text-align:right;
+                           font-weight:700;text-transform:uppercase;letter-spacing:1px;">
+                  Amount
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              ${slotRows}
+            </tbody>
+            <tfoot>
+              <tr style="background:#f0f4ff;">
+                <td style="padding:10px 12px;font-weight:800;font-size:14px;">Total</td>
+                <td style="padding:10px 12px;font-weight:800;font-size:15px;
+                           text-align:right;color:#0d6efd;">₵${amountGHS.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <p style="font-size:13px;color:#888;margin:0;">
+            Questions? Contact the facility directly or visit your
+            <a href="${process.env.VITE_APP_URL ?? '#'}/mybookings"
+               style="color:#0d6efd;text-decoration:none;font-weight:700;">My Bookings</a> page.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background:#f8fafd;padding:20px;text-align:center;">
+          <p style="font-size:13px;color:#8a9bb5;margin:0;">
+            © ${new Date().getFullYear()}
+            <span style="color:#198754;font-weight:bold;">Turf</span><span style="color:#0d6efd;font-weight:bold;">Arena</span>.
+            All rights reserved.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </div>
+          `);
+          console.log(`[webhook] 📧 Confirmation email sent to ${userEmail}`);
+        }
+      } catch (emailErr) {
+        // Never fail webhook for email errors
+        console.error('[webhook] Confirmation email failed:', emailErr.message);
       }
 
       console.log(`[webhook] ✅ Done — ${bookingIds.length} booking(s) saved for ref=${ref}`);
@@ -447,6 +596,7 @@ const cancelBooking = async (req, res) => {
         [booking_id]
       );
 
+      await redis.del(redis.KEYS.dashboard(booking.turf_id));
       console.log(`[cancel] Booking ${booking_id} cancelled — no refund (within 6 hrs)`);
       return res.json({
         message:          'Booking cancelled — no refund applies (within 6 hours of slot)',
@@ -505,6 +655,7 @@ const cancelBooking = async (req, res) => {
     );
 
 
+    await redis.del(redis.KEYS.dashboard(booking.turf_id));
     console.log(`[cancel] Booking ${booking_id} cancelled — refund_pending ₵${refundAmount}`);
 
     return res.json({
@@ -529,8 +680,8 @@ const getMyBookings = async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT b.id, b.slot_label, b.booking_date AS date,
-              b.amount, b.status, b.payment_status,b.is_deleted,
-              b.refund_amount, b.paystack_ref,b.created_at,
+              b.amount, b.status, b.payment_status,b.created_at,
+              b.refund_amount, b.paystack_ref,b.is_deleted,
               t.name AS turf, t.id AS turf_id
        FROM bookings b
        LEFT JOIN turfs t ON t.id = b.turf_id
@@ -582,7 +733,7 @@ const deleteBooking = async (req, res) => {
         message: 'Cannot delete while a refund is being processed.',
       });
 
-    await db.query(`UPDATE bookings SET is_deleted=1 WHERE id = ? AND user_id = ?`, [booking_id, user_id]);
+    await db.query(`UPDATE  bookings SET is_deleted=1 WHERE id = ? AND user_id = ?`, [booking_id, user_id]);
 
     return res.json({ message: 'Booking deleted' });
   } catch (err) {
