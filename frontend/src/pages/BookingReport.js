@@ -1,33 +1,44 @@
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo } from "react"
 import DataTable from "react-data-table-component"
 import axios from "axios"
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
-
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—"
 const fmtAmt  = (a) => `₵${parseFloat(a??0).toFixed(2)}`
 
 const StatusBadge = ({ s }) => {
-  const m = { confirmed:["#193c87","Confirmed"], cancelled:["#dc3545","Cancelled"], pending:["#e6a817","Pending"],completed:["#18e76e","Completed"] }
+  const m = {
+    confirmed: ["#198754","Confirmed"],
+    cancelled: ["#dc3545","Cancelled"],
+    completed: ["#0895b3","Completed"],
+    pending:   ["#e6a817","Pending"],
+  }
   const [col, label] = m[s] || ["#6c757d", s]
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
 const PayBadge = ({ s }) => {
-  const m = { paid:["#198754","Paid"], refunded:["#0895b3","Refunded"], pending:["#e6a817","Pending"], failed:["#dc3545","Failed"] }
+  const m = {
+    paid:           ["#198754","Paid"],
+    refunded:       ["#0895b3","Refunded"],
+    refund_pending: ["#6f42c1","Refund Pending"],
+    no_refund:      ["#fd7e14","No Refund"],
+    pending:        ["#e6a817","Pending"],
+    failed:         ["#dc3545","Failed"],
+  }
   const [col, label] = m[s] || ["#6c757d", s]
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
 
 const columns = [
-  { name:"#",           width:"55px",  cell:(_,i) => i+1 },
-  { name:"Customer",    grow:2,        selector: r => r.name,         cell: r => <div><div className="fw-semibold" style={{fontSize:13}}>{r.name||"—"}</div><div className="text-muted" style={{fontSize:11}}>{r.email}</div></div> },
-  { name:"Contact",                    selector: r => r.contact,      cell: r => r.contact||"—" },
-  { name:"Date",                       selector: r => r.booking_date, cell: r => fmtDate(r.booking_date), sortable:true },
-  { name:"Slot",                       selector: r => r.slot_label,   cell: r => r.slot_label||"—" },
-  { name:"Amount",                     selector: r => r.amount,       cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
-  { name:"Status",                     cell: r => <StatusBadge s={r.status} /> },
-  { name:"Payment",                    cell: r => <PayBadge s={r.payment_status} /> },
-  { name:"Booked On",                  selector: r => r.created_at,   cell: r => fmtDate(r.created_at), sortable:true },
+  { name:"#",         width:"55px", cell:(_,i) => i+1 },
+  { name:"Customer",  grow:2,       selector: r => r.name,         cell: r => <div><div className="fw-semibold" style={{fontSize:13}}>{r.name||"—"}</div><div className="text-muted" style={{fontSize:11}}>{r.email||"—"}</div></div> },
+  { name:"Contact",                 selector: r => r.contact,      cell: r => r.contact||"—" },
+  { name:"Date",                    selector: r => r.booking_date, cell: r => fmtDate(r.booking_date), sortable:true },
+  { name:"Slot",                    selector: r => r.slot_label,   cell: r => r.slot_label||"—" },
+  { name:"Amount",                  selector: r => r.amount,       cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
+  { name:"Status",                  cell: r => <StatusBadge s={r.status} /> },
+  { name:"Payment",                 cell: r => <PayBadge s={r.payment_status} /> },
+  { name:"Booked On",               selector: r => r.created_at,   cell: r => fmtDate(r.created_at), sortable:true },
 ]
 
 const customStyles = {
@@ -36,7 +47,6 @@ const customStyles = {
   rows:     { style: { fontSize:13 }, highlightOnHoverStyle: { background:"#f0f4ff", borderBottomColor:"#e0e7ff" } },
 }
 
-// CSV export helper — no library needed
 const exportCSV = (data, filename) => {
   const headers = ["#","Customer","Email","Contact","Date","Slot","Amount","Status","Payment","Booked On"]
   const rows = data.map((r,i) => [
@@ -88,7 +98,7 @@ export default function BookingReport() {
   const [payment,  setPayment]  = useState("")
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo,   setDateTo]   = useState("")
-  const [summary,  setSummary]  = useState({ total:0, confirmed:0, cancelled:0, refunded:0, completed:0 })
+  const [summary,  setSummary]  = useState({ total:0, confirmed:0, cancelled:0, refunded:0, completed:0, revenue:0 })
   const [generated,setGenerated]= useState(null)
 
   const token   = localStorage.getItem("token")
@@ -106,7 +116,10 @@ export default function BookingReport() {
           confirmed: rows.filter(r => r.status === "confirmed").length,
           cancelled: rows.filter(r => r.status === "cancelled").length,
           refunded:  rows.filter(r => r.payment_status === "refunded").length,
-          completed:  rows.filter(r => r.status === "completed").length,
+          completed: rows.filter(r => r.status === "completed").length,
+          revenue:   rows
+            .filter(r => r.payment_status === "paid" || r.payment_status === "no_refund")
+            .reduce((s,r) => s + parseFloat(r.amount??0), 0),
         })
       })
       .catch(()=>{})
@@ -116,8 +129,8 @@ export default function BookingReport() {
   useEffect(() => { fetchData() }, [])
 
   const filtered = useMemo(() => bookings.filter(r => {
-    const q  = search.toLowerCase()
-    const d  = r.booking_date?.slice(0,10) ?? ""
+    const q = search.toLowerCase()
+    const d = r.booking_date?.slice(0,10) ?? ""
     return (
       (!q       || r.name?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q) || r.slot_label?.toLowerCase().includes(q)) &&
       (!status  || r.status === status) &&
@@ -145,13 +158,14 @@ export default function BookingReport() {
       {/* KPI cards */}
       <div className="row g-3 mb-4">
         {[
-          { label:"Total",     value:summary.total,           icon:"bi-calendar-check",    color:"primary" },
-          { label:"Confirmed", value:summary.confirmed,       icon:"bi-check-circle-fill", color:"info" },
-          { label:"Cancelled", value:summary.cancelled,       icon:"bi-x-circle-fill",     color:"danger"  },
-          { label:"Refunded",  value:summary.refunded,        icon:"bi-arrow-counterclockwise", color:"info" },
-          { label:"Completed",   value:summary.completed,     icon:"bi-calendar-check",         color:"success" },
+          { label:"Total",     value:summary.total,           icon:"bi-calendar-check",        color:"primary" },
+          { label:"Confirmed", value:summary.confirmed,       icon:"bi-check-circle-fill",     color:"info"    },
+          { label:"Cancelled", value:summary.cancelled,       icon:"bi-x-circle-fill",         color:"danger"  },
+          { label:"Refunded",  value:summary.refunded,        icon:"bi-arrow-counterclockwise", color:"warning" },
+          { label:"Completed", value:summary.completed,       icon:"bi-patch-check-fill",      color:"success" },
+          { label:"Revenue",   value:fmtAmt(summary.revenue), icon:"bi-cash-coin",             color:"success" },
         ].map(c => (
-          <div className="col-6 col-xl" key={c.label}>
+          <div className="col-6 col-xl-2" key={c.label}>
             <div className="card border-0 shadow-sm text-center h-100">
               <div className="card-body py-3">
                 <i className={`bi ${c.icon} text-${c.color} fs-4 d-block mb-1`}></i>
@@ -164,7 +178,6 @@ export default function BookingReport() {
       </div>
 
       <div className="card shadow-sm">
-        {/* Export buttons */}
         <div className="card-header d-flex flex-wrap align-items-center gap-2">
           <h5 className="card-title mb-0 me-auto">Report Table</h5>
           <button className="btn btn-sm btn-outline-secondary" onClick={() => navigator.clipboard.writeText(filtered.map(r=>[r.name,r.email,fmtDate(r.booking_date),r.slot_label,fmtAmt(r.amount),r.status,r.payment_status].join("\t")).join("\n"))}>
@@ -174,9 +187,9 @@ export default function BookingReport() {
             <i className="bi bi-filetype-csv me-1"></i>CSV
           </button>
           <button className="btn btn-sm btn-success" onClick={() => exportJSON(filtered,`bookings-${Date.now()}.json`)}>
-            <i className="bi bi-file-earmark-excel me-1"></i>JSON
+            <i className="bi bi-file-earmark-code me-1"></i>JSON
           </button>
-          <button className="btn btn-sm btn-info" onClick={() => printTable(filtered)}>
+          <button className="btn btn-sm btn-info text-white" onClick={() => printTable(filtered)}>
             <i className="bi bi-printer me-1"></i>Print
           </button>
         </div>
@@ -196,7 +209,7 @@ export default function BookingReport() {
                 <option value="">All Statuses</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
-                <option value="Completed">Completed</option>
+                <option value="completed">Completed</option>
                 <option value="pending">Pending</option>
               </select>
             </div>
@@ -205,6 +218,8 @@ export default function BookingReport() {
                 <option value="">All Payments</option>
                 <option value="paid">Paid</option>
                 <option value="refunded">Refunded</option>
+                <option value="refund_pending">Refund Pending</option>
+                <option value="no_refund">No Refund</option>
                 <option value="pending">Pending</option>
                 <option value="failed">Failed</option>
               </select>

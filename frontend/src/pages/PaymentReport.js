@@ -1,26 +1,34 @@
 import { useState, useEffect, useMemo } from "react"
-import DataTable from "react-data-table-component";
-import axios from "axios";
+import DataTable from "react-data-table-component"
+import axios from "axios"
+
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—"
 const fmtAmt  = (a) => `₵${parseFloat(a??0).toFixed(2)}`
 
 const PayBadge = ({ s }) => {
-  const m = { completed:["#198754","Completed"], refunded:["#0895b3","Refunded"], pending:["#e6a817","Pending"], failed:["#dc3545","Failed"] }
+  const m = {
+    completed:     ["#198754","Completed"],
+    refunded:      ["#0895b3","Refunded"],
+    partial_refund:["#6f42c1","Partial Refund"],
+    pending:       ["#e6a817","Pending"],
+    failed:        ["#dc3545","Failed"],
+  }
   const [col, label] = m[s] || ["#6c757d", s]
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
 
 const columns = [
-  { name:"#",           width:"55px",  cell:(_,i) => i+1 },
-  { name:"Customer",    grow:2,        cell: r => <div><div className="fw-semibold" style={{fontSize:13}}>{r.user_name||"—"}</div><div className="text-muted" style={{fontSize:11}}>{r.user_email}</div></div> },
-  { name:"Contact",                    selector: r => r.user_contact,  cell: r => r.user_contact||"—" },
-  { name:"Reference",                  selector: r => r.paystack_ref,  cell: r => <code style={{fontSize:10,background:"#f1f3f5",padding:"2px 5px",borderRadius:3}}>{r.paystack_ref}</code> },
-  { name:"Paid At",                    selector: r => r.paid_at,       cell: r => fmtDate(r.paid_at), sortable:true },
-  { name:"Amount",                     selector: r => r.amount,        cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
-  { name:"Slots",       width:"70px",  selector: r => r.slot_count,    cell: r => r.slot_count||0 },
-  { name:"Slot Labels",                selector: r => r.slot_labels,   cell: r => <span title={r.slot_labels} style={{fontSize:12,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{r.slot_labels||"—"}</span> },
-  { name:"Status",                     cell: r => <PayBadge s={r.payment_status} /> },
+  { name:"#",          width:"55px", cell:(_,i) => i+1 },
+  { name:"Customer",   grow:2,       cell: r => <div><div className="fw-semibold" style={{fontSize:13}}>{r.user_name||"—"}</div><div className="text-muted" style={{fontSize:11}}>{r.user_email||"—"}</div></div> },
+  { name:"Contact",                  selector: r => r.user_contact, cell: r => r.user_contact||"—" },
+  { name:"Reference",                selector: r => r.paystack_ref, cell: r => <code style={{fontSize:10,background:"#f1f3f5",padding:"2px 5px",borderRadius:3}}>{r.paystack_ref}</code> },
+  { name:"Paid At",                  selector: r => r.paid_at,      cell: r => fmtDate(r.paid_at), sortable:true },
+  { name:"Amount",                   selector: r => r.amount,       cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
+  { name:"Refunded",                 selector: r => r.refund_amount,cell: r => parseFloat(r.refund_amount??0) > 0 ? <span className="text-info fw-semibold">{fmtAmt(r.refund_amount)}</span> : "—" },
+  { name:"Slots",      width:"70px", selector: r => r.slot_count,   cell: r => r.slot_count||0 },
+  { name:"Slot Labels",              selector: r => r.slot_labels,  cell: r => <span title={r.slot_labels} style={{fontSize:12,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}}>{r.slot_labels||"—"}</span> },
+  { name:"Status",                   cell: r => <PayBadge s={r.payment_status} /> },
 ]
 
 const customStyles = {
@@ -30,11 +38,11 @@ const customStyles = {
 }
 
 const exportCSV = (data, filename) => {
-  const headers = ["#","Customer","Email","Contact","Reference","Paid At","Amount","Slots","Slot Labels","Status"]
+  const headers = ["#","Customer","Email","Contact","Reference","Paid At","Amount","Refunded","Slots","Slot Labels","Status"]
   const rows = data.map((r,i) => [
     i+1, r.user_name||"", r.user_email||"", r.user_contact||"",
     r.paystack_ref||"", fmtDate(r.paid_at), fmtAmt(r.amount),
-    r.slot_count||0, r.slot_labels||"", r.payment_status
+    fmtAmt(r.refund_amount), r.slot_count||0, r.slot_labels||"", r.payment_status
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(","))
   const csv = [headers.join(","), ...rows].join("\n")
   const blob = new Blob([csv], { type:"text/csv" })
@@ -47,7 +55,8 @@ const printTable = (data) => {
   const rows = data.map((r,i) => `<tr>
     <td>${i+1}</td><td>${r.user_name||"—"}</td><td>${r.user_email||"—"}</td>
     <td>${r.paystack_ref||"—"}</td><td>${fmtDate(r.paid_at)}</td>
-    <td>${fmtAmt(r.amount)}</td><td>${r.slot_count||0}</td><td>${r.payment_status}</td>
+    <td>${fmtAmt(r.amount)}</td><td>${fmtAmt(r.refund_amount)}</td>
+    <td>${r.slot_count||0}</td><td>${r.payment_status}</td>
   </tr>`).join("")
   const win = window.open("","_blank")
   win.document.write(`<html><head><title>Payment Report</title>
@@ -57,7 +66,7 @@ const printTable = (data) => {
     h2{color:#1a56db}</style></head><body>
     <h2>Payment Report</h2>
     <p>Generated: ${new Date().toLocaleString()} | ${data.length} records</p>
-    <table><thead><tr><th>#</th><th>Customer</th><th>Email</th><th>Reference</th><th>Paid At</th><th>Amount</th><th>Slots</th><th>Status</th></tr></thead>
+    <table><thead><tr><th>#</th><th>Customer</th><th>Email</th><th>Reference</th><th>Paid At</th><th>Amount</th><th>Refunded</th><th>Slots</th><th>Status</th></tr></thead>
     <tbody>${rows}</tbody></table></body></html>`)
   win.document.close(); win.print()
 }
@@ -69,7 +78,7 @@ export default function PaymentReport() {
   const [status,    setStatus]    = useState("")
   const [dateFrom,  setDateFrom]  = useState("")
   const [dateTo,    setDateTo]    = useState("")
-  const [summary,   setSummary]   = useState({ total:0, completed:0, refunded:0, failed:0, revenue:0, refundedAmt:0 })
+  const [summary,   setSummary]   = useState({ count:0, completed:0, refunded:0, failed:0, revenue:0, refundedAmt:0 })
   const [generated, setGenerated] = useState(null)
 
   const token   = localStorage.getItem("token")
@@ -80,15 +89,16 @@ export default function PaymentReport() {
     axios.get(`${API}/api/payments/admin`, { headers })
       .then(res => {
         const rows = res.data?.payments ?? []
+        const srv  = res.data?.summary  ?? {}
         setPayments(rows)
         setGenerated(new Date().toLocaleString())
         setSummary({
-          total:       rows.length,
-          completed:   rows.filter(r => r.payment_status === "completed").length,
-          refunded:    rows.filter(r => r.payment_status === "refunded").length,
+          count:       srv.count     ?? rows.length,
+          completed:   srv.completed ?? rows.filter(r => r.payment_status === "completed").length,
+          refunded:    rows.filter(r => r.payment_status === "refunded" || r.payment_status === "partial_refund").length,
           failed:      rows.filter(r => r.payment_status === "failed").length,
-          revenue:     rows.filter(r => r.payment_status === "completed").reduce((s,r) => s+parseFloat(r.amount??0),0),
-          refundedAmt: rows.filter(r => r.payment_status === "refunded").reduce((s,r)  => s+parseFloat(r.amount??0),0),
+          revenue:     srv.total     ?? rows.filter(r => r.payment_status === "completed").reduce((s,r) => s+parseFloat(r.amount??0),0),
+          refundedAmt: rows.reduce((s,r) => s + parseFloat(r.refund_amount??0), 0),
         })
       })
       .catch(()=>{})
@@ -101,7 +111,7 @@ export default function PaymentReport() {
     const q = search.toLowerCase()
     const d = r.paid_at?.slice(0,10) ?? ""
     return (
-      (!q     || r.user_name?.toLowerCase().includes(q) || r.user_email?.toLowerCase().includes(q) || r.paystack_ref?.toLowerCase().includes(q)) &&
+      (!q      || r.user_name?.toLowerCase().includes(q) || r.user_email?.toLowerCase().includes(q) || r.paystack_ref?.toLowerCase().includes(q)) &&
       (!status || r.payment_status === status) &&
       (!dateFrom|| d >= dateFrom) &&
       (!dateTo  || d <= dateTo)
@@ -126,7 +136,7 @@ export default function PaymentReport() {
       {/* KPI cards */}
       <div className="row g-3 mb-4">
         {[
-          { label:"Transactions", value:summary.total,               icon:"bi-receipt",                color:"primary"   },
+          { label:"Transactions", value:summary.count,               icon:"bi-receipt",                color:"primary"   },
           { label:"Completed",    value:summary.completed,           icon:"bi-check-circle-fill",      color:"success"   },
           { label:"Refunded",     value:summary.refunded,            icon:"bi-arrow-counterclockwise", color:"info"      },
           { label:"Failed",       value:summary.failed,              icon:"bi-x-circle-fill",          color:"danger"    },
@@ -146,16 +156,15 @@ export default function PaymentReport() {
       </div>
 
       <div className="card shadow-sm">
-        {/* Export buttons */}
         <div className="card-header d-flex flex-wrap align-items-center gap-2">
           <h5 className="card-title mb-0 me-auto">Report Table</h5>
-          <button className="btn btn-sm btn-outline-secondary" onClick={() => navigator.clipboard.writeText(filtered.map(r=>[r.user_name,r.user_email,r.paystack_ref,fmtDate(r.paid_at),fmtAmt(r.amount),r.payment_status].join("\t")).join("\n"))}>
+          <button className="btn btn-sm btn-outline-secondary" onClick={() => navigator.clipboard.writeText(filtered.map(r=>[r.user_name,r.user_email,r.paystack_ref,fmtDate(r.paid_at),fmtAmt(r.amount),fmtAmt(r.refund_amount),r.payment_status].join("\t")).join("\n"))}>
             <i className="bi bi-clipboard me-1"></i>Copy
           </button>
           <button className="btn btn-sm btn-outline-success" onClick={() => exportCSV(filtered,`payments-${Date.now()}.csv`)}>
             <i className="bi bi-filetype-csv me-1"></i>CSV
           </button>
-          <button className="btn btn-sm btn-info" onClick={() => printTable(filtered)}>
+          <button className="btn btn-sm btn-info text-white" onClick={() => printTable(filtered)}>
             <i className="bi bi-printer me-1"></i>Print
           </button>
         </div>
@@ -175,6 +184,7 @@ export default function PaymentReport() {
                 <option value="">All Statuses</option>
                 <option value="completed">Completed</option>
                 <option value="refunded">Refunded</option>
+                <option value="partial_refund">Partial Refund</option>
                 <option value="pending">Pending</option>
                 <option value="failed">Failed</option>
               </select>

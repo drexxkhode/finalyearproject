@@ -25,26 +25,29 @@ const getAdminPayments = async (req, res) => {
 
     const WHERE = conditions.join(' AND ')
 
-    // ── Main query — join users for name/email ───────────────────────────
+    // ── Main query — LEFT JOIN users so deleted accounts don't hide payments ──
     const [payments] = await db.query(
       `SELECT
          p.id, p.paystack_ref, p.paystack_event,
          p.booking_ids, p.amount, p.payment_status,
          p.paid_at, p.created_at,
-         u.name  AS user_name,
-         u.email AS user_email,
+         u.name    AS user_name,
+         u.email   AS user_email,
          u.contact AS user_contact,
-         -- Get booking date from first booking in booking_ids
          (SELECT b.booking_date FROM bookings b
           WHERE b.paystack_ref = p.paystack_ref
           LIMIT 1) AS booking_date,
-         -- Total refund for this ref
+         (SELECT COUNT(*) FROM bookings b
+          WHERE b.paystack_ref = p.paystack_ref) AS slot_count,
+         (SELECT GROUP_CONCAT(b.slot_label ORDER BY b.slot_label SEPARATOR ', ')
+          FROM bookings b
+          WHERE b.paystack_ref = p.paystack_ref) AS slot_labels,
          (SELECT COALESCE(SUM(b.refund_amount), 0)
           FROM bookings b
           WHERE b.paystack_ref = p.paystack_ref
             AND b.status = 'cancelled') AS refund_amount
        FROM payments p
-       JOIN users u ON u.id = p.user_id
+       LEFT JOIN users u ON u.id = p.user_id
        WHERE ${WHERE}
        ORDER BY p.paid_at DESC`,
       params

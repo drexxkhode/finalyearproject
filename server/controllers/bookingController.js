@@ -487,7 +487,7 @@ const paystackWebhook = async (req, res) => {
 
         console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — test mode, simulating delay then treating as processed`);
         // Delay before processing so demo doesn't show instant status flip
-        const TEST_REFUND_DELAY_MS = 25000; //25 seconds
+        const TEST_REFUND_DELAY_MS = 8000; // 8 seconds
         await new Promise(resolve => setTimeout(resolve, TEST_REFUND_DELAY_MS));
         // Fall through to the refund.processed logic below
       }
@@ -765,7 +765,7 @@ const getBookings = async (req, res) => {
         u.contact,
         b.created_at
       FROM bookings b
-      JOIN users u 
+      LEFT JOIN users u 
         ON b.user_id = u.id
       WHERE b.turf_id = ?
       ORDER BY b.created_at DESC

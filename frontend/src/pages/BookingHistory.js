@@ -6,36 +6,48 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeri
 const fmtAmt  = (a) => `₵${parseFloat(a??0).toFixed(2)}`
 
 const StatusBadge = ({ s }) => {
-  const m = { confirmed:["#198754","Confirmed"], cancelled:["#dc3545","Cancelled"], pending:["#e6a817","Pending"] }
+  const m = {
+    confirmed: ["#198754","Confirmed"],
+    cancelled: ["#dc3545","Cancelled"],
+    completed: ["#0895b3","Completed"],
+    pending:   ["#e6a817","Pending"],
+  }
   const [col, label] = m[s] || ["#6c757d", s]
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
 const PayBadge = ({ s }) => {
-  const m = { paid:["#198754","Paid"], refunded:["#0895b3","Refunded"], pending:["#e6a817","Pending"], failed:["#dc3545","Failed"] }
+  const m = {
+    paid:           ["#198754","Paid"],
+    refunded:       ["#0895b3","Refunded"],
+    refund_pending: ["#6f42c1","Refund Pending"],
+    no_refund:      ["#fd7e14","No Refund"],
+    pending:        ["#e6a817","Pending"],
+    failed:         ["#dc3545","Failed"],
+  }
   const [col, label] = m[s] || ["#6c757d", s]
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
 
 const columns = [
-  { name:"#", width:"55px", cell:(_,i) => i+1, },
+  { name:"#", width:"55px", cell:(_,i) => i+1 },
   { name:"Customer", grow:2, cell: r => (
     <div className="d-flex align-items-center gap-2 py-1">
       <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center flex-shrink-0" style={{width:32,height:32}}>
-        <span className="text-white fw-bold" style={{fontSize:12}}>{r.name?.charAt(0).toUpperCase()}</span>
+        <span className="text-white fw-bold" style={{fontSize:12}}>{r.name?.charAt(0).toUpperCase() || "?"}</span>
       </div>
       <div>
-        <div className="fw-semibold" style={{fontSize:13}}>{r.name}</div>
-        <div className="text-muted" style={{fontSize:11}}>{r.email}</div>
+        <div className="fw-semibold" style={{fontSize:13}}>{r.name || "—"}</div>
+        <div className="text-muted" style={{fontSize:11}}>{r.email || "—"}</div>
       </div>
     </div>
   )},
-  { name:"Contact",      selector: r => r.contact,      cell: r => r.contact || "—" },
-  { name:"Date",         selector: r => r.booking_date, cell: r => fmtDate(r.booking_date), sortable:true },
-  { name:"Slot",         selector: r => r.slot_label,   cell: r => r.slot_label || "—" },
-  { name:"Amount",       selector: r => r.amount,       cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
-  { name:"Status",       cell: r => <StatusBadge s={r.status} /> },
-  { name:"Payment",      cell: r => <PayBadge s={r.payment_status} /> },
-  { name:"Booked On",    selector: r => r.created_at,   cell: r => fmtDate(r.created_at), sortable:true },
+  { name:"Contact",   selector: r => r.contact,      cell: r => r.contact || "—" },
+  { name:"Date",      selector: r => r.booking_date, cell: r => fmtDate(r.booking_date), sortable:true },
+  { name:"Slot",      selector: r => r.slot_label,   cell: r => r.slot_label || "—" },
+  { name:"Amount",    selector: r => r.amount,       cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
+  { name:"Status",    cell: r => <StatusBadge s={r.status} /> },
+  { name:"Payment",   cell: r => <PayBadge s={r.payment_status} /> },
+  { name:"Booked On", selector: r => r.created_at,   cell: r => fmtDate(r.created_at), sortable:true },
 ]
 
 const customStyles = {
@@ -65,7 +77,10 @@ export default function BookingHistory() {
           total:     rows.length,
           confirmed: rows.filter(r => r.status === "confirmed").length,
           cancelled: rows.filter(r => r.status === "cancelled").length,
-          revenue:   rows.filter(r => r.payment_status === "paid").reduce((s,r) => s + parseFloat(r.amount??0), 0),
+          // paid + no_refund both represent collected revenue
+          revenue:   rows
+            .filter(r => r.payment_status === "paid" || r.payment_status === "no_refund")
+            .reduce((s,r) => s + parseFloat(r.amount??0), 0),
         })
       })
       .catch(() => {})
@@ -75,7 +90,7 @@ export default function BookingHistory() {
   const filtered = useMemo(() => bookings.filter(r => {
     const q = search.toLowerCase()
     return (
-      (!q      || r.name?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q) || r.slot_label?.toLowerCase().includes(q)) &&
+      (!q       || r.name?.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q) || r.slot_label?.toLowerCase().includes(q)) &&
       (!status  || r.status === status) &&
       (!payment || r.payment_status === payment)
     )
@@ -119,12 +134,15 @@ export default function BookingHistory() {
             <option value="">All Statuses</option>
             <option value="confirmed">Confirmed</option>
             <option value="cancelled">Cancelled</option>
+            <option value="completed">Completed</option>
             <option value="pending">Pending</option>
           </select>
-          <select className="form-select form-select-sm" style={{width:140}} value={payment} onChange={e => setPayment(e.target.value)}>
+          <select className="form-select form-select-sm" style={{width:155}} value={payment} onChange={e => setPayment(e.target.value)}>
             <option value="">All Payments</option>
             <option value="paid">Paid</option>
             <option value="refunded">Refunded</option>
+            <option value="refund_pending">Refund Pending</option>
+            <option value="no_refund">No Refund</option>
             <option value="pending">Pending</option>
             <option value="failed">Failed</option>
           </select>
@@ -135,7 +153,6 @@ export default function BookingHistory() {
           )}
         </div>
         <div className="card-body">
-
           <DataTable
             columns={columns}
             data={filtered}
@@ -164,11 +181,11 @@ export default function BookingHistory() {
               <div className="modal-body px-4 py-3">
                 <div className="d-flex align-items-center gap-3 mb-3 p-3 rounded" style={{background:"#f8f9fa"}}>
                   <div className="rounded-circle bg-primary d-flex align-items-center justify-content-center" style={{width:44,height:44}}>
-                    <span className="text-white fw-bold fs-5">{selected.name?.charAt(0).toUpperCase()}</span>
+                    <span className="text-white fw-bold fs-5">{selected.name?.charAt(0).toUpperCase() || "?"}</span>
                   </div>
                   <div>
-                    <div className="fw-bold">{selected.name}</div>
-                    <div className="text-muted small">{selected.email}</div>
+                    <div className="fw-bold">{selected.name || "Deleted user"}</div>
+                    <div className="text-muted small">{selected.email || "—"}</div>
                     {selected.contact && <div className="text-muted small">{selected.contact}</div>}
                   </div>
                 </div>
