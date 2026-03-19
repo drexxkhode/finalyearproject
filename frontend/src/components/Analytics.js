@@ -73,7 +73,12 @@ const Analytics = () => {
         min: 0,
         max: moneyMax * 1.2,
         title: { text: "Amount (₵)" },
-        labels: { formatter: (val) => `₵${(val / 1000).toFixed(1)}k` },
+        labels: {
+          formatter: (val) => {
+            if (val >= 1000) return `₵${(val / 1000).toFixed(1)}k`;
+            return `₵${Number(val).toFixed(0)}`;
+          },
+        },
       },
       {
         // series[3] Refunds — same scale as Payments, axis hidden to avoid duplicate
@@ -90,6 +95,7 @@ const Analytics = () => {
       y: {
         formatter: (val, { seriesIndex }) => {
           if (seriesIndex === 0 || seriesIndex === 1) return `${val} bookings`;
+          if (val >= 1000) return `₵${(val / 1000).toFixed(1)}k`;
           return `₵${Number(val).toFixed(2)}`;
         },
       },
