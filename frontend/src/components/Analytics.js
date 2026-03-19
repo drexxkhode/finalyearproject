@@ -35,10 +35,20 @@ const Analytics = () => {
   // Y-axis safe maximums
   const acceptedMax  = series[0].data.length ? Math.max(...series[0].data) : 10;
   const cancelledMax = series[1].data.length ? Math.max(...series[1].data) : 10;
-  const bookingMax   = Math.max(acceptedMax, cancelledMax) + 5;
+  // Use a generous ceiling so short bars are still clearly visible
+  const bookingMax   = Math.max(acceptedMax, cancelledMax, 5) * 2;
   const paymentsMax  = series[2].data.length ? Math.max(...series[2].data) : 1000;
   const refundsMax   = series[3].data.length ? Math.max(...series[3].data) : 1000;
-  const moneyMax     = Math.max(paymentsMax, refundsMax);
+  const moneyMax     = Math.max(paymentsMax, refundsMax, 1);
+
+  // Narrow columns when few months, wider when many months accumulate
+  const monthCount    = categories.length;
+  const columnWidth   = monthCount <= 3 ? "30%" : monthCount <= 6 ? "50%" : "65%";
+
+  const moneyFormatter = (val) => {
+    if (val >= 1000) return `₵${(val / 1000).toFixed(1)}k`;
+    return `₵${Number(val).toFixed(2)}`;
+  };
 
   const options = {
     chart: {
@@ -49,11 +59,17 @@ const Analytics = () => {
     },
 
     plotOptions: {
-      bar: { columnWidth: "55%", borderRadius: 4 },
+      bar: { columnWidth, borderRadius: 4 },
     },
 
     // 4 series: 2 columns (no stroke) + 2 lines (stroke width 3)
     stroke: { width: [0, 0, 3, 3] },
+
+    // Always show markers so a single data point is visible as a dot with a label
+    markers: {
+      size: [0, 0, 5, 5],
+      hover: { size: 7 },
+    },
 
     dataLabels: { enabled: false },
 
@@ -64,6 +80,7 @@ const Analytics = () => {
         // series[0] Accepted + series[1] Cancelled
         min: 0,
         max: bookingMax,
+        tickAmount: Math.min(bookingMax, 10),
         title: { text: "Bookings" },
         labels: { formatter: (val) => Math.round(val) },
       },
@@ -73,12 +90,7 @@ const Analytics = () => {
         min: 0,
         max: moneyMax * 1.2,
         title: { text: "Amount (₵)" },
-        labels: {
-          formatter: (val) => {
-            if (val >= 1000) return `₵${(val / 1000).toFixed(1)}k`;
-            return `₵${Number(val).toFixed(0)}`;
-          },
-        },
+        labels: { formatter: moneyFormatter },
       },
       {
         // series[3] Refunds — same scale as Payments, axis hidden to avoid duplicate
@@ -95,8 +107,7 @@ const Analytics = () => {
       y: {
         formatter: (val, { seriesIndex }) => {
           if (seriesIndex === 0 || seriesIndex === 1) return `${val} bookings`;
-          if (val >= 1000) return `₵${(val / 1000).toFixed(1)}k`;
-          return `₵${Number(val).toFixed(2)}`;
+          return moneyFormatter(val);
         },
       },
     },
