@@ -31,6 +31,7 @@ const columns = [
   { name:"Amount",   selector: r => r.amount,        cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
   { name:"Status",   cell: r => <StatusBadge s={r.status} /> },
   { name:"Payment",  cell: r => <PayBadge s={r.payment_status} /> },
+  { name:"Action", cell:r=> <button className="btn btn-danger btn-sm" ><i className="bi bi-trash" /></button>  },
 ]
 
 const customStyles = {
@@ -123,6 +124,7 @@ const Bookings = () => {
                 No bookings found
               </div>
             }
+
           />
         </div>
       </div>

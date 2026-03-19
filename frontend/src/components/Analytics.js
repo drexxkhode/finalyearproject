@@ -10,6 +10,7 @@ const Analytics = () => {
     { name: "Completed", type: "column", data: [], yAxisIndex: 0 },
     { name: "Cancelled", type: "column", data: [], yAxisIndex: 0 },
     { name: "Payments", type: "line", data: [], yAxisIndex: 1 },
+    { name: "Refunds", type: "line", data: [], yAxisIndex: 1 },
   ]);
 
   useEffect(() => {
@@ -32,15 +33,21 @@ const Analytics = () => {
           yAxisIndex: 0
         },
         {
-          name: "Rejected",
+          name: "Cancelled",
           type: "column",
-          data: data.map((d) => d.rejected),
+          data: data.map((d) => d.cancelled),
           yAxisIndex: 0
         },
         {
           name: "Payments",
           type: "line",
           data: data.map((d) => d.payments),
+          yAxisIndex: 1
+        },
+        {
+          name: "Refunds",
+          type: "line",
+          data: data.map((d) => d.refunds),
           yAxisIndex: 1
         }
       ]);
@@ -58,6 +65,7 @@ const Analytics = () => {
   const rejectedMax = series[1].data.length ? Math.max(...series[1].data) : 10;
   const bookingMax = Math.max(acceptedMax, rejectedMax) + 5;
   const paymentMax = series[2].data.length ? Math.max(...series[2].data) : 1000;
+  const refundMax = series[2].data.length ? Math.max(...series[2].data) : 1000;
 
   const options = {
     chart: {
@@ -90,6 +98,12 @@ const Analytics = () => {
         max: paymentMax * 1.2,
         title: { text: "Payments" },
         labels: { formatter: (val) => `₡${(val / 1000).toFixed(1)}k` },
+      },{
+        opposite: true,
+        min: 0,
+        max: refundMax * 1.2,
+        title: { text: "Refunds" },
+        labels: { formatter: (val) => `₡${(val / 1000).toFixed(1)}k` },
       },
     ],
 
@@ -105,7 +119,7 @@ const Analytics = () => {
       },
     },
 
-    colors: ["#00E396", "#FF4560", "#008FFB"],
+    colors: ["#00E396", "#FF4560", "#008FFB","#FF4560"],
 
     legend: { position: "bottom" },
   };

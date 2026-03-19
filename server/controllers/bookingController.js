@@ -22,7 +22,8 @@ const getBookedSlots = async (req, res) => {
       `SELECT time_slot_id FROM bookings
        WHERE turf_id = ? AND booking_date = ?
          AND status != 'cancelled'
-         AND payment_status = 'paid'`,
+         AND payment_status = 'paid'
+         AND is_deleted = 0`,
       [turf_id, date]
     );
     const bookedIds = new Set(booked.map(r => r.time_slot_id));
@@ -92,7 +93,8 @@ const initiateBooking = async (req, res) => {
        WHERE turf_id = ? AND booking_date = ?
          AND time_slot_id IN (?)
          AND status != 'cancelled'
-         AND payment_status = 'paid'`,
+         AND payment_status = 'paid'
+         AND is_deleted = 0`,
       [turf_id, date, slotIds]
     );
     if (alreadyBooked.length)
@@ -483,7 +485,10 @@ const paystackWebhook = async (req, res) => {
           return;
         }
 
-        console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — test mode, treating as processed`);
+        console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — test mode, simulating delay then treating as processed`);
+        // Delay before processing so demo doesn't show instant status flip
+        const TEST_REFUND_DELAY_MS = 25000; //25 seconds
+        await new Promise(resolve => setTimeout(resolve, TEST_REFUND_DELAY_MS));
         // Fall through to the refund.processed logic below
       }
 

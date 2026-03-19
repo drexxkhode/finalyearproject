@@ -50,6 +50,8 @@ const Settings = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isUpdating, setIsUpdating]     = useState(false);
+  const [updating, setUpdating]     = useState(false);
+  
   const [errors, setErrors]             = useState({});
 
   const [turfId, setTurfId] = useState(null);
@@ -208,6 +210,7 @@ const Settings = () => {
   const handleTurfDetailSubmit = async (e) => {
     e.preventDefault();
     // Flush raw textarea to array before validation/save
+    setUpdating(true);
     const flushedAmenities = amenitiesRaw.split(',').map(a => a.trim()).filter(Boolean);
     setFormData(prev => ({ ...prev, amenities: flushedAmenities }));
     if (!validateForm()) return;
@@ -232,6 +235,8 @@ const Settings = () => {
       toast.success(res.data.message || "Turf details updated successfully!");
     } catch (error) {
       toast.error("Update failed!");
+    }finally{
+setUpdating(false);
     }
   };
 
@@ -424,7 +429,7 @@ const Settings = () => {
                                   </div>
                                 </div>
                                 <div className="d-flex gap-2 mt-2 justify-content-end">
-                                  <button type="button" className="btn btn-primary"
+                                  <button type="button" className="btn btn-primary" disabled={updating}
                                     onClick={handleTurfDetailSubmit}>Save Changes</button>
                                 </div>
                               </div>
@@ -588,7 +593,7 @@ const Settings = () => {
 
                           </div>
                           <div className="d-flex gap-2 justify-content-end p-3">
-                            <button type="button" className="btn btn-primary"
+                            <button type="button" className="btn btn-primary" disabled={updating}
                               onClick={handleTurfDetailSubmit}>Save</button>
                           </div>
                         </form>

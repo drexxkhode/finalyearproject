@@ -44,8 +44,9 @@ async function emitMonthlyAnalytics(socket, turfId) {
      SELECT
   DATE_FORMAT(b.booking_date, '%Y-%m') AS month,
   SUM(CASE WHEN b.status IN ('confirmed','completed') THEN 1 ELSE 0 END) AS accepted,
-  SUM(CASE WHEN b.status = 'cancelled' THEN 1 ELSE 0 END) AS rejected,
-  SUM(CASE WHEN b.payment_status = 'paid' THEN b.amount ELSE 0 END) AS payments
+  SUM(CASE WHEN b.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+  SUM(CASE WHEN b.payment_status IN ('paid' ,'no_refund') THEN b.amount ELSE 0 END) AS payments
+  SUM(CASE WHEN b.payment_status IN ('refunded', 'no_refund') THEN b.amount ELSE 0 END) AS refunds
 FROM bookings b
 WHERE b.turf_id = ?
 GROUP BY month
@@ -55,8 +56,9 @@ ORDER BY month
     socket.emit('booking-analytics-monthly', rows.map(row => ({
       month:    row.month,
       accepted: Number(row.accepted),
-      rejected: Number(row.rejected),
+      cancelled: Number(row.cancelled),
       payments: Number(row.payments),
+      refunds: Number(row.refunds),
     })));
 
   } catch (error) {

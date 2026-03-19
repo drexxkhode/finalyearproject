@@ -219,7 +219,8 @@ module.exports = function registerSlotLockSocket(io) {
         const [booked] = await db.query(
           `SELECT id FROM bookings
            WHERE time_slot_id = ? AND booking_date = ?
-             AND status != 'cancelled' AND payment_status = 'paid'`,
+             AND status != 'cancelled' AND payment_status = 'paid'
+             AND is_deleted = 0`,
           [slotId, lockDate]
         )
         if (booked.length) {
