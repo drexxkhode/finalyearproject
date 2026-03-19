@@ -2,84 +2,58 @@ import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
 import ClipLoader from "react-spinners/ClipLoader";
 import { io } from "socket.io-client";
-const API = process.env.REACT_APP_URL ?? "http://localhost:5000";
-const Analytics = () => {
 
+const API = process.env.REACT_APP_URL ?? "http://localhost:5000";
+
+const Analytics = () => {
   const [categories, setCategories] = useState([]);
   const [series, setSeries] = useState([
-    { name: "Completed", type: "column", data: [], yAxisIndex: 0 },
-    { name: "Cancelled", type: "column", data: [], yAxisIndex: 0 },
-    { name: "Payments", type: "line", data: [], yAxisIndex: 1 },
-    { name: "Refunds", type: "line", data: [], yAxisIndex: 1 },
+    { name: "Accepted",  type: "column", data: [] },
+    { name: "Cancelled", type: "column", data: [] },
+    { name: "Payments",  type: "line",   data: [] },
+    { name: "Refunds",   type: "line",   data: [] },
   ]);
 
   useEffect(() => {
-
-    const socket = io(`${API}`, {
-      auth: {
-        token: localStorage.getItem("token") // send JWT
-      }
+    const socket = io(API, {
+      auth: { token: localStorage.getItem("token") },
     });
 
     socket.on("booking-analytics-monthly", (data) => {
-
       setCategories(data.map((d) => d.month));
-
       setSeries([
-        {
-          name: "Accepted",
-          type: "column",
-          data: data.map((d) => d.accepted),
-          yAxisIndex: 0
-        },
-        {
-          name: "Cancelled",
-          type: "column",
-          data: data.map((d) => d.cancelled),
-          yAxisIndex: 0
-        },
-        {
-          name: "Payments",
-          type: "line",
-          data: data.map((d) => d.payments),
-          yAxisIndex: 1
-        },
-        {
-          name: "Refunds",
-          type: "line",
-          data: data.map((d) => d.refunds),
-          yAxisIndex: 1
-        }
+        { name: "Accepted",  type: "column", data: data.map((d) => d.accepted)  },
+        { name: "Cancelled", type: "column", data: data.map((d) => d.cancelled) },
+        { name: "Payments",  type: "line",   data: data.map((d) => d.payments)  },
+        { name: "Refunds",   type: "line",   data: data.map((d) => d.refunds)   },
       ]);
-
     });
 
-    return () => {
-      socket.disconnect();
-    };
-
+    return () => socket.disconnect();
   }, []);
 
-  // SAFE MAX RANGES
-  const acceptedMax = series[0].data.length ? Math.max(...series[0].data) : 10;
-  const rejectedMax = series[1].data.length ? Math.max(...series[1].data) : 10;
-  const bookingMax = Math.max(acceptedMax, rejectedMax) + 5;
-  const paymentMax = series[2].data.length ? Math.max(...series[2].data) : 1000;
-  const refundMax = series[2].data.length ? Math.max(...series[2].data) : 1000;
+  // Y-axis safe maximums
+  const acceptedMax  = series[0].data.length ? Math.max(...series[0].data) : 10;
+  const cancelledMax = series[1].data.length ? Math.max(...series[1].data) : 10;
+  const bookingMax   = Math.max(acceptedMax, cancelledMax) + 5;
+  const paymentsMax  = series[2].data.length ? Math.max(...series[2].data) : 1000;
+  const refundsMax   = series[3].data.length ? Math.max(...series[3].data) : 1000;
+  const moneyMax     = Math.max(paymentsMax, refundsMax);
 
   const options = {
     chart: {
       type: "line",
       stacked: false,
       toolbar: { show: false },
-      zoom: { enabled: false },
+      zoom:    { enabled: false },
     },
 
     plotOptions: {
       bar: { columnWidth: "55%", borderRadius: 4 },
     },
 
-    stroke: { width: [0, 0, 3] },
+    // 4 series: 2 columns (no stroke) + 2 lines (stroke width 3)
+    stroke: { width: [0, 0, 3, 3] },
 
     dataLabels: { enabled: false },
 
@@ -87,23 +61,26 @@ const Analytics = () => {
 
     yaxis: [
       {
+        // series[0] Accepted + series[1] Cancelled
         min: 0,
         max: bookingMax,
         title: { text: "Bookings" },
-        labels: { formatter: (val) => val },
+        labels: { formatter: (val) => Math.round(val) },
       },
       {
+        // series[2] Payments
         opposite: true,
         min: 0,
-        max: paymentMax * 1.2,
-        title: { text: "Payments" },
-        labels: { formatter: (val) => `₡${(val / 1000).toFixed(1)}k` },
-      },{
+        max: moneyMax * 1.2,
+        title: { text: "Amount (₵)" },
+        labels: { formatter: (val) => `₵${(val / 1000).toFixed(1)}k` },
+      },
+      {
+        // series[3] Refunds — same scale as Payments, axis hidden to avoid duplicate
         opposite: true,
+        show: false,
         min: 0,
-        max: refundMax * 1.2,
-        title: { text: "Refunds" },
-        labels: { formatter: (val) => `₡${(val / 1000).toFixed(1)}k` },
+        max: moneyMax * 1.2,
       },
     ],
 
@@ -112,14 +89,13 @@ const Analytics = () => {
       intersect: false,
       y: {
         formatter: (val, { seriesIndex }) => {
-          if (seriesIndex === 0 || seriesIndex === 1) return val;
-          if (seriesIndex === 2) return `₡${(val / 1000).toFixed(1)}k`;
-          return val;
+          if (seriesIndex === 0 || seriesIndex === 1) return `${val} bookings`;
+          return `₵${Number(val).toFixed(2)}`;
         },
       },
     },
 
-    colors: ["#00E396", "#FF4560", "#008FFB","#FF4560"],
+    colors: ["#00E396", "#FF4560", "#008FFB", "#FEB019"],
 
     legend: { position: "bottom" },
   };
