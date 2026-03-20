@@ -760,24 +760,26 @@ const getBookings = async (req, res) => {
   try {
     const turf_id = req.user?.turf_id;
 
-    const [rows] = await db.execute(`
-      SELECT 
-        b.id,
-        b.booking_date,
-        b.slot_label,
-        b.amount,
-        b.status,
-        b.payment_status,
-        u.name,
-        u.email,
-        u.contact,
-        b.created_at
-      FROM bookings b
-      LEFT JOIN users u 
-        ON b.user_id = u.id
-      WHERE b.turf_id = ?
-      ORDER BY b.created_at DESC
-    `, [turf_id]);
+   const [rows] = await db.execute(`
+  SELECT 
+    b.id,
+    b.booking_date,
+    b.slot_label,
+    b.amount,
+    b.status,
+    b.payment_status,
+    b.paystack_ref,
+    b.turf_id,
+    u.name,
+    u.email,
+    u.contact,
+    b.created_at
+  FROM bookings b
+  LEFT JOIN users u 
+    ON b.user_id = u.id
+  WHERE b.turf_id = ?
+  ORDER BY b.created_at DESC
+`, [turf_id]);
 
     res.json(rows);
 

@@ -199,22 +199,6 @@ module.exports = function registerSlotLockSocket(io) {
       }
 
       try {
-        // Is this slot already locked on this date by someone else?
-        const [existing] = await db.query(
-          `SELECT locked_by FROM slot_locks
-           WHERE time_slot_id = ? AND lock_date = ?
-             AND lock_expires_at > NOW()`,
-          [slotId, lockDate]
-        )
-
-        if (existing.length && existing[0].locked_by !== userId) {
-          socket.emit('slot:lock:ack', {
-            ok: false, turfId, slotId, lockDate,
-            reason: 'Slot is already locked by another user',
-          })
-          return
-        }
-
         // Is this slot already permanently booked on this date?
         const [booked] = await db.query(
           `SELECT id FROM bookings
@@ -231,7 +215,35 @@ module.exports = function registerSlotLockSocket(io) {
           return
         }
 
-        const expiresAt = await dbLock(turfId, slotId, lockDate, userId, socket.id)
+        // Truly atomic lock acquisition using INSERT...SELECT with WHERE NOT EXISTS.
+        // MySQL evaluates the subquery and the INSERT as one atomic unit — no two
+        // concurrent requests can both pass the EXISTS check and both insert a row.
+        const expiresAt = new Date(Date.now() + LOCK_DURATION_MS)
+        const [insertResult] = await db.query(
+          `INSERT INTO slot_locks
+             (turf_id, time_slot_id, lock_date, locked_by, lock_socket_id, lock_expires_at)
+           SELECT ?, ?, ?, ?, ?, ?
+           FROM DUAL
+           WHERE NOT EXISTS (
+             SELECT 1 FROM slot_locks
+             WHERE time_slot_id = ?
+               AND lock_date    = ?
+               AND locked_by   != ?
+               AND lock_expires_at > NOW()
+           )`,
+          [turfId, slotId, lockDate, userId, socket.id, expiresAt,
+           slotId, lockDate, userId]
+        )
+
+        if (insertResult.affectedRows === 0) {
+          // WHERE NOT EXISTS was false — another user holds an active lock
+          socket.emit('slot:lock:ack', {
+            ok: false, turfId, slotId, lockDate,
+            reason: 'Slot is already locked by another user',
+          })
+          return
+        }
+
         scheduleExpiry(io, turfId, slotId, lockDate, LOCK_DURATION_MS)
 
         socket.emit('slot:lock:ack', {

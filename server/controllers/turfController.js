@@ -220,6 +220,7 @@ exports.getTurfName = async (req, res) => {
 exports.getDashboardDetails = async (req, res) => {
   try {
     const turf_id = req.user?.turf_id;
+    if (!turf_id) return res.status(403).json({ message: 'Admin access required' });
     const cacheKey = redis.KEYS.dashboard(turf_id);
 
     // ── Cache check ───────────────────────────────────────────────────────
