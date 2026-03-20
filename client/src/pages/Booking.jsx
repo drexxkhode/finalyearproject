@@ -326,15 +326,15 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
             <div className="row g-3">
               <div className="col-12 col-sm-6">
                 <input className="form-control" placeholder="Full Name"
-                  value={info.name} onChange={handle('name')} />
+                  value={info.name} onChange={handle('name')} disabled />
               </div>
               <div className="col-12 col-sm-6">
                 <input className="form-control" placeholder="Phone Number"
-                  value={info.phone} onChange={handle('phone')} />
+                  value={info.phone} onChange={handle('phone')} disabled />
               </div>
               <div className="col-12 col-sm-6">
                 <input className="form-control" type="email" placeholder="Email Address"
-                  value={info.email} onChange={handle('email')} />
+                  value={info.email} onChange={handle('email')} disabled />
               </div>
               <div className="col-12 col-sm-6">
                 <div className="form-control bg-light text-muted" style={{ cursor: 'default' }}>
@@ -461,7 +461,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
                 Pay with Paystack →
               </button>
               <button className="btn btn-outline-secondary fw-bold" onClick={() => goStep(1)}>
-                ← Edit Details
+                ← View Details
               </button>
             </div>
           </div>

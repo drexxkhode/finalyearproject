@@ -39,6 +39,8 @@ export default function Inner() {
     catch { return null }
   })
   const [activeTab,   setActiveTab]   = useState('turfs')
+  // Turf list lifted here so it survives navigation — Home never re-fetches
+  const [turfs, setTurfs] = useState([])
   // Auth modal state — shown when guest clicks a slot
   const [authOpen,      setAuthOpen]      = useState(false)
   // When true, AuthScreen opens directly on the OTP/verify screen
@@ -169,7 +171,7 @@ export default function Inner() {
 
           {/* ── Public browsing routes (guests allowed) ── */}
           <Route path="/" element={
-            <Home slots={slots} onOpenTurf={openTurf} activeTab={activeTab} />
+            <Home slots={slots} onOpenTurf={openTurf} activeTab={activeTab} turfs={turfs} setTurfs={setTurfs} />
           } />
 
           <Route path="/turf/:id" element={

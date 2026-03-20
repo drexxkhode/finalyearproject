@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
@@ -81,6 +81,7 @@ function OtpInput({ otp, setOtp, onComplete }) {
 
 export default function AuthScreen({ onSuccess, isModal = false, onClose, startOnVerify = false }) {
   const { login, register } = useAuth();
+  const navigate = useNavigate();
 
   const [mode,    setMode]    = useState("login");
   const [loading, setLoading] = useState(false);
@@ -377,7 +378,8 @@ export default function AuthScreen({ onSuccess, isModal = false, onClose, startO
                   <div className="d-flex justify-content-end mt-2">
                     {isModal
                       ? <button type="button" className="btn btn-link btn-sm p-0 text-primary"
-                          onClick={onClose} style={{ textDecoration: "underline", fontSize: 13 }}>
+                          onClick={() => { onClose?.(); navigate('/lost-password') }}
+                          style={{ textDecoration: "underline", fontSize: 13 }}>
                           Lost password?
                         </button>
                       : <Link to="/lost-password" className="text-primary text-decoration-underline small">

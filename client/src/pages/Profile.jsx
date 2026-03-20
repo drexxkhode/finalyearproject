@@ -114,7 +114,7 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
     try {
       const token = localStorage.getItem('token')
       const res   = await axios.put(
-        `${API}/users/update-user/${id}`,
+        `${API}/users/update-user/${user?.id}`,
         { name: form.name, email: form.email, contact: form.contact },
         { headers: { Authorization: `Bearer ${token}` } }
       )

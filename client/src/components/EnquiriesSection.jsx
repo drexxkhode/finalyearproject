@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { io } from 'socket.io-client'
+import { useSocket } from '../context/SocketContext'
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
@@ -11,7 +11,9 @@ export default function EnquiriesSection({ turfId, user }) {
   const [loading,   setLoading]   = useState(false)
   const [sent,      setSent]      = useState(false)
   const [error,     setError]     = useState(null)
-  const socketRef = useRef(null)
+
+  // Use the shared socket from SocketContext — no new connection needed
+  const { socket } = useSocket()
 
   // ── Fetch existing enquiries on mount ──────────────────────────────────
   useEffect(() => {
@@ -21,36 +23,27 @@ export default function EnquiriesSection({ turfId, user }) {
       .catch(() => {})
   }, [turfId])
 
-  // ── Socket — join user room + listen for admin replies ────────────────
+  // ── Join user room + listen for admin replies via shared socket ────────
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (!token || !user?.id) return
+    if (!socket || !user?.id) return
 
-    const socket = io(API, {
-      auth:       { token },
-      transports: ['websocket'],
-    })
-    socketRef.current = socket
+    // Join personal room so admin replies reach this specific user
+    socket.emit('user:join', user.id)
 
-    socket.on('connect', () => {
-      // Join personal room so admin replies reach this specific user
-      socket.emit('user:join', user.id)
-    })
-
-    // Admin replied — update the matching enquiry live
-    socket.on('enquiry:reply', ({ enquiry_id, reply, replied_at }) => {
+    const handleReply = ({ enquiry_id, reply, replied_at }) => {
       setEnquiries(prev => prev.map(e =>
         e.id === enquiry_id
           ? { ...e, reply, replied_at, status: 'resolved' }
           : e
       ))
-    })
+    }
+
+    socket.on('enquiry:reply', handleReply)
 
     return () => {
-      socket.disconnect()
-      socketRef.current = null
+      socket.off('enquiry:reply', handleReply)
     }
-  }, [user?.id])
+  }, [socket, user?.id])
 
   // ── Submit enquiry ─────────────────────────────────────────────────────
   const submit = async () => {
@@ -173,4 +166,4 @@ export default function EnquiriesSection({ turfId, user }) {
       </div>
     </div>
   )
-};
+}
