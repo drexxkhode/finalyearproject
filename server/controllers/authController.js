@@ -418,75 +418,96 @@ exports.forgotPassword = async (req, res) => {
 
     const resetLink = `${URL}/reset-password/${resetToken}`;
 
-    await sendEmail(
-      email,
-      "Reset Your Password",
-      `
-  <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 40px 0;">
-    <table align="center" width="100%" cellpadding="0" cellspacing="0"
-           style="max-width: 600px; background: #ffffff; border-radius: 8px; overflow: hidden;">
-      <tr>
-        <td style="text-align: center; padding: 30px 20px 10px 20px;">
-          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
-               alt="Company Logo" width="120" style="display: block; margin: 0 auto;" />
-        </td>
-      </tr>
-      <tr>
-        <td style="background-color: #1e88e5; padding: 20px; text-align: center;">
-          <h2 style="color: #ffffff; margin: 0;">Password Reset Request</h2>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 30px 30px 15px 30px; color: #333333;">
-          <p style="font-size: 16px; margin: 0 0 15px 0;">Hello, <span style="color: #2563eb; font-weight: bold">${lastName}!</span></p>
-          <p style="font-size: 15px; line-height: 1.6; margin: 0 0 15px 0;">
-            We received a request to reset your password. Click the button below to set a new password.
-          </p>
-          <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                 style="background: #ffffff; border-radius: 12px; border: 1px solid #e6edf5; margin: 20px 0;">
-            <tr>
-              <td style="padding: 15px;">
-                <p style="font-size: 14px; color: #1a1f36; margin: 0 0 8px 0; font-weight: bold;">🔐 Password requirements:</p>
-                <table cellpadding="0" cellspacing="0" border="0">
-                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• Minimum 8 characters</td></tr>
-                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• At least one uppercase letter</td></tr>
-                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• At least one number</td></tr>
-                  <tr><td style="padding: 2px 0; color: #5b6e8c; font-size: 13px;">• At least one special character</td></tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-          <div style="text-align: center; margin: 20px 0;">
-            <a href="${resetLink}"
-               style="background-color: #1e88e5; color: #ffffff; padding: 12px 25px;
-                      text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;">
-              Reset Password
-            </a>
-          </div>
-          <p style="font-size: 14px; color: #666; margin: 0 0 10px 0;">
-            ⏱️ This link will expire in <strong>15 minutes</strong>.
-          </p>
-          <p style="font-size: 14px; color: #666; margin: 0;">
-            If you did not request this, please ignore this email.
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="background: #f8fafd; padding: 20px; text-align: center;">
-          <p style="font-size: 13px; color: #8a9bb5; margin: 0 0 8px 0;">
-            © ${new Date().getFullYear()} <span style="color:#15803d; font-weight: bold">Turf</span><span style="color:#2563eb; font-weight: bold">Arena</span>. All rights reserved.
-          </p>
-          <p style="font-size: 12px; color: #a0b3cc; margin: 0;">
-            <a href="#" style="color: #8a9bb5; text-decoration: underline; margin: 0 5px;">Privacy Policy</a> |
-            <a href="#" style="color: #8a9bb5; text-decoration: underline; margin: 0 5px;">Unsubscribe</a>
-          </p>
-        </td>
-      </tr>
-    </table>
-  </div>
-  `
-    );
+ await sendEmail(
+  email,
+  "Reset Your Password",
+  `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;background-color:#e8edf2;font-family:Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:#e8edf2;padding:20px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:520px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #d0d7e2;">
 
+        <!-- LOGO + HEADER -->
+        <tr>
+          <td style="background-color:#1565c0;padding:16px 24px 0 24px;text-align:center;">
+            <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
+                 alt="TurfArena" width="90" style="display:block;margin:0 auto;" />
+            <h2 style="color:#ffffff;margin:8px 0 14px 0;font-size:17px;font-weight:600;">
+              Password Reset Request
+            </h2>
+          </td>
+        </tr>
+
+        <!-- BODY -->
+        <tr>
+          <td style="padding:20px 24px 16px 24px;">
+            <p style="font-size:14px;color:#222;margin:0 0 10px 0;">
+              Hello, <strong style="color:#1565c0;">${lastName}!</strong>
+            </p>
+            <p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 16px 0;">
+              We received a request to reset your password. Click the button below to set a new password.
+            </p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin:0 0 16px 0;">
+              <tr><td align="center">
+                <a href="${resetLink}"
+                   style="display:inline-block;background-color:#1565c0;color:#ffffff;font-size:14px;
+                          font-weight:600;text-decoration:none;padding:10px 28px;border-radius:5px;">
+                  Reset Password
+                </a>
+              </td></tr>
+            </table>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background:#f4f8ff;border:1px solid #d6e4f7;border-radius:6px;margin:0 0 16px 0;">
+              <tr><td style="padding:12px 16px;">
+                <p style="font-size:12px;font-weight:700;color:#1565c0;margin:0 0 8px 0;
+                           text-transform:uppercase;letter-spacing:0.4px;">Password Requirements</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                  <tr><td style="padding:2px 0;font-size:12px;color:#4a5568;"><span style="color:#1565c0;margin-right:5px;">&#10003;</span>Minimum 8 characters</td></tr>
+                  <tr><td style="padding:2px 0;font-size:12px;color:#4a5568;"><span style="color:#1565c0;margin-right:5px;">&#10003;</span>At least one uppercase letter</td></tr>
+                  <tr><td style="padding:2px 0;font-size:12px;color:#4a5568;"><span style="color:#1565c0;margin-right:5px;">&#10003;</span>At least one number</td></tr>
+                  <tr><td style="padding:2px 0;font-size:12px;color:#4a5568;"><span style="color:#1565c0;margin-right:5px;">&#10003;</span>At least one special character</td></tr>
+                </table>
+              </td></tr>
+            </table>
+
+            <p style="font-size:12px;color:#666;margin:0 0 6px 0;">
+              This link expires in <strong style="color:#c0392b;">15 minutes</strong>.
+            </p>
+            <p style="font-size:12px;color:#999;margin:0;">
+              If you did not request this, please ignore this email.
+            </p>
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="border-top:1px solid #eaecf0;padding:12px 24px;text-align:center;background:#ffffff;">
+            <p style="font-size:12px;color:#aaa;margin:0 0 4px 0;">
+              &copy; ${new Date().getFullYear()}
+              <span style="color:#15803d;font-weight:bold;">Turf</span><span style="color:#1565c0;font-weight:bold;">Arena</span>.
+              All rights reserved.
+            </p>
+            <p style="font-size:11px;margin:0;">
+              <a href="#" style="color:#999;text-decoration:underline;">Privacy Policy</a>
+              &nbsp;&middot;&nbsp;
+              <a href="#" style="color:#999;text-decoration:underline;">Unsubscribe</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+);
     res.json({ message: "Password reset email sent" });
   } catch (err) {
     console.error(err);
