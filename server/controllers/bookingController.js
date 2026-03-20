@@ -351,103 +351,117 @@ const paystackWebhook = async (req, res) => {
             </tr>`;
           }).join('');
 
-          await sendEmail(userEmail, `Booking Confirmed — ${turfName}`, `
-  <div style="font-family:Arial,sans-serif;background:#f4f6f8;padding:40px 0;">
-    <table align="center" width="100%" cellpadding="0" cellspacing="0"
-           style="max-width:600px;background:#fff;border-radius:8px;overflow:hidden;">
-      <tr>
-        <td style="text-align:center;padding:28px 20px 10px;">
-          <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
-               alt="TurfArena" width="110" style="display:block;margin:0 auto;" />
-        </td>
-      </tr>
-      <tr>
-        <td style="background:#0d6efd;padding:20px;text-align:center;">
-          <h2 style="color:#fff;margin:0;font-size:20px;">✅ Booking Confirmed!</h2>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:28px 30px 10px;">
-          <p style="font-size:16px;margin:0 0 6px 0;">
-            Hi <span style="color:#0d6efd;font-weight:bold;">${userName}</span>,
-          </p>
-          <p style="font-size:14px;color:#555;margin:0 0 20px 0;">
-            Your booking has been confirmed. See you on the pitch!
-          </p>
+          await sendEmail(userEmail, `Your Booking is Confirmed • ${turfName}`, `
+<div style="font-family:'Segoe UI',Roboto,Arial,sans-serif;background:#f4f6f8;padding:40px 0;">
+  <table align="center" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:620px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.06);">
+    
+    <!-- Logo -->
+    <tr>
+      <td style="text-align:center;padding:30px 20px 15px;">
+        <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
+             alt="TurfArena" width="120" />
+      </td>
+    </tr>
 
-          <!-- Booking summary card -->
-          <table width="100%" cellpadding="0" cellspacing="0"
-                 style="background:#f8faff;border:1px solid #d0e0ff;border-radius:10px;margin-bottom:20px;">
-            <tr>
-              <td style="padding:16px 20px;">
-                <div style="font-size:13px;color:#6c757d;text-transform:uppercase;
-                            letter-spacing:1px;font-weight:700;margin-bottom:12px;">
-                  Booking Details
-                </div>
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="font-size:13px;color:#6c757d;padding:4px 0;">Facility</td>
-                    <td style="font-size:13px;font-weight:700;text-align:right;padding:4px 0;">${turfName}</td>
-                  </tr>
-                  <tr>
-                    <td style="font-size:13px;color:#6c757d;padding:4px 0;">Date</td>
-                    <td style="font-size:13px;font-weight:700;text-align:right;padding:4px 0;">${bookDate}</td>
-                  </tr>
-                  <tr>
-                    <td style="font-size:13px;color:#6c757d;padding:4px 0;">Reference</td>
-                    <td style="font-size:13px;font-weight:700;text-align:right;padding:4px 0;color:#0d6efd;">${ref}</td>
-                  </tr>
-                </table>
+    <!-- Header -->
+    <tr>
+      <td style="background:linear-gradient(135deg,#0d6efd,#198754);padding:22px;text-align:center;">
+        <h2 style="color:#ffffff;margin:0;font-size:22px;">Booking Confirmed 🎉</h2>
+        <p style="color:#e9f2ff;font-size:13px;margin-top:6px;">
+          Your spot is secured — we’ll see you on the pitch!
+        </p>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style="padding:30px;">
+        <p style="font-size:15px;margin-bottom:8px;">
+          Hello <strong style="color:#0d6efd;">${userName}</strong>,
+        </p>
+        <p style="font-size:14px;color:#555;margin-bottom:22px;">
+          Thank you for your booking. Here are your reservation details:
+        </p>
+
+        <!-- Summary Card -->
+        <table width="100%" cellpadding="0" cellspacing="0"
+               style="background:#f8faff;border:1px solid #d6e4ff;border-radius:10px;margin-bottom:24px;">
+          <tr>
+            <td style="padding:18px 20px;">
+              <div style="font-size:12px;color:#6c757d;font-weight:700;text-transform:uppercase;margin-bottom:12px;">
+                Booking Summary
+              </div>
+
+              <table width="100%">
+                <tr>
+                  <td style="font-size:13px;color:#6c757d;padding:6px 0;">Facility</td>
+                  <td style="font-size:13px;font-weight:600;text-align:right;">${turfName}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6c757d;padding:6px 0;">Date</td>
+                  <td style="font-size:13px;font-weight:600;text-align:right;">${bookDate}</td>
+                </tr>
+                <tr>
+                  <td style="font-size:13px;color:#6c757d;padding:6px 0;">Reference</td>
+                  <td style="font-size:13px;font-weight:700;text-align:right;color:#0d6efd;">${ref}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Slots -->
+        <table width="100%" cellpadding="0" cellspacing="0"
+               style="border:1px solid #e9ecef;border-radius:10px;overflow:hidden;margin-bottom:25px;">
+          <thead>
+            <tr style="background:#f8f9fa;">
+              <th style="padding:12px;font-size:12px;color:#6c757d;text-align:left;">Time Slot</th>
+              <th style="padding:12px;font-size:12px;color:#6c757d;text-align:right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${slotRows}
+          </tbody>
+          <tfoot>
+            <tr style="background:#eef4ff;">
+              <td style="padding:12px;font-weight:700;">Total</td>
+              <td style="padding:12px;font-weight:800;text-align:right;color:#0d6efd;">
+                ₵${amountGHS.toFixed(2)}
               </td>
             </tr>
-          </table>
+          </tfoot>
+        </table>
 
-          <!-- Slot rows -->
-          <table width="100%" cellpadding="0" cellspacing="0"
-                 style="border:1px solid #e9ecef;border-radius:8px;margin-bottom:20px;overflow:hidden;">
-            <thead>
-              <tr style="background:#f8f9fa;">
-                <th style="padding:10px 12px;font-size:12px;color:#6c757d;text-align:left;
-                           font-weight:700;text-transform:uppercase;letter-spacing:1px;">
-                  Time Slot
-                </th>
-                <th style="padding:10px 12px;font-size:12px;color:#6c757d;text-align:right;
-                           font-weight:700;text-transform:uppercase;letter-spacing:1px;">
-                  Amount
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              ${slotRows}
-            </tbody>
-            <tfoot>
-              <tr style="background:#f0f4ff;">
-                <td style="padding:10px 12px;font-weight:800;font-size:14px;">Total</td>
-                <td style="padding:10px 12px;font-weight:800;font-size:15px;
-                           text-align:right;color:#0d6efd;">₵${amountGHS.toFixed(2)}</td>
-              </tr>
-            </tfoot>
-          </table>
+        <!-- CTA -->
+        <div style="text-align:center;margin-bottom:25px;">
+          <a href="${process.env.VITE_APP_URL ?? '#'}/mybookings"
+             style="display:inline-block;padding:12px 20px;background:#0d6efd;color:#fff;
+                    font-size:14px;border-radius:6px;text-decoration:none;font-weight:600;">
+            View My Bookings
+          </a>
+        </div>
 
-          <p style="font-size:13px;color:#888;margin:0;">
-            Questions? Contact the facility directly or visit your
-            <a href="${process.env.VITE_APP_URL ?? '#'}/mybookings"
-               style="color:#0d6efd;text-decoration:none;font-weight:700;">My Bookings</a> page.
-          </p>
-        </td>
-      </tr>
-      <tr>
-        <td style="background:#f8fafd;padding:20px;text-align:center;">
-          <p style="font-size:13px;color:#8a9bb5;margin:0;">
-            © ${new Date().getFullYear()}
-            <span style="color:#198754;font-weight:bold;">Turf</span><span style="color:#0d6efd;font-weight:bold;">Arena</span>.
-            All rights reserved.
-          </p>
-        </td>
-      </tr>
-    </table>
-  </div>
-          `);
+        <p style="font-size:12px;color:#888;text-align:center;margin:0;">
+          Need help? Contact the facility or support team anytime.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="background:#f8fafd;padding:18px;text-align:center;">
+        <p style="font-size:12px;color:#8a9bb5;margin:0;">
+          © ${new Date().getFullYear()}
+          <strong style="color:#198754;">Turf</strong><strong style="color:#0d6efd;">Arena</strong>.
+          All rights reserved.
+        </p>
+      </td>
+    </tr>
+
+  </table>
+</div>
+`);
           console.log(`[webhook] 📧 Confirmation email sent to ${userEmail}`);
         }
       } catch (emailErr) {
