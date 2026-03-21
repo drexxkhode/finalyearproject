@@ -105,6 +105,27 @@ exports.getTurfData = async (req, res) => {
       return res.json(cached);
     }
 
+    // ── Stampede prevention ───────────────────────────────────────────────
+    // Under heavy load, many requests can miss the cache simultaneously and
+    // all hit MySQL at once. We use a short-lived Redis lock so only ONE
+    // request fetches from the DB — all others wait and then serve from cache.
+    const lockKey    = 'lock:turfs:all';
+    const isLeader   = await redis.setNX(lockKey, '1', 10); // 10s lock TTL
+
+    if (!isLeader) {
+      // Another request is already fetching — poll until cache is populated
+      for (let i = 0; i < 25; i++) {
+        await new Promise(r => setTimeout(r, 100)); // wait 100ms per attempt
+        const retried = await redis.get(redis.KEYS.allTurfs);
+        if (retried) {
+          console.log('[cache] STAMPEDE resolved — served from cache after wait');
+          return res.json(retried);
+        }
+      }
+      // Fallback: if cache never populated after 2.5s, fetch directly
+      console.warn('[cache] STAMPEDE fallback — fetching directly after wait timeout');
+    }
+
     const [turfs] = await db.query(
       `SELECT
   t.id, t.name, t.email, t.contact, t.district,
@@ -138,6 +159,7 @@ ORDER BY t.name`
 
     // ── Cache store ───────────────────────────────────────────────────────
     await redis.set(redis.KEYS.allTurfs, payload, redis.TTL.allTurfs);
+    await redis.del(lockKey); // release lock early so waiters can proceed
     console.log('[cache] MISS turfs:all — cached');
 
     res.json(payload);
@@ -157,6 +179,22 @@ exports.getSingleTurf = async (req, res) => {
     if (cached) {
       console.log(`[cache] HIT turfs:${id}`);
       return res.json(cached);
+    }
+
+    // ── Stampede prevention ───────────────────────────────────────────────
+    const lockKey  = `lock:turfs:${id}`;
+    const isLeader = await redis.setNX(lockKey, '1', 10);
+
+    if (!isLeader) {
+      for (let i = 0; i < 25; i++) {
+        await new Promise(r => setTimeout(r, 100));
+        const retried = await redis.get(redis.KEYS.turf(id));
+        if (retried) {
+          console.log(`[cache] STAMPEDE resolved — turfs:${id} served from cache`);
+          return res.json(retried);
+        }
+      }
+      console.warn(`[cache] STAMPEDE fallback — fetching turfs:${id} directly`);
     }
 
     const [[turf]] = await db.query(
@@ -190,6 +228,7 @@ exports.getSingleTurf = async (req, res) => {
 
     // ── Cache store ───────────────────────────────────────────────────────
     await redis.set(redis.KEYS.turf(id), payload, redis.TTL.turf);
+    await redis.del(lockKey); // release lock early so waiters can proceed
     console.log(`[cache] MISS turfs:${id} — cached`);
 
     res.json(payload);

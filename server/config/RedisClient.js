@@ -62,6 +62,22 @@ async function set(key, value, ttlSeconds = 300) {
   }
 }
 
+// Set only if key does NOT exist — returns true if the lock was acquired
+// Used for stampede prevention: only one request fetches from DB, others wait
+async function setNX(key, value, ttlSeconds = 10) {
+  if (!ready || !client) return false;
+  try {
+    const result = await client.set(key, JSON.stringify(value), {
+      EX:  ttlSeconds,
+      NX:  true,       // Only set if Not eXists
+    });
+    return result === 'OK';
+  } catch (err) {
+    console.warn('[redis] setNX error:', err.message);
+    return false;
+  }
+}
+
 async function del(...keys) {
   if (!ready || !client) return false;
   try {
@@ -100,4 +116,4 @@ const TTL = {
   dashboard: 2  * 60,   // 2 minutes
 };
 
-module.exports = { connect, get, set, del, delPattern, KEYS, TTL };
+module.exports = { connect, get, set, setNX, del, delPattern, KEYS, TTL };
