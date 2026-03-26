@@ -40,23 +40,32 @@ const Profile = () => {
   }, [id]);
 
   // trim + collapse double spaces when middleName is empty
-  const fullName = `${admin.firstName || ""} ${admin.middleName || ""} ${admin.lastName || ""}`.trim().replace(/\s+/g, " ");
+  const fullName =
+    `${admin.firstName || ""} ${admin.middleName || ""} ${admin.lastName || ""}`
+      .trim()
+      .replace(/\s+/g, " ");
 
   const AVATAR = "/assets/images/admin/avatar.webp";
 
   return (
     <div className="container my-5">
       <div className="profile-header mb-4">
-        <div className="camera-btn shadow">
-          <i className="bi bi-camera-fill text-black" style={{ fontSize: "1.5rem" }}></i>
-        </div>
+        <Link to={`/edit-details/${admin.id}`} className="edit-btn shadow">
+          <i
+            className="bi bi-pen text-black "
+            title="Edit details"
+            style={{ fontSize: "1.5rem" }}
+          ></i>
+        </Link>
 
         <div className="d-flex align-items-center gap-4">
           <img
             src={admin.photo || AVATAR}
             className="profile-img"
             alt="Profile"
-            onError={(e) => { e.target.src = AVATAR }}
+            onError={(e) => {
+              e.target.src = AVATAR;
+            }}
           />
           <div>
             <h2 className="fw-bold mb-1">{fullName}</h2>
@@ -72,30 +81,40 @@ const Profile = () => {
         <div className="row g-4">
           <div className="col-md-3">
             <div className="card stat-card">
-              <div className="stat-icon text-primary"><i className="bi bi-person-vcard"></i></div>
+              <div className="stat-icon text-primary">
+                <i className="bi bi-person-vcard"></i>
+              </div>
               <small className="text-muted">National ID</small>
               <h6 className="fw-bold mt-2">{admin.nationalId || "N/A"}</h6>
             </div>
           </div>
           <div className="col-md-3">
             <div className="card stat-card">
-              <div className="stat-icon text-success"><i className="bi bi-percent"></i></div>
+              <div className="stat-icon text-success">
+                <i className="bi bi-percent"></i>
+              </div>
               <small className="text-muted">Age</small>
               <h6 className="fw-bold mt-2">
-                {admin.dob ? `${new Date().getFullYear() - new Date(admin.dob).getFullYear()} Years` : "N/A"}
+                {admin.dob
+                  ? `${new Date().getFullYear() - new Date(admin.dob).getFullYear()} Years`
+                  : "N/A"}
               </h6>
             </div>
           </div>
           <div className="col-md-3">
             <div className="card stat-card">
-              <div className="stat-icon text-danger"><i className="bi bi-heart"></i></div>
+              <div className="stat-icon text-danger">
+                <i className="bi bi-heart"></i>
+              </div>
               <small className="text-muted">Marital Status</small>
               <h6 className="fw-bold mt-2">{admin.maritalStatus || "N/A"}</h6>
             </div>
           </div>
           <div className="col-md-3">
             <div className="card stat-card">
-              <div className="stat-icon text-warning"><i className="bi bi-briefcase"></i></div>
+              <div className="stat-icon text-warning">
+                <i className="bi bi-briefcase"></i>
+              </div>
               <small className="text-muted">Role</small>
               <h6 className="fw-bold mt-2">{admin.role || "N/A"}</h6>
             </div>
@@ -108,11 +127,9 @@ const Profile = () => {
       <div className="card info-card">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h5 className="card-title fw-bold">
-            <i className="bi bi-person-lines-fill text-primary"></i> Personal Information
+            <i className="bi bi-person-lines-fill text-primary"></i> Personal
+            Information
           </h5>
-          <Link to={`/edit-details/${admin.id}`} className="btn btn-primary btn-sm ms-auto">
-            Edit Details
-          </Link>
         </div>
         <div className="row g-4 p-4">
           <div className="col-md-6">
@@ -121,7 +138,9 @@ const Profile = () => {
           </div>
           <div className="col-md-6">
             <div className="info-label">Date of Birth</div>
-            <div className="fw-semibold">{admin.dob ? new Date(admin.dob).toLocaleDateString() : "N/A"}</div>
+            <div className="fw-semibold">
+              {admin.dob ? new Date(admin.dob).toLocaleDateString() : "N/A"}
+            </div>
           </div>
           <div className="col-md-6">
             <div className="info-label">Gender</div>

@@ -15,7 +15,7 @@ const sendEmail = async (to, subject, html) => {
   );
 
   if (!rows.length) {
-    throw new Error("User not found");
+    throw new Error("Email sent if user exist ");
   }
 
   const { turf_name, turf_email } = rows[0];

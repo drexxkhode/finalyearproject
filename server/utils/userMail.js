@@ -9,7 +9,7 @@ const sendEmail = async (to, subject, html) => {
   );
 
   if (!rows.length) {
-    throw new Error("User not found");
+    throw new Error("Email sent if account exist!");
   }
 
   const { name } = rows[0];
