@@ -36,13 +36,13 @@ const Login = () => {
             <div className="border rounded-2 p-4 mt-5">
               <div className="login-form">
 
-                <a href="#" className="mb-4 d-flex">
-                  <img src="/assets/images/logo.svg"
+                <a href="#" className="mb-2 d-flex">
+                  <img src="/assets/images/admin/logo.png"
                     className="img-fluid login-logo"
                     alt="Admin Dashboard" />
                 </a>
 
-                <h5 className="fw-light mb-5">Sign in to access dashboard.</h5>
+                <h5 className="fw-light mb-2">Sign in to access dashboard.</h5>
 
                 <div className="mb-3">
                   <label className="form-label">Your Email</label>

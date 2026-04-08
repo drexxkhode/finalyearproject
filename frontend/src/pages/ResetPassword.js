@@ -42,15 +42,15 @@ const ResetPassword = () => {
             <div  className="my-5">
               <div className="border rounded-2 p-4 mt-5">
                 <div className="login-form">
-                  <a href="#" className="mb-4 d-flex">
+                  <a href="#" className="mb-2 d-flex">
                     <img
-                      src="/assets/images/logo.svg"
+                      src="/assets/images/admin/logo.png"
                       className="img-fluid login-logo"
-                      alt="Earth Admin Dashboard"
+                      alt="Turfarena Admin Dashboard"
                     />
                   </a>
                   <h5 className="fw-light mb-5 lh-2">
-                    In order to complete password reset, please enter
+                    In order to complete your password reset, please enter a
                     new Password to finish the password resetting process.
                   </h5>
                   <div className="mb-3">

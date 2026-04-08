@@ -71,11 +71,11 @@ const ForgotPassword = () => {
             <div className="my-5">
               <div className="border rounded-2 p-4 mt-5">
                 <div className="login-form">
-                  <Link to={"/login"} className="mb-4 d-flex">
+                  <Link to={"/login"} className="mb-1 d-flex">
                     <img
-                      src="/assets/images/logo.svg"
+                      src="/assets/images/admin/logo.png"
                       className="img-fluid login-logo"
-                      alt="Earth Admin Dashboard"
+                      alt="Turfarena Admin Dashboard"
                     />
                   </Link>
                   <h5 className="fw-light mb-5 lh-2">
