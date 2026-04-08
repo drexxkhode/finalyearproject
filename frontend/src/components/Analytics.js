@@ -6,6 +6,7 @@ import { io } from "socket.io-client";
 const API = process.env.REACT_APP_URL ?? "http://localhost:5000";
 
 const Analytics = () => {
+  const [status, setStatus] = useState("");
   const [categories, setCategories] = useState([]);
   const [series, setSeries] = useState([
     { name: "Accepted",  type: "column", data: [] },
@@ -20,6 +21,13 @@ const Analytics = () => {
     });
 
     socket.on("booking-analytics-monthly", (data) => {
+     if (!Array.isArray(data)) return;
+
+      if (data.length === 0) {
+        // Server connected and responded — just no bookings yet
+        setStatus('empty');
+        return;
+      }
       setCategories(data.map((d) => d.month));
       setSeries([
         { name: "Accepted",  type: "column", data: data.map((d) => d.accepted)  },
@@ -116,6 +124,14 @@ const Analytics = () => {
 
     legend: { position: "bottom" },
   };
+   // No bookings yet — server responded but data is empty
+  if (status === 'empty') return (
+    <div className="text-center py-5 text-muted">
+      <i className="bi bi-bar-chart fs-1 d-block mb-2 opacity-25"></i>
+      <p className="mb-0">No booking data yet.</p>
+      <small>Analytics will appear once bookings are made.</small>
+    </div>
+  );
 
   if (!categories.length)
     return (
