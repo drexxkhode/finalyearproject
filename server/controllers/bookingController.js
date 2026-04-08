@@ -755,7 +755,7 @@ const deleteBooking = async (req, res) => {
   }
 };
 
-//ADMIN DASHBOARD DATA FETCH.
+//ADMIN DASHBOARD DATA FETCH RECORDS.
 const getBookings = async (req, res) => {
   try {
     const turf_id = req.user?.turf_id;
@@ -789,4 +789,76 @@ const getBookings = async (req, res) => {
   }
 };
 
-module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings, deleteBooking };
+//ADMIN DASHBOARD DATA FETCH.
+const getBookingsForAdmin = async (req, res) => {
+  try {
+    const turf_id = req.user?.turf_id;
+
+   const [rows] = await db.execute(`
+  SELECT 
+    b.id,
+    b.booking_date,
+    b.slot_label,
+    b.amount,
+    b.status,
+    b.payment_status,
+    b.paystack_ref,
+    b.turf_id,
+    u.name,
+    u.email,
+    u.contact,
+    b.created_at,
+    admin_deleted
+  FROM bookings b
+  LEFT JOIN users u 
+    ON b.user_id = u.id
+  WHERE b.turf_id = ? AND admin_deleted=0
+  ORDER BY b.created_at DESC
+`, [turf_id]);
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching bookings" });
+  }
+};
+
+//ADMIN DELETE BOOKING
+const deleteBookingByAdmin = async (req, res) => {
+  try {
+    const turf_id    = req.user?.turf_id;
+    const booking_id = parseInt(req.params.id);
+    if (!turf_id) return res.status(401).json({ message: 'Unauthorized' });
+
+    const [rows] = await db.query(
+      `SELECT id, status, payment_status FROM bookings
+       WHERE id = ? AND turf_id = ? LIMIT 1`,
+      [booking_id, turf_id]
+    );
+    if (!rows.length) return res.status(404).json({ message: 'Booking not found' });
+
+    const booking = rows[0];
+
+    // Block deletion of active paid bookings — must be cancelled first
+    if (booking.status === 'confirmed' && booking.payment_status === 'paid')
+      return res.status(400).json({
+        message: 'Cannot delete an active booking.',
+      });
+
+    // Block deletion if a refund is still in progress
+    if (booking.payment_status === 'refund_pending')
+      return res.status(400).json({
+        message: 'Cannot delete while a refund is being processed.',
+      });
+
+    await db.query(`UPDATE  bookings SET admin_deleted=1 WHERE id = ? AND turf_id = ?`, [booking_id, turf_id]);
+
+    return res.json({ message: 'Booking deleted successfully' });
+  } catch (err) {
+    console.error('deleteBooking error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings, deleteBooking, deleteBookingByAdmin, getBookingsForAdmin };

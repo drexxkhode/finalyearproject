@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import DataTable from "react-data-table-component"
-import axios from "axios"
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" }) : "—"
@@ -17,22 +18,44 @@ const PayBadge = ({ s }) => {
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
 
-const columns = [
-  { name:"#",        width:"55px", cell:(_,i) => i+1 },
-  { name:"Customer", grow:2,       selector: r => r.name,         cell: r => (
-    <div className="py-1">
-      <div className="fw-semibold" style={{fontSize:13}}>{r.name||"—"}</div>
-      <div className="text-muted"  style={{fontSize:11}}>{r.email}</div>
-    </div>
-  )},
-  { name:"Contact",  selector: r => r.contact,       cell: r => r.contact||"—" },
-  { name:"Date",     selector: r => r.booking_date,  cell: r => fmtDate(r.booking_date), sortable:true },
-  { name:"Time Slot",selector: r => r.slot_label,    cell: r => r.slot_label||"—" },
-  { name:"Amount",   selector: r => r.amount,        cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
-  { name:"Status",   cell: r => <StatusBadge s={r.status} /> },
-  { name:"Payment",  cell: r => <PayBadge s={r.payment_status} /> },
-  { name:"Action", cell:r=> <button className="btn btn-danger btn-sm" ><i className="bi bi-trash" /></button>  },
-]
+const getColumns = (deleteBookings) => [
+  { name:"#", width:"55px", cell:(_,i) => i+1 },
+
+  {
+    name:"Customer",
+    grow:2,
+    selector: r => r.name,
+    cell: r => (
+      <div className="py-1">
+        <div className="fw-semibold" style={{fontSize:13}}>
+          {r.name || "—"}
+        </div>
+        <div className="text-muted" style={{fontSize:11}}>
+          {r.email}
+        </div>
+      </div>
+    )
+  },
+
+  { name:"Contact", cell: r => r.contact || "—" },
+  { name:"Date", selector: r => r.booking_date, cell: r => fmtDate(r.booking_date), sortable:true },
+  { name:"Time Slot", cell: r => r.slot_label || "—" },
+  { name:"Amount", selector: r => r.amount, cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
+  { name:"Status", cell: r => <StatusBadge s={r.status} /> },
+  { name:"Payment", cell: r => <PayBadge s={r.payment_status} /> },
+
+  {
+    name:"Action",
+    cell: r => (
+      <button
+        className="btn btn-danger btn-sm"
+        onClick={() => deleteBookings(r.id)}
+      >
+        <i className="bi bi-trash" />
+      </button>
+    )
+  }
+];
 
 const customStyles = {
   headRow:   { style: { background:"#1a56db", borderRadius:"4px 4px 0 0" } },
@@ -46,19 +69,37 @@ const Bookings = () => {
   const [search,   setSearch]   = useState("")
   const [status,   setStatus]   = useState("")
   const [payment,  setPayment]  = useState("")
-
+  
   const token   = localStorage.getItem("token")
   const headers = { Authorization: `Bearer ${token}` }
 
   const fetchBookings = () => {
     setLoading(true)
-    axios.get(`${API}/api/admin/get-bookings`, { headers })
+    axios.get(`${API}/api/admin/all-bookings`, { headers })
       .then(res => setBookings(Array.isArray(res.data) ? res.data : []))
       .catch(() => setBookings([]))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchBookings() }, [])
+  useEffect(() => { fetchBookings() }, []);
+
+ const deleteBookings = async (id) => {
+  try {
+    if (!window.confirm("Delete this booking record?")) return;
+
+    const res = await axios.delete(`${API}/api/admin/delete-booking/${id}`, { headers });
+
+    if (res.status === 200) {
+      setBookings(prev => prev.filter(b => b.id !== id));
+      toast.success(res?.data?.message || "Record deleted");
+    } else {
+      toast.warning(res?.data?.message || "Unable to delete record");
+    }
+  } catch (err) {
+    console.log("Deleting booking error:", err.response?.data?.message);
+    toast.error(err.response?.data?.message ||"Error deleting booking");
+  }
+};
 
   const filtered = useMemo(() => bookings.filter(r => {
     const q = search.toLowerCase()
@@ -67,7 +108,9 @@ const Bookings = () => {
       (!status  || r.status === status) &&
       (!payment || r.payment_status === payment)
     )
-  }), [bookings, search, status, payment])
+  }), [bookings, search, status, payment]);
+
+const columns = useMemo(() => getColumns(deleteBookings), [deleteBookings]);
 
   return (
     <div className="col-xxl-12">
@@ -121,14 +164,16 @@ const Bookings = () => {
             noDataComponent={
               <div className="py-5 text-muted text-center">
                 <i className="bi bi-calendar-x fs-1 d-block mb-2 opacity-25"></i>
-                No bookings found
+                No bookings data yet
               </div>
             }
 
           />
         </div>
       </div>
+      <ToastContainer/>
     </div>
+    
   )
 }
 

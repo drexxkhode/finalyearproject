@@ -16,7 +16,7 @@ export default function TurfCard({ turf, onOpen }) {
         <div className="tf-card-cover-overlay" />
         <div className="tf-card-cover-badges">
           <span className="tf-badge tf-badge-blue">{turf.capacity}</span>
-          <span className="tf-badge tf-badge-yellow">⭐ {turf.rating}</span>
+          <span className="tf-badge tf-badge-yellow">⭐ <span className="text-dark" >{turf.rating}</span></span>
         </div>
         <div className="tf-card-avail-tag">{avail} open</div>
       </div>
