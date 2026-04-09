@@ -15,9 +15,9 @@ function Hero() {
     { path: '/history/payments', name: 'Payment History' },
     { path: '/report/payments', name: 'Payment Report' },
     { path: '/report/bookings', name: 'Booking Report' },
-    { path: '/register', name: 'Register' },
+    { path: '/register', name: 'Register New User' },
     { path: '/edit-details/:id', name: 'Edit User Details' },
-    { path: '/settings', name: 'Settings' },
+    { path: '/settings', name: 'General Settings' },
     { path: '/reset-password', name: 'Reset Password' },
   ];
 

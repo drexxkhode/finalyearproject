@@ -46,7 +46,7 @@ getTotal();
                 <i className="bi bi-cash-stack fs-1 text-warning lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Payments</h5>
+                <h5 className="m-0 text-secondary fw-normal">Cash</h5>
                 <h3 className="m-0 text-primary">₡ {total.total_payments}</h3>
               </div>
             </div>

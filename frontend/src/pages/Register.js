@@ -7,32 +7,45 @@ import ClipLoader from "react-spinners/ClipLoader";
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const Register = () => {
-  const [activeTab,       setActiveTab]       = useState("oneA");
-  const [showPassword,    setShowPassword]    = useState(false);
-  const [save,            setSave]            = useState(false);
-  const [showImageModal,  setShowImageModal]  = useState(false);
-  const [useCamera,       setUseCamera]       = useState(false);
-  const [previewImage,    setPreviewImage]    = useState(null);
-  const [errors,          setErrors]          = useState({});
+  const [activeTab, setActiveTab] = useState("oneA");
+  const [showPassword, setShowPassword] = useState(false);
+  const [save, setSave] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [useCamera, setUseCamera] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [errors, setErrors] = useState({});
   const [passwordStrength, setPasswordStrength] = useState({
-    score: 0, label: "Very Weak", color: "bg-danger",
+    score: 0,
+    label: "Very Weak",
+    color: "bg-danger",
     message: "Password is too weak",
   });
 
-  const videoRef  = useRef(null);
+  const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    firstName: "", middleName: "", lastName: "", dob: "",
-    contact: "", gender: "", address: "", nationalId: "",
-    email: "", maritalStatus: "", role: "", password: "",
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    dob: "",
+    contact: "",
+    gender: "",
+    address: "",
+    nationalId: "",
+    email: "",
+    maritalStatus: "",
+    role: "",
+    password: "",
     photo: null,
   });
 
   // ------------------- Camera -------------------
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+      });
       videoRef.current.srcObject = stream;
       videoRef.current.play();
     } catch {
@@ -46,9 +59,9 @@ const Register = () => {
   };
 
   const capturePhoto = () => {
-    const video  = videoRef.current;
+    const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width  = video.videoWidth;
+    canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d").drawImage(video, 0, 0);
     canvas.toBlob((blob) => {
@@ -61,24 +74,46 @@ const Register = () => {
     });
   };
 
-  useEffect(() => { return () => stopCamera(); }, []);
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
 
   // ------------------- Password Strength -------------------
   const checkPasswordStrength = (password) => {
     let score = 0;
-    if (password.length >= 8)                        score++;
-    if (/[A-Z]/.test(password))                      score++;
-    if (/[a-z]/.test(password))                      score++;
-    if (/[0-9]/.test(password))                      score++;
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(password))    score++;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
 
     const map = [
-      { label: "Very Weak", color: "bg-danger",  message: "Use at least 8 characters, numbers, letters, and symbols." },
-      { label: "Very Weak", color: "bg-danger",  message: "Use at least 8 characters, numbers, letters, and symbols." },
-      { label: "Weak",      color: "bg-warning", message: "Add uppercase letters, numbers, or symbols." },
-      { label: "Medium",    color: "bg-info",    message: "Stronger, but could add symbols or numbers." },
-      { label: "Strong",    color: "bg-success", message: "Good password." },
-      { label: "Very Strong", color: "bg-success", message: "Excellent password!" },
+      {
+        label: "Very Weak",
+        color: "bg-danger",
+        message: "Use at least 8 characters, numbers, letters, and symbols.",
+      },
+      {
+        label: "Very Weak",
+        color: "bg-danger",
+        message: "Use at least 8 characters, numbers, letters, and symbols.",
+      },
+      {
+        label: "Weak",
+        color: "bg-warning",
+        message: "Add uppercase letters, numbers, or symbols.",
+      },
+      {
+        label: "Medium",
+        color: "bg-info",
+        message: "Stronger, but could add symbols or numbers.",
+      },
+      { label: "Strong", color: "bg-success", message: "Good password." },
+      {
+        label: "Very Strong",
+        color: "bg-success",
+        message: "Excellent password!",
+      },
     ];
     setPasswordStrength({ score, ...map[score] });
   };
@@ -100,8 +135,17 @@ const Register = () => {
   const validateForm = () => {
     const newErrors = {};
     const requiredFields = [
-      "firstName", "lastName", "dob", "contact", "gender",
-      "address", "nationalId", "email", "maritalStatus", "role", "password",
+      "firstName",
+      "lastName",
+      "dob",
+      "contact",
+      "gender",
+      "address",
+      "nationalId",
+      "email",
+      "maritalStatus",
+      "role",
+      "password",
     ];
 
     requiredFields.forEach((field) => {
@@ -159,9 +203,18 @@ const Register = () => {
 
       // Reset form after success
       setFormData({
-        firstName: "", middleName: "", lastName: "", dob: "",
-        contact: "", gender: "", address: "", nationalId: "",
-        email: "", maritalStatus: "", role: "", password: "",
+        firstName: "",
+        middleName: "",
+        lastName: "",
+        dob: "",
+        contact: "",
+        gender: "",
+        address: "",
+        nationalId: "",
+        email: "",
+        maritalStatus: "",
+        role: "",
+        password: "",
         photo: null,
       });
       setPreviewImage(null);
@@ -198,7 +251,11 @@ const Register = () => {
                   </h5>
                   <button
                     className="btn-close"
-                    onClick={() => { stopCamera(); setUseCamera(false); setShowImageModal(false); }}
+                    onClick={() => {
+                      stopCamera();
+                      setUseCamera(false);
+                      setShowImageModal(false);
+                    }}
                   />
                 </div>
                 <div className="modal-body">
@@ -206,23 +263,40 @@ const Register = () => {
                     <>
                       <button
                         className="btn btn-outline-primary w-100 mb-2"
-                        onClick={() => { setUseCamera(true); startCamera(); }}
+                        onClick={() => {
+                          setUseCamera(true);
+                          startCamera();
+                        }}
                       >
                         <i className="bi bi-camera me-2" /> Open Camera
                       </button>
                       <label className="btn btn-outline-secondary w-100">
                         <i className="bi bi-upload me-2" /> Choose from device
-                        <input type="file" accept="image/*" hidden id="photo" onChange={handleChange} />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          id="photo"
+                          onChange={handleChange}
+                        />
                       </label>
                     </>
                   ) : (
                     <>
                       <div className="camera-preview-wrapper">
-                        <video ref={videoRef} className="camera-video" autoPlay playsInline />
+                        <video
+                          ref={videoRef}
+                          className="camera-video"
+                          autoPlay
+                          playsInline
+                        />
                         <div className="face-guide"></div>
                       </div>
                       <canvas ref={canvasRef} hidden />
-                      <button className="btn btn-success w-100" onClick={capturePhoto}>
+                      <button
+                        className="btn btn-success w-100"
+                        onClick={capturePhoto}
+                      >
                         <i className="bi bi-camera-fill me-2" /> Capture Photo
                       </button>
                     </>
@@ -242,8 +316,8 @@ const Register = () => {
               <div className="custom-tabs-container">
                 <ul className="nav nav-tabs">
                   {[
-                    { key: "oneA",   label: "General" },
-                    { key: "twoA",   label: "Other Info" },
+                    { key: "oneA", label: "General" },
+                    { key: "twoA", label: "Other Info" },
                     { key: "threeA", label: "Security & Photo" },
                   ].map(({ key, label }) => (
                     <li className="nav-item" key={key}>
@@ -260,61 +334,103 @@ const Register = () => {
 
                 <form onSubmit={handleSubmit}>
                   <div className="tab-content">
-
                     {/* ===== GENERAL ===== */}
-                    <div className={`tab-pane ${activeTab === "oneA" ? "show active" : "d-none"}`}>
+                    <div
+                      className={`tab-pane ${activeTab === "oneA" ? "show active" : "d-none"}`}
+                    >
                       <div className="card mb-3">
-                        <div className="card-header"><h5 className="card-title">Personal Details</h5></div>
+                        <div className="card-header">
+                          <h5 className="card-title">Personal Details</h5>
+                        </div>
                         <div className="card-body">
                           <div className="row gx-3">
                             {[
                               { id: "firstName", label: "First Name" },
-                              { id: "lastName",  label: "Last Name" },
-                              { id: "middleName", label: "Other Name", optional: true },
+                              { id: "lastName", label: "Last Name" },
+                              {
+                                id: "middleName",
+                                label: "Other Name",
+                                optional: true,
+                              },
                             ].map(({ id, label, optional }) => (
                               <div className="col-6" key={id}>
-                                <label htmlFor={id} className="form-label">{label}</label>
+                                <label htmlFor={id} className="form-label">
+                                  {label}
+                                </label>
                                 <input
                                   id={id}
                                   className={`form-control ${errors[id] ? "is-invalid" : ""}`}
                                   value={formData[id]}
                                   onChange={handleChange}
                                 />
-                                {errors[id] && <div className="invalid-feedback">{errors[id]}</div>}
+                                {errors[id] && (
+                                  <div className="invalid-feedback">
+                                    {errors[id]}
+                                  </div>
+                                )}
                               </div>
                             ))}
                             <div className="col-6">
-                              <label htmlFor="dob" className="form-label">Date of Birth</label>
-                              <input type="date" id="dob"
+                              <label htmlFor="dob" className="form-label">
+                                Date of Birth
+                              </label>
+                              <input
+                                type="date"
+                                id="dob"
                                 className={`form-control ${errors.dob ? "is-invalid" : ""}`}
-                                value={formData.dob} onChange={handleChange}
+                                value={formData.dob}
+                                onChange={handleChange}
                               />
-                              {errors.dob && <div className="invalid-feedback">{errors.dob}</div>}
+                              {errors.dob && (
+                                <div className="invalid-feedback">
+                                  {errors.dob}
+                                </div>
+                              )}
                             </div>
                             <div className="col-6">
-                              <label htmlFor="contact" className="form-label">Contact</label>
-                              <input id="contact"
+                              <label htmlFor="contact" className="form-label">
+                                Contact
+                              </label>
+                              <input
+                                id="contact"
                                 className={`form-control ${errors.contact ? "is-invalid" : ""}`}
-                                value={formData.contact} onChange={handleChange}
+                                value={formData.contact}
+                                onChange={handleChange}
                               />
-                              {errors.contact && <div className="invalid-feedback">{errors.contact}</div>}
+                              {errors.contact && (
+                                <div className="invalid-feedback">
+                                  {errors.contact}
+                                </div>
+                              )}
                             </div>
                             <div className="col-6">
-                              <label htmlFor="gender" className="form-label">Gender</label>
-                              <select id="gender"
+                              <label htmlFor="gender" className="form-label">
+                                Gender
+                              </label>
+                              <select
+                                id="gender"
                                 className={`form-control ${errors.gender ? "is-invalid" : ""}`}
-                                value={formData.gender} onChange={handleChange}
+                                value={formData.gender}
+                                onChange={handleChange}
                               >
                                 <option value="">-- Select Gender --</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                               </select>
-                              {errors.gender && <div className="invalid-feedback">{errors.gender}</div>}
+                              {errors.gender && (
+                                <div className="invalid-feedback">
+                                  {errors.gender}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="d-flex gap-2 justify-content-end p-3">
-                          <button type="button" className="btn btn-primary" onClick={() => setActiveTab("twoA")}>
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => setActiveTab("twoA")}
+                          >
                             Next <i className="bi bi-arrow-right-circle" />
                           </button>
                         </div>
@@ -322,40 +438,79 @@ const Register = () => {
                     </div>
 
                     {/* ===== OTHER INFO ===== */}
-                    <div className={`tab-pane ${activeTab === "twoA" ? "show active" : "d-none"}`}>
+                    <div
+                      className={`tab-pane ${activeTab === "twoA" ? "show active" : "d-none"}`}
+                    >
                       <div className="card mb-3">
-                        <div className="card-header"><h5 className="card-title">Other Details</h5></div>
+                        <div className="card-header">
+                          <h5 className="card-title">Other Details</h5>
+                        </div>
                         <div className="card-body">
                           <div className="row gx-3">
                             <div className="col-6">
-                              <label htmlFor="address" className="form-label">Address</label>
-                              <input id="address"
+                              <label htmlFor="address" className="form-label">
+                                Address
+                              </label>
+                              <input
+                                id="address"
                                 className={`form-control ${errors.address ? "is-invalid" : ""}`}
-                                value={formData.address} onChange={handleChange}
+                                value={formData.address}
+                                onChange={handleChange}
                               />
-                              {errors.address && <div className="invalid-feedback">{errors.address}</div>}
+                              {errors.address && (
+                                <div className="invalid-feedback">
+                                  {errors.address}
+                                </div>
+                              )}
                             </div>
                             <div className="col-6">
-                              <label htmlFor="nationalId" className="form-label">National ID</label>
-                              <input id="nationalId"
+                              <label
+                                htmlFor="nationalId"
+                                className="form-label"
+                              >
+                                National ID
+                              </label>
+                              <input
+                                id="nationalId"
                                 className={`form-control ${errors.nationalId ? "is-invalid" : ""}`}
-                                value={formData.nationalId} onChange={handleChange}
+                                value={formData.nationalId}
+                                onChange={handleChange}
                               />
-                              {errors.nationalId && <div className="invalid-feedback">{errors.nationalId}</div>}
+                              {errors.nationalId && (
+                                <div className="invalid-feedback">
+                                  {errors.nationalId}
+                                </div>
+                              )}
                             </div>
                             <div className="col-6">
-                              <label htmlFor="email" className="form-label">Email</label>
-                              <input type="email" id="email"
+                              <label htmlFor="email" className="form-label">
+                                Email
+                              </label>
+                              <input
+                                type="email"
+                                id="email"
                                 className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                                value={formData.email} onChange={handleChange}
+                                value={formData.email}
+                                onChange={handleChange}
                               />
-                              {errors.email && <div className="invalid-feedback">{errors.email}</div>}
+                              {errors.email && (
+                                <div className="invalid-feedback">
+                                  {errors.email}
+                                </div>
+                              )}
                             </div>
                             <div className="col-6">
-                              <label htmlFor="maritalStatus" className="form-label">Marital Status</label>
-                              <select id="maritalStatus"
+                              <label
+                                htmlFor="maritalStatus"
+                                className="form-label"
+                              >
+                                Marital Status
+                              </label>
+                              <select
+                                id="maritalStatus"
                                 className={`form-control ${errors.maritalStatus ? "is-invalid" : ""}`}
-                                value={formData.maritalStatus} onChange={handleChange}
+                                value={formData.maritalStatus}
+                                onChange={handleChange}
                               >
                                 <option value="">-- Select Status --</option>
                                 <option value="Married">Married</option>
@@ -363,15 +518,27 @@ const Register = () => {
                                 <option value="Widow">Widow</option>
                                 <option value="Divorced">Divorced</option>
                               </select>
-                              {errors.maritalStatus && <div className="invalid-feedback">{errors.maritalStatus}</div>}
+                              {errors.maritalStatus && (
+                                <div className="invalid-feedback">
+                                  {errors.maritalStatus}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="d-flex gap-2 justify-content-end p-3">
-                          <button type="button" className="btn btn-success" onClick={() => setActiveTab("oneA")}>
+                          <button
+                            type="button"
+                            className="btn btn-success"
+                            onClick={() => setActiveTab("oneA")}
+                          >
                             <i className="bi bi-arrow-left-circle" /> Prev
                           </button>
-                          <button type="button" className="btn btn-primary" onClick={() => setActiveTab("threeA")}>
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => setActiveTab("threeA")}
+                          >
                             Next <i className="bi bi-arrow-right-circle" />
                           </button>
                         </div>
@@ -379,40 +546,84 @@ const Register = () => {
                     </div>
 
                     {/* ===== SECURITY & PHOTO ===== */}
-                    <div className={`tab-pane ${activeTab === "threeA" ? "show active" : "d-none"}`}>
+                    <div
+                      className={`tab-pane ${activeTab === "threeA" ? "show active" : "d-none"}`}
+                    >
                       <div className="card mb-3">
-                        <div className="card-header"><h5 className="card-title">Security & Photo</h5></div>
+                        <div className="card-header">
+                          <h5 className="card-title">Security & Photo</h5>
+                        </div>
                         <div className="card-body">
-                          <div className="profile-header mb-1" style={{ padding: "5px", background: "#0073d8" }}>
-                            <div className="camera-btn shadow" onClick={() => setShowImageModal(true)} style={{ cursor: "pointer" }}>
-                              <i className="bi bi-camera-fill text-black" style={{ fontSize: "1.5rem" }} />
+                          <div
+                            className="profile-header mb-1"
+                            style={{ padding: "5px", background: "#0073d8" }}
+                          >
+                            <div
+                              className="camera-btn shadow"
+                              onClick={() => setShowImageModal(true)}
+                              style={{ cursor: "pointer" }}
+                            >
+                              <i
+                                className="bi bi-camera-fill text-black"
+                                style={{ fontSize: "1.5rem" }}
+                              />
                             </div>
+                            {previewImage && (
+                              <button
+                                type="button"
+                                className="btn btn-close text-danger removeBtn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewImage(null);
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    photo: null,
+                                  }));
+                                }}
+                              ></button>
+                            )}
                             <div className="d-flex align-items-center gap-4">
                               <img
                                 src={previewImage || AVATAR}
                                 className={`profile-img ${errors.photo ? "is-invalid" : ""}`}
                                 alt="Profile"
-                                onError={(e) => { e.target.src = AVATAR }}
+                                onError={(e) => {
+                                  e.target.src = AVATAR;
+                                }}
                               />
-                              {errors.photo && <div className="text-danger">{errors.photo}</div>}
+                              {errors.photo && (
+                                <div className="text-danger">
+                                  {errors.photo}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <hr />
                           <div className="row gx-3">
                             <div className="col-6">
-                              <label htmlFor="role" className="form-label">Role</label>
-                              <select id="role"
+                              <label htmlFor="role" className="form-label">
+                                Role
+                              </label>
+                              <select
+                                id="role"
                                 className={`form-control ${errors.role ? "is-invalid" : ""}`}
-                                value={formData.role} onChange={handleChange}
+                                value={formData.role}
+                                onChange={handleChange}
                               >
                                 <option value="">-- Select Role --</option>
                                 <option value="Staff">Staff</option>
                                 <option value="Manager">Manager</option>
                               </select>
-                              {errors.role && <div className="invalid-feedback">{errors.role}</div>}
+                              {errors.role && (
+                                <div className="invalid-feedback">
+                                  {errors.role}
+                                </div>
+                              )}
                             </div>
                             <div className="col-6">
-                              <label htmlFor="password" className="form-label">Password</label>
+                              <label htmlFor="password" className="form-label">
+                                Password
+                              </label>
                               <div className="input-group">
                                 <input
                                   type={showPassword ? "text" : "password"}
@@ -421,39 +632,66 @@ const Register = () => {
                                   value={formData.password}
                                   onChange={handleChange}
                                 />
-                                <span className="input-group-text" style={{ cursor: "pointer" }}
-                                  onClick={() => setShowPassword((p) => !p)}>
-                                  <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`} />
+                                <span
+                                  className="input-group-text"
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => setShowPassword((p) => !p)}
+                                >
+                                  <i
+                                    className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}
+                                  />
                                 </span>
-                                {errors.password && <div className="invalid-feedback">{errors.password}</div>}
+                                {errors.password && (
+                                  <div className="invalid-feedback">
+                                    {errors.password}
+                                  </div>
+                                )}
                               </div>
-                              <div className="progress mt-2" style={{ height: "6px" }}>
+                              <div
+                                className="progress mt-2"
+                                style={{ height: "6px" }}
+                              >
                                 <div
                                   className={`progress-bar ${passwordStrength.color}`}
-                                  style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+                                  style={{
+                                    width: `${(passwordStrength.score / 5) * 100}%`,
+                                  }}
                                 />
                               </div>
                               <small className="text-muted">
-                                <strong>{passwordStrength.label}:</strong> {passwordStrength.message}
+                                <strong>{passwordStrength.label}:</strong>{" "}
+                                {passwordStrength.message}
                               </small>
                             </div>
                           </div>
                         </div>
                         <div className="d-flex gap-2 justify-content-end p-3">
-                          <button type="button" className="btn btn-success" onClick={() => setActiveTab("twoA")}>
+                          <button
+                            type="button"
+                            className="btn btn-success"
+                            onClick={() => setActiveTab("twoA")}
+                          >
                             <i className="bi bi-arrow-left-circle" /> Prev
                           </button>
                           {/* ← disabled is now correctly on the button element */}
-                          <button type="submit" className="btn btn-info" disabled={save}>
-                            {save
-                              ? <><ClipLoader color="#fff" size={18} /> Saving...</>
-                              : <><i className="bi bi-cloud-arrow-up" /> Save</>
-                            }
+                          <button
+                            type="submit"
+                            className="btn btn-info"
+                            disabled={save}
+                          >
+                            {save ? (
+                              <>
+                                <ClipLoader color="#fff" size={18} /> Saving...
+                              </>
+                            ) : (
+                              <>
+                                <i className="bi bi-cloud-arrow-up" /> Save
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
                     </div>
-
                   </div>
                 </form>
                 <ToastContainer />

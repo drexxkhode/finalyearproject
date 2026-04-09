@@ -270,13 +270,13 @@ exports.getDashboardDetails = async (req, res) => {
     }
 
     const [rows] = await db.execute(
-      `SELECT
-         (SELECT COUNT(*) FROM payments   WHERE turf_id = ?) AS total_payments,
-         (SELECT COUNT(*) FROM bookings   WHERE turf_id = ?) AS total_bookings,
-         (SELECT COUNT(*) FROM admins     WHERE turf_id = ?) AS total_admins,
-         (SELECT COUNT(*) FROM enquiries  WHERE turf_id = ?) AS total_enquiries`,
-      [turf_id, turf_id, turf_id, turf_id]
-    );
+  `SELECT 
+    (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE turf_id = ?) AS total_payments,
+    (SELECT COUNT(*) FROM bookings   WHERE turf_id = ?) AS total_bookings,
+    (SELECT COUNT(*) FROM admins     WHERE turf_id = ?) AS total_admins,
+    (SELECT COUNT(*) FROM enquiries  WHERE turf_id = ?) AS total_enquiries`,
+  [turf_id, turf_id, turf_id, turf_id]
+);
 
     const payload = rows[0];
 

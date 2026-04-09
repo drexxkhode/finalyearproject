@@ -136,9 +136,9 @@ function Navbar() {
         </button>
       </div>
 
-      <div className="app-brand py-2 ms-3">
-        <Link to={"/"} className="d-sm-block d-none">
-          <img src="/assets/images/admin/logo.png" className="logo" alt="LOGO" />
+      <div className="app-brand py-2 ms-3" >
+        <Link to={"/"} className="d-sm-block d-none" >
+          <img src="/assets/images/admin/logo.png" className="logo"  alt="LOGO" />
         </Link>
       </div>
 
