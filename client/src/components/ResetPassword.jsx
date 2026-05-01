@@ -40,7 +40,7 @@ export default function ResetPassword() {
       <div className="text-center mb-4">
         <div className="tf-auth-logo"><img src="/assets/img/logo/logo.png" alt="turfarea" /> </div>
         <div className="tf-brand-title font-condensed fs-2">TURFARENA</div>
-        <div className="tf-brand-sub">Accra Metropolitan Assembly</div>
+        <div className="tf-brand-sub">Dome Kwabenya & Ayawaso West Constituency</div>
       </div>
 
       <div className="card border-0 shadow-lg rounded-4 p-4">

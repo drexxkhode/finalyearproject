@@ -102,7 +102,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
               <div className="tf-brand-icon"><img src='/assets/img/logo/logo.png' /></div>
               <div className="text-start">
                 <div className="tf-brand-title">TURFARENA</div>
-                <div className="tf-brand-sub">Accra Metropolitan Assembly</div>
+                <div className="tf-brand-sub">Dome Kwabenya & Ayawaso West</div>
               </div>
             </button>
 
@@ -142,7 +142,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
 
               {user ? (
                 <button
-                  className="btn btn-outline-primary btn-sm fw-bold d-none d-md-inline-flex"
+                  className="btn btn-outline-primary btn-sm fw-bold d-none d-md-inline-flex" title='view bookings'
                   onClick={() => navigate('/mybookings')}
                 >
                   <i className="bi bi-calendar2-check me-1"></i>Bookings
@@ -158,7 +158,7 @@ export default function Navbar({ TABS, activeTab, onTabChange, user, logout, not
 
               {user && (
                 <button
-                  className="btn btn-outline-danger btn-sm fw-bold d-none d-md-inline-flex"
+                  className="btn btn-outline-danger btn-sm fw-bold d-none d-md-inline-flex" title='Logout'
                   onClick={handleLogout}
                 >
                   <i className="bi bi-box-arrow-right"></i>
