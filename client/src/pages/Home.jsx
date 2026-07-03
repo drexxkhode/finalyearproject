@@ -100,7 +100,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
         <>
           <div className="tf-filter-bar">
             <div className="tf-filter-search">
-              <input className="form-control" placeholder="🔍 Search turfs in Accra…"
+              <input className="form-control" placeholder="🔍 Search turfs in Dome…"
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <select className="form-select tf-filter-select" value={fCap} onChange={e => setFCap(e.target.value)}>

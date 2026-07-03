@@ -22,9 +22,11 @@
     "leaflet-routing-machine": "^3.2.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-icons": "^5.7.0",
     "react-leaflet": "^4.2.1",
     "react-responsive": "^10.0.1",
     "react-router-dom": "^7.13.1",
+    "react-simple-star-rating": "^5.1.7",
     "react-spinners": "^0.17.0",
     "socket.io-client": "^4.8.3"
   },

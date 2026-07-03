@@ -49,6 +49,10 @@ exports.register = async (req, res) => {
     if (!validatePassword(password))
       return res.status(400).json({ message: "Weak password" });
 
+    if (!firstName || !lastName || !dob || !contact || !gender || !address ||
+    !nationalId || !email || !maritalStatus || !role || !password)
+      return res.status(400).json({ message: "Some fields are missing" });
+
     const hashed = await bcrypt.hash(password, 10);
 
     // Upload photo to Cloudinary if provided
@@ -287,6 +291,9 @@ exports.deleteUser = async (req, res) => {
     const [rows] = await db.query(
       "SELECT photo FROM admins WHERE id = ?", [req.user.id]
     );
+    if (rows.length === 0) {
+      return res.status(404).json({message: "User does not exist"});
+    }
     if (rows.length && rows[0].photo) {
       await deleteFromCloudinary(extractPublicId(rows[0].photo));
     }

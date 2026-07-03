@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { useSocket } from '../context/SocketContext'
+import StarRating from "../components/StarRating";
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
@@ -11,6 +12,7 @@ export default function EnquiriesSection({ turfId, user }) {
   const [loading,   setLoading]   = useState(false)
   const [sent,      setSent]      = useState(false)
   const [error,     setError]     = useState(null)
+const [rating, setRating] = useState(0);
 
   // Use the shared socket from SocketContext — no new connection needed
   const { socket } = useSocket()
@@ -131,16 +133,41 @@ export default function EnquiriesSection({ turfId, user }) {
         {error && (
           <div className="alert alert-danger py-2 small mb-2">{error}</div>
         )}
+
         {user && (
-          <input
-            className="form-control mb-2"
-            placeholder="Subject (optional)"
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            disabled={loading}
-          />
-        )}
-        <textarea
+  <div className="d-flex align-items-end justify-content-end gap-2 mb-2">
+
+    {/* Rating */}
+    <div className="text-end" style={{ minWidth: "150px" }}>
+  <small className="text-muted d-block mb-1">
+    Rating
+  </small>
+
+  <StarRating
+    rating={rating}
+    setRating={setRating}
+  />
+
+  {rating > 0 && (
+    <small className="text-primary">
+      {rating}/5
+    </small>
+  )}
+</div>
+  </div>
+)}
+
+{user && (
+  <input
+    className="form-control mb-2"
+    placeholder="Subject (optional)"
+    value={subject}
+    onChange={e => setSubject(e.target.value)}
+    disabled={loading}
+  />
+)}
+
+       <textarea
           className="form-control mb-2"
           rows={3}
           placeholder={user ? 'Ask a question about this turf…' : 'Sign in to send an enquiry'}
@@ -155,7 +182,7 @@ export default function EnquiriesSection({ turfId, user }) {
         >
           {loading
             ? <><span className="spinner-border spinner-border-sm me-2" />Sending...</>
-            : 'Send Enquiry →'
+            : 'Send Comment →'
           }
         </button>
         {!user && (
