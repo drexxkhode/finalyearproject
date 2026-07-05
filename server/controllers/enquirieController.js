@@ -13,6 +13,7 @@ const getEnquiries = async (req, res) => {
     u.name,
     e.subject,
     e.message,
+    e.rating,
     e.status,
     e.created_at,
     er.reply,
@@ -38,14 +39,14 @@ const createEnquiry = async (req, res) => {
     const user_id = req.user?.id;
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { turf_id, subject, message } = req.body;
+    const { turf_id, subject, message, rating } = req.body;
     if (!turf_id || !message?.trim())
       return res.status(400).json({ message: 'turf_id and message are required' });
 
     const [result] = await db.query(
-      `INSERT INTO enquiries (turf_id, user_id, subject, message, status)
-       VALUES (?, ?, ?, ?, 'pending')`,
-      [turf_id, user_id, subject ?? 'General Enquiry', message.trim()]
+      `INSERT INTO enquiries (turf_id, user_id, subject, message, rating, status)
+       VALUES (?, ?, ?, ?, ?, 'pending')`,
+      [turf_id, user_id, subject ?? 'General Enquiry', message.trim(), rating]
     );
 
     const enquiry = {

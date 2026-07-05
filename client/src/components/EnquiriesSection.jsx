@@ -60,12 +60,14 @@ const [rating, setRating] = useState(0);
           turf_id: turfId,
           subject: subject.trim() || 'General Enquiry',
           message: msg.trim(),
+          rating
         },
         { headers: { Authorization: `Bearer ${token}` } }
       )
       setEnquiries(prev => [res.data.enquiry, ...prev])
       setMsg('')
       setSubject('')
+      setRating(0)
       setSent(true)
       setTimeout(() => setSent(false), 3000)
     } catch (err) {
@@ -86,22 +88,25 @@ const [rating, setRating] = useState(0);
   return (
     <div className="card border-0 shadow-sm rounded-4 p-3 mb-3">
       <div className="d-flex align-items-center gap-2 mb-3">
-        <span className="fw-bold fs-6">💬 Enquiries</span>
+        <span className="fw-bold fs-6">💬 Enquiries & Reviews</span>
         <span className="tf-badge tf-badge-blue">{enquiries.length}</span>
       </div>
 
       {enquiries.length === 0 && (
         <p className="text-muted text-center small py-2">
-          No enquiries yet. Be the first to ask!
+          No enquiries yet. Be the first to ask or comment!
         </p>
       )}
 
       {enquiries.map(e => (
         <div key={e.id} className="tf-enquiry-bubble">
-          <div className="d-flex align-items-center gap-2 mb-2">
-            <div className="tf-enquiry-avatar">{e.name?.charAt(0).toUpperCase()}</div>
+          
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <div className="tf-enquiry-avatar">{e.name?.charAt(0).toUpperCase()} </div>
+            
             <div>
               <div className="fw-bold" style={{ fontSize: 13 }}>{e.name}</div>
+              <div className="text-muted" style={{ fontSize: 7 }}>{"⭐".repeat(e.rating)}</div>
               <div className="text-muted" style={{ fontSize: 11 }}>{formatTime(e.created_at)}</div>
             </div>
             {e.subject && e.subject !== 'General Enquiry' && (
@@ -139,7 +144,7 @@ const [rating, setRating] = useState(0);
 
     {/* Rating */}
     <div className="text-end" style={{ minWidth: "150px" }}>
-  <small className="text-muted d-block mb-1">
+  <small className="text-muted fw-bold d-block mb-1">
     Rating
   </small>
 
