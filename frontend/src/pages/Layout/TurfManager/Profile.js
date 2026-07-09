@@ -84,8 +84,8 @@ const Profile = () => {
               <div className="stat-icon text-primary">
                 <i className="bi bi-person-vcard"></i>
               </div>
-              <small className="text-muted">National ID</small>
-              <h6 className="fw-bold mt-2">{admin.nationalId || "N/A"}</h6>
+              <small className="text-muted">Contact</small>
+              <h6 className="fw-bold mt-2">{admin.contact || "N/A"}</h6>
             </div>
           </div>
           <div className="col-md-3">
@@ -93,11 +93,11 @@ const Profile = () => {
               <div className="stat-icon text-success">
                 <i className="bi bi-percent"></i>
               </div>
-              <small className="text-muted">Age</small>
+              <small className="text-muted">Email</small>
               <h6 className="fw-bold mt-2">
-                {admin.dob
-                  ? `${new Date().getFullYear() - new Date(admin.dob).getFullYear()} Years`
-                  : "N/A"}
+                {admin.email
+                  ||
+                   "N/A"}
               </h6>
             </div>
           </div>
@@ -122,44 +122,6 @@ const Profile = () => {
         </div>
       </div>
 
-      <hr />
-
-      <div className="card info-card">
-        <div className="card-header d-flex justify-content-between align-items-center">
-          <h5 className="card-title fw-bold">
-            <i className="bi bi-person-lines-fill text-primary"></i> Personal
-            Information
-          </h5>
-        </div>
-        <div className="row g-4 p-4">
-          <div className="col-md-6">
-            <div className="info-label">Full Name</div>
-            <div className="fw-semibold">{fullName}</div>
-          </div>
-          <div className="col-md-6">
-            <div className="info-label">Date of Birth</div>
-            <div className="fw-semibold">
-              {admin.dob ? new Date(admin.dob).toLocaleDateString() : "N/A"}
-            </div>
-          </div>
-          <div className="col-md-6">
-            <div className="info-label">Gender</div>
-            <div className="fw-semibold">{admin.gender || "N/A"}</div>
-          </div>
-          <div className="col-md-6">
-            <div className="info-label">Email</div>
-            <div className="fw-semibold">{admin.email || "N/A"}</div>
-          </div>
-          <div className="col-md-6">
-            <div className="info-label">Phone</div>
-            <div className="fw-semibold">{admin.contact || "N/A"}</div>
-          </div>
-          <div className="col-md-6">
-            <div className="info-label">Address</div>
-            <div className="fw-semibold">{admin.address || "N/A"}</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

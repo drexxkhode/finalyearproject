@@ -36,14 +36,12 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
       setTurfs(res.data.data.map(t => ({
         ...t,
         pricePerHour: t.price_per_hour,
-        location:     t.district || t.location,
+        location:     t.district,
         address:      t.location,
         cover_image:  t.cover_image ?? null,
         images:       t.images       ?? [],
-        distance:     t.distance ?? 0,
         rating:       t.rating   ?? 4.5,
         capacity:     t.capacity ?? '5',
-        surface:      t.surface  ?? 'Astro Turf',
         amenities:    Array.isArray(t.amenities) ? t.amenities : [],
         about:        t.about    ?? '',
       })))

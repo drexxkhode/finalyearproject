@@ -53,7 +53,8 @@ const getColumns = (deleteBookings) => [
       >
         <i className="bi bi-trash" />
       </button>
-    )
+      
+    ) 
   }
 ];
 

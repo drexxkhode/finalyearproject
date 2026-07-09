@@ -130,8 +130,7 @@ exports.getTurfData = async (req, res) => {
       `SELECT
   t.id, t.name, t.email, t.contact, t.district,
   t.latitude, t.longitude, t.location,
-  t.price_per_hour, t.about, t.rating, t.capacity,
-  t.surface, t.amenities, t.distance,
+  t.price_per_hour, t.about, t.rating, t.capacity, t.amenities,
 
   (
     SELECT url
@@ -201,8 +200,7 @@ exports.getSingleTurf = async (req, res) => {
       `SELECT
          t.id, t.name, t.email, t.contact, t.district,
          t.latitude, t.longitude, t.location,
-         t.price_per_hour, t.about, t.rating, t.capacity,
-         t.surface, t.amenities, t.distance,
+         t.price_per_hour, t.about, t.rating, t.capacity, t.amenities, 
          (
            SELECT url FROM turf_images
            WHERE turf_id = t.id AND is_cover = 1

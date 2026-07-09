@@ -118,9 +118,6 @@ export default function TurfDetail({
               <span className="tf-badge tf-badge-blue">
                 {turf.capacity ?? "N/A"}
               </span>
-              <span className="tf-badge tf-badge-gray">
-                {turf.surface ?? "Turf"}
-              </span>
               <span className="tf-badge tf-badge-yellow">
                 ⭐ {turf.rating ?? "4.5"}
               </span>
@@ -129,12 +126,6 @@ export default function TurfDetail({
               <div>
                 <div className="tf-info-price-big">₵{turf.pricePerHour}</div>
                 <div className="tf-info-label">per hour</div>
-              </div>
-              <div>
-                <div className="tf-info-dist-big">
-                  {turf.distance ?? "—"} km
-                </div>
-                <div className="tf-info-label">from you</div>
               </div>
             </div>
             {amenities.length > 0 && (

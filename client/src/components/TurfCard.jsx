@@ -23,7 +23,7 @@ export default function TurfCard({ turf, onOpen }) {
       <div className="tf-card-body">
         <div className="tf-card-name">{turf.name}</div>
         <div className="tf-card-meta">
-          <i className="bi bi-geo-alt-fill me-1"></i>{turf.location} · {turf.distance} km
+          <i className="bi bi-geo-alt-fill me-1"></i>{turf.address} · {turf.district} 
         </div>
         <div className="d-flex justify-content-between align-items-center">
           <div>

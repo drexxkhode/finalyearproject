@@ -2,7 +2,6 @@ const express  = require('express');
 const router   = express.Router();
 const auth     = require('../../middleware/auth');       // client auth
 const {
-  getEnquiries,
   createEnquiry,
   replyEnquiry,
   getAdminEnquiries,
@@ -10,7 +9,6 @@ const {
 } = require('../../controllers/enquirieController');
 
 // ── Client routes ──────────────────────────────────────────────────────────
-router.get('/',              getEnquiries);               // public — load enquiries for a turf
 router.post('/',       auth, createEnquiry);              // logged-in user submits enquiry
 
 // ── Admin routes ───────────────────────────────────────────────────────────

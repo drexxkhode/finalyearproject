@@ -1,52 +1,19 @@
 const db = require('../config/db');
 
-// ── GET /api/enquiries?turf_id=1 — public, loads enquiries for a turf ──────
-const getEnquiries = async (req, res) => {
-  try {
-    const { turf_id } = req.query;
-    if (!turf_id)
-      return res.status(400).json({ message: 'turf_id is required' });
-
-    const [rows] = await db.query(
-      `SELECT
-    e.id,
-    u.name,
-    e.subject,
-    e.message,
-    e.rating,
-    e.status,
-    e.created_at,
-    er.reply,
-    er.created_at AS replied_at
-FROM enquiries e
-LEFT JOIN users u ON e.user_id = u.id
-LEFT JOIN enquiry_replies er ON er.enquiry_id = e.id
-WHERE e.turf_id = ?
-ORDER BY e.created_at DESC`,
-      [turf_id]
-    );
-
-    res.json({ enquiries: rows });
-  } catch (err) {
-    console.error('getEnquiries error:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
 // ── POST /api/enquiries — client submits enquiry ───────────────────────────
 const createEnquiry = async (req, res) => {
   try {
     const user_id = req.user?.id;
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { turf_id, subject, message, rating } = req.body;
+    const { turf_id, subject, message } = req.body;
     if (!turf_id || !message?.trim())
       return res.status(400).json({ message: 'turf_id and message are required' });
 
     const [result] = await db.query(
-      `INSERT INTO enquiries (turf_id, user_id, subject, message, rating, status)
-       VALUES (?, ?, ?, ?, ?, 'pending')`,
-      [turf_id, user_id, subject ?? 'General Enquiry', message.trim(), rating]
+      `INSERT INTO enquiries (turf_id, user_id, subject, message, status)
+       VALUES (?, ?, ?, ?, 'pending')`,
+      [turf_id, user_id, subject ?? 'General Enquiry', message.trim()]
     );
 
     const enquiry = {
@@ -176,4 +143,4 @@ const markRead = async (req, res) => {
   }
 };
 
-module.exports = { getEnquiries, createEnquiry, replyEnquiry, getAdminEnquiries, markRead };
+module.exports = { createEnquiry, replyEnquiry, getAdminEnquiries, markRead };

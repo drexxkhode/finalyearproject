@@ -35,9 +35,9 @@ exports.register = async (req, res) => {
       return res.status(403).json({ message: "No turf assigned" });
 
     const {
-      firstName, middleName, lastName, dob,
-      contact, gender, address, nationalId,
-      email, maritalStatus, role, password,
+      firstName, middleName, lastName, 
+      contact, 
+      email, role, password
     } = req.body;
 
     const [exists] = await db.query(
@@ -49,8 +49,8 @@ exports.register = async (req, res) => {
     if (!validatePassword(password))
       return res.status(400).json({ message: "Weak password" });
 
-    if (!firstName || !lastName || !dob || !contact || !gender || !address ||
-    !nationalId || !email || !maritalStatus || !role || !password)
+    if (!firstName || !lastName || !contact || 
+     !email ||  !role || !password)
       return res.status(400).json({ message: "Some fields are missing" });
 
     const hashed = await bcrypt.hash(password, 10);
@@ -68,14 +68,14 @@ exports.register = async (req, res) => {
 
     await db.query(
       `INSERT INTO admins
-       (turf_id, firstName, middleName, lastName, dob,
-        contact, gender, address, nationalId, email,
-        maritalStatus, role, password, photo)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       (turf_id, firstName, middleName, lastName, 
+        contact, email,
+         role, password, photo)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
       [
-        turf_id, firstName, middleName, lastName, dob,
-        contact, gender, address, nationalId,
-        email, maritalStatus, role, hashed, photoUrl,
+        turf_id, firstName, middleName, lastName, 
+        contact, 
+        email,  role, hashed, photoUrl,
       ]
     );
 
@@ -88,40 +88,79 @@ exports.register = async (req, res) => {
 
 /* ================= LOGIN ================= */
 exports.login = async (req, res) => {
+  const { email, password } = req.body;
   try {
-    const { email, password } = req.body;
 
-    const [rows] = await db.query(
+     //=============================================
+  //1. Check Manager
+  //=============================================
+   const [managers] = await db.query(
       "SELECT * FROM admins WHERE email = ?", [email]
     );
-    if (!rows.length)
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (managers.length > 0) {
 
-    const user  = rows[0];
-    const match = await bcrypt.compare(password, user.password);
+    const manager  = managers[0];
+    const match = await bcrypt.compare(password, manager.password);
     if (!match)
       return res.status(401).json({ message: "Invalid credentials" });
 
     const token = generateToken({
-      id:      user.id,
-      role:    user.role,
-      turf_id: user.turf_id,
+      id:      manager.id,
+      role:    manager.role,
+      turf_id: manager.turf_id  
     });
 
     res.json({
       message: "Login successful",
       token,
       user: {
-        id:           user.id,
-        firstName:    user.firstName,
-        middleName:   user.middleName,
-        lastName:     user.lastName,
-        email:        user.email,
-        role:         user.role,
-        turf_id:      user.turf_id,
-        photo:        user.photo ?? null,  // already a Cloudinary URL or null
+        id:           manager.id,
+        firstName:    manager.firstName,
+        middleName:   manager.middleName,
+        lastName:     manager.lastName,
+        email:        manager.email,
+        role:         manager.role,
+        turf_id:       manager.turf_id,
+        photo:        manager.photo ?? null,  // already a Cloudinary URL or null
       },
     });
+
+  }
+ 
+//===================================================
+// 2. Check Super Admin
+//===================================================
+
+    const [admins] = await db.query(
+      "SELECT * FROM super_admins WHERE email = ?", [email]
+    );
+    if (admins.length > 0) {
+
+    const admin  = admins[0];
+    const match = await bcrypt.compare(password, admin.password);
+    if (!match)
+      return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = generateToken({
+      id:      admin.s_id,
+      role:    admin.role,
+    });
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id:           admin.s_id,
+        firstName:    admin.firstName,
+        middleName:   admin.middleName,
+        lastName:     admin.lastName,
+        email:        admin.email,
+        role:         admin.role,
+        photo:        admin.photo ?? null,  // already a Cloudinary URL or null
+      },
+    });
+
+  }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -146,9 +185,9 @@ exports.updateUser = async (req, res) => {
 
     // Text fields
     [
-      "firstName", "middleName", "lastName", "dob",
-      "contact", "gender", "address", "nationalId",
-      "email", "maritalStatus", "role",
+      "firstName", "middleName", "lastName",
+      "contact", 
+      "email", "role"
     ].forEach((key) => {
       if (req.body[key] !== undefined) {
         fields.push(`${key} = ?`);
@@ -186,8 +225,7 @@ exports.updateUser = async (req, res) => {
     // Return updated admin so frontend can sync immediately
     const [updated] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, contact, gender,
-              address, dob, maritalStatus, nationalId
+              email, role, photo, contact
        FROM admins WHERE id = ?`,
       [userId]
     );
@@ -310,8 +348,7 @@ exports.getAdminDetails = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, contact, gender,
-              address, dob, maritalStatus, nationalId
+              email, role, photo, contact
        FROM admins WHERE id = ?`,
       [req.params.id]
     );
@@ -329,8 +366,7 @@ exports.getAllAdmins = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, contact, gender,
-              address, dob, maritalStatus, nationalId
+              email, role, photo, contact
        FROM admins WHERE turf_id = ?`,
       [req.user.turf_id]
     );
@@ -347,8 +383,7 @@ exports.getMe = async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, address, dob, contact,
-              gender, maritalStatus, nationalId
+              email, role, photo, address, contact
        FROM admins WHERE id = ?`,
       [userId]
     );

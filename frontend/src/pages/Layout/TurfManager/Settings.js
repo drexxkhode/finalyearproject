@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
-import '../components/Spinner.css';
+import '../../../components/Spinner.css';
 import ClipLoader from "react-spinners/ClipLoader";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
@@ -423,7 +423,7 @@ setUpdating(false);
                                 </div>
                                 <div className="col-12">
                                   <div className="mb-2">
-                                    <label className="form-label">About</label>
+                                    <label className="form-label">Description</label>
                                     <textarea className="form-control" rows="3" id="about"
                                       value={formData.about || ""} onChange={handleChange} />
                                   </div>
@@ -528,7 +528,7 @@ setUpdating(false);
                             </div>
 
                             <div className="col-6 mt-3">
-                              <label htmlFor="district" className="form-label">District</label>
+                              <label htmlFor="district" className="form-label">Municipal</label>
                               <input id="district"
                                 className={`form-control ${errors.district ? "is-invalid" : ""}`}
                                 value={formData.district} onChange={handleChange} />

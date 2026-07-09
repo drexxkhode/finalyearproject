@@ -6,7 +6,7 @@ import StarRating from "../components/StarRating";
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
 export default function EnquiriesSection({ turfId, user }) {
-  const [enquiries, setEnquiries] = useState([])
+  const [reviews, setReviews] = useState([])
   const [msg,       setMsg]       = useState('')
   const [subject,   setSubject]   = useState('')
   const [loading,   setLoading]   = useState(false)
@@ -20,32 +20,10 @@ const [rating, setRating] = useState(0);
   // ── Fetch existing enquiries on mount ──────────────────────────────────
   useEffect(() => {
     if (!turfId) return
-    axios.get(`${API}/enquiries?turf_id=${turfId}`)
-      .then(res => setEnquiries(res.data.enquiries ?? []))
+    axios.get(`${API}/reviews?turf_id=${turfId}`)
+      .then(res => setReviews(res.data.reviews ?? []))
       .catch(() => {})
   }, [turfId])
-
-  // ── Join user room + listen for admin replies via shared socket ────────
-  useEffect(() => {
-    if (!socket || !user?.id) return
-
-    // Join personal room so admin replies reach this specific user
-    socket.emit('user:join', user.id)
-
-    const handleReply = ({ enquiry_id, reply, replied_at }) => {
-      setEnquiries(prev => prev.map(e =>
-        e.id === enquiry_id
-          ? { ...e, reply, replied_at, status: 'resolved' }
-          : e
-      ))
-    }
-
-    socket.on('enquiry:reply', handleReply)
-
-    return () => {
-      socket.off('enquiry:reply', handleReply)
-    }
-  }, [socket, user?.id])
 
   // ── Submit enquiry ─────────────────────────────────────────────────────
   const submit = async () => {
@@ -60,11 +38,9 @@ const [rating, setRating] = useState(0);
           turf_id: turfId,
           subject: subject.trim() || 'General Enquiry',
           message: msg.trim(),
-          rating
         },
         { headers: { Authorization: `Bearer ${token}` } }
       )
-      setEnquiries(prev => [res.data.enquiry, ...prev])
       setMsg('')
       setSubject('')
       setRating(0)
@@ -88,18 +64,18 @@ const [rating, setRating] = useState(0);
   return (
     <div className="card border-0 shadow-sm rounded-4 p-3 mb-3">
       <div className="d-flex align-items-center gap-2 mb-3">
-        <span className="fw-bold fs-6">💬 Enquiries & Reviews</span>
-        <span className="tf-badge tf-badge-blue">{enquiries.length}</span>
+        <span className="fw-bold fs-6">💬 Reviews</span>
+        <span className="tf-badge tf-badge-blue">{reviews.length}</span>
       </div>
 
-      {enquiries.length === 0 && (
+      {reviews.length === 0 && (
         <p className="text-muted text-center small py-2">
-          No enquiries yet. Be the first to ask or comment!
+          No comment yet. Be the first to rate or comment after booking!
         </p>
       )}
 
-      {enquiries.map(e => (
-        <div key={e.id} className="tf-enquiry-bubble">
+      {reviews.map(e => (
+        <div key={e.r_id} className="tf-enquiry-bubble">
           
           <div className="d-flex align-items-center gap-2 mb-1">
             <div className="tf-enquiry-avatar">{e.name?.charAt(0).toUpperCase()} </div>
@@ -109,22 +85,9 @@ const [rating, setRating] = useState(0);
               <div className="text-muted" style={{ fontSize: 7 }}>{"⭐".repeat(e.rating)}</div>
               <div className="text-muted" style={{ fontSize: 11 }}>{formatTime(e.created_at)}</div>
             </div>
-            {e.subject && e.subject !== 'General Enquiry' && (
-              <span className="tf-badge tf-badge-gray ms-auto" style={{ fontSize: 10 }}>
-                {e.subject}
-              </span>
-            )}
+    
           </div>
           <p className="mb-0 small">{e.message}</p>
-          {e.reply && (
-            <div className="tf-enquiry-reply">
-              <div className="tf-enquiry-manager-label">🏟️ Turf Manager</div>
-              {e.reply}
-              <div className="text-muted mt-1" style={{ fontSize: 10 }}>
-                {formatTime(e.replied_at)}
-              </div>
-            </div>
-          )}
         </div>
       ))}
 
@@ -187,7 +150,7 @@ const [rating, setRating] = useState(0);
         >
           {loading
             ? <><span className="spinner-border spinner-border-sm me-2" />Sending...</>
-            : 'Send Comment →'
+            : 'Send Enquiry →'
           }
         </button>
         {!user && (

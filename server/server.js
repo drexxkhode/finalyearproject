@@ -19,6 +19,7 @@ const paymentsRoute = require('./routes/admin/paymentRoute')
 const turfImageRoute = require('./routes/turf/turfImageRoute');
 // 4. Add enquiries route
 const enquiriesRoute = require('./routes/client/enquirieRoute');
+const reviewRoute = require('./routes/client/reviewsRoute');
 const setupAnalyticsSocket = require("./sockets/Analytics");
 const registerSlotLockSocket = require('./sockets/slotLockSocket');
 // 2. Register the admin notification socket
@@ -74,6 +75,7 @@ app.use('/api/admin', bookingsRoute);
 app.use('/api/admin', dashbaordRoute); 
 app.use('/api/turf/:id/images', turfImageRoute); 
 app.use('/api/enquiries', enquiriesRoute);
+app.use('/api/reviews', reviewRoute);
 app.use('/api/payments', paymentsRoute);
 
 app.get("/", (req, res) => {

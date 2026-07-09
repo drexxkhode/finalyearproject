@@ -1,4 +1,4 @@
-import "../components/PreviewGuide.css";
+import "../../../components/PreviewGuide.css";
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -28,13 +28,8 @@ const Register = () => {
     firstName: "",
     middleName: "",
     lastName: "",
-    dob: "",
     contact: "",
-    gender: "",
-    address: "",
-    nationalId: "",
     email: "",
-    maritalStatus: "",
     role: "",
     password: "",
     photo: null,
@@ -137,13 +132,8 @@ const Register = () => {
     const requiredFields = [
       "firstName",
       "lastName",
-      "dob",
       "contact",
-      "gender",
-      "address",
-      "nationalId",
       "email",
-      "maritalStatus",
       "role",
       "password",
     ];
@@ -165,9 +155,6 @@ const Register = () => {
 
     if (formData.password && passwordStrength.score < 3)
       newErrors.password = "Password is too weak";
-
-    if (formData.nationalId && formData.nationalId.length < 5)
-      newErrors.nationalId = "Enter a valid ID";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -206,13 +193,8 @@ const Register = () => {
         firstName: "",
         middleName: "",
         lastName: "",
-        dob: "",
         contact: "",
-        gender: "",
-        address: "",
-        nationalId: "",
         email: "",
-        maritalStatus: "",
         role: "",
         password: "",
         photo: null,
@@ -317,8 +299,7 @@ const Register = () => {
                 <ul className="nav nav-tabs">
                   {[
                     { key: "oneA", label: "General" },
-                    { key: "twoA", label: "Other Info" },
-                    { key: "threeA", label: "Security & Photo" },
+                    { key: "threeA", label: "Other Info" },
                   ].map(({ key, label }) => (
                     <li className="nav-item" key={key}>
                       <button
@@ -371,19 +352,19 @@ const Register = () => {
                               </div>
                             ))}
                             <div className="col-6">
-                              <label htmlFor="dob" className="form-label">
-                                Date of Birth
+                              <label htmlFor="email" className="form-label">
+                                Email{" "}
                               </label>
                               <input
-                                type="date"
-                                id="dob"
-                                className={`form-control ${errors.dob ? "is-invalid" : ""}`}
-                                value={formData.dob}
+                                type="email"
+                                id="email"
+                                className={`form-control ${errors.email ? "is-invalid" : ""}`}
+                                value={formData.email}
                                 onChange={handleChange}
                               />
-                              {errors.dob && (
+                              {errors.email && (
                                 <div className="invalid-feedback">
-                                  {errors.dob}
+                                  {errors.email}
                                 </div>
                               )}
                             </div>
@@ -403,137 +384,53 @@ const Register = () => {
                                 </div>
                               )}
                             </div>
-                            <div className="col-6">
-                              <label htmlFor="gender" className="form-label">
-                                Gender
-                              </label>
-                              <select
-                                id="gender"
-                                className={`form-control ${errors.gender ? "is-invalid" : ""}`}
-                                value={formData.gender}
-                                onChange={handleChange}
-                              >
-                                <option value="">-- Select Gender --</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                              </select>
-                              {errors.gender && (
-                                <div className="invalid-feedback">
-                                  {errors.gender}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="d-flex gap-2 justify-content-end p-3">
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={() => setActiveTab("twoA")}
-                          >
-                            Next <i className="bi bi-arrow-right-circle" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* ===== OTHER INFO ===== */}
-                    <div
-                      className={`tab-pane ${activeTab === "twoA" ? "show active" : "d-none"}`}
-                    >
-                      <div className="card mb-3">
-                        <div className="card-header">
-                          <h5 className="card-title">Other Details</h5>
-                        </div>
-                        <div className="card-body">
-                          <div className="row gx-3">
                             <div className="col-6">
-                              <label htmlFor="address" className="form-label">
-                                Address
+                              <label htmlFor="password" className="form-label">
+                                Password
                               </label>
-                              <input
-                                id="address"
-                                className={`form-control ${errors.address ? "is-invalid" : ""}`}
-                                value={formData.address}
-                                onChange={handleChange}
-                              />
-                              {errors.address && (
-                                <div className="invalid-feedback">
-                                  {errors.address}
-                                </div>
-                              )}
-                            </div>
-                            <div className="col-6">
-                              <label
-                                htmlFor="nationalId"
-                                className="form-label"
+                              <div className="input-group">
+                                <input
+                                  type={showPassword ? "text" : "password"}
+                                  id="password"
+                                  className={`form-control ${errors.password ? "is-invalid" : ""}`}
+                                  value={formData.password}
+                                  onChange={handleChange}
+                                />
+                                <span
+                                  className="input-group-text"
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => setShowPassword((p) => !p)}
+                                >
+                                  <i
+                                    className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}
+                                  />
+                                </span>
+                                {errors.password && (
+                                  <div className="invalid-feedback">
+                                    {errors.password}
+                                  </div>
+                                )}
+                              </div>
+                              <div
+                                className="progress mt-2"
+                                style={{ height: "6px" }}
                               >
-                                National ID
-                              </label>
-                              <input
-                                id="nationalId"
-                                className={`form-control ${errors.nationalId ? "is-invalid" : ""}`}
-                                value={formData.nationalId}
-                                onChange={handleChange}
-                              />
-                              {errors.nationalId && (
-                                <div className="invalid-feedback">
-                                  {errors.nationalId}
-                                </div>
-                              )}
-                            </div>
-                            <div className="col-6">
-                              <label htmlFor="email" className="form-label">
-                                Email
-                              </label>
-                              <input
-                                type="email"
-                                id="email"
-                                className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                                value={formData.email}
-                                onChange={handleChange}
-                              />
-                              {errors.email && (
-                                <div className="invalid-feedback">
-                                  {errors.email}
-                                </div>
-                              )}
-                            </div>
-                            <div className="col-6">
-                              <label
-                                htmlFor="maritalStatus"
-                                className="form-label"
-                              >
-                                Marital Status
-                              </label>
-                              <select
-                                id="maritalStatus"
-                                className={`form-control ${errors.maritalStatus ? "is-invalid" : ""}`}
-                                value={formData.maritalStatus}
-                                onChange={handleChange}
-                              >
-                                <option value="">-- Select Status --</option>
-                                <option value="Married">Married</option>
-                                <option value="Single">Single</option>
-                                <option value="Widow">Widow</option>
-                                <option value="Divorced">Divorced</option>
-                              </select>
-                              {errors.maritalStatus && (
-                                <div className="invalid-feedback">
-                                  {errors.maritalStatus}
-                                </div>
-                              )}
+                                <div
+                                  className={`progress-bar ${passwordStrength.color}`}
+                                  style={{
+                                    width: `${(passwordStrength.score / 5) * 100}%`,
+                                  }}
+                                />
+                              </div>
+                              <small className="text-muted">
+                                <strong>{passwordStrength.label}:</strong>{" "}
+                                {passwordStrength.message}
+                              </small>
                             </div>
                           </div>
                         </div>
                         <div className="d-flex gap-2 justify-content-end p-3">
-                          <button
-                            type="button"
-                            className="btn btn-success"
-                            onClick={() => setActiveTab("oneA")}
-                          >
-                            <i className="bi bi-arrow-left-circle" /> Prev
-                          </button>
                           <button
                             type="button"
                             className="btn btn-primary"
@@ -545,13 +442,14 @@ const Register = () => {
                       </div>
                     </div>
 
+
                     {/* ===== SECURITY & PHOTO ===== */}
                     <div
                       className={`tab-pane ${activeTab === "threeA" ? "show active" : "d-none"}`}
                     >
                       <div className="card mb-3">
                         <div className="card-header">
-                          <h5 className="card-title">Security & Photo</h5>
+                          <h5 className="card-title"> Photo & Role</h5>
                         </div>
                         <div className="card-body">
                           <div
@@ -620,56 +518,13 @@ const Register = () => {
                                 </div>
                               )}
                             </div>
-                            <div className="col-6">
-                              <label htmlFor="password" className="form-label">
-                                Password
-                              </label>
-                              <div className="input-group">
-                                <input
-                                  type={showPassword ? "text" : "password"}
-                                  id="password"
-                                  className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                                  value={formData.password}
-                                  onChange={handleChange}
-                                />
-                                <span
-                                  className="input-group-text"
-                                  style={{ cursor: "pointer" }}
-                                  onClick={() => setShowPassword((p) => !p)}
-                                >
-                                  <i
-                                    className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}
-                                  />
-                                </span>
-                                {errors.password && (
-                                  <div className="invalid-feedback">
-                                    {errors.password}
-                                  </div>
-                                )}
-                              </div>
-                              <div
-                                className="progress mt-2"
-                                style={{ height: "6px" }}
-                              >
-                                <div
-                                  className={`progress-bar ${passwordStrength.color}`}
-                                  style={{
-                                    width: `${(passwordStrength.score / 5) * 100}%`,
-                                  }}
-                                />
-                              </div>
-                              <small className="text-muted">
-                                <strong>{passwordStrength.label}:</strong>{" "}
-                                {passwordStrength.message}
-                              </small>
-                            </div>
                           </div>
                         </div>
                         <div className="d-flex gap-2 justify-content-end p-3">
                           <button
                             type="button"
                             className="btn btn-success"
-                            onClick={() => setActiveTab("twoA")}
+                            onClick={() => setActiveTab("oneA")}
                           >
                             <i className="bi bi-arrow-left-circle" /> Prev
                           </button>

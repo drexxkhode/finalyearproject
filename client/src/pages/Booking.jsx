@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import SystemReviewModal from '../components/ReviewModal';
 
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ?? ''
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
@@ -61,7 +62,27 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const [paid,       setPaid]       = useState(() => sessionStorage.getItem(SK_PAID) === '1')
   const [err,        setErr]        = useState('')
   const [bookingRef, setBookingRef] = useState(() => sessionStorage.getItem(SK_REF) ?? null)
-  const [psReady,    setPsReady]    = useState(!!window.PaystackPop)
+  const [psReady,    setPsReady]    = useState(!!window.PaystackPop);
+  const [showSystemReview, setShowSystemReview] = useState(false);
+  const REVIEW_SHOWN = "system_review_shown";
+  useEffect(() => {
+    if (
+        paid &&
+        !sessionStorage.getItem(REVIEW_SHOWN)
+    ) {
+
+        const timer = setTimeout(() => {
+
+            setShowSystemReview(true);
+
+            sessionStorage.setItem(REVIEW_SHOWN, "1");
+
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }
+
+}, [paid]);
   // Snapshot at pay time — so confirmation screen shows correct values
   // even if lockedSlots state is cleared by timer expiry after payment
   const [slotsSnap,  setSlotsSnap]  = useState(() => {
@@ -245,6 +266,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   })()
 
   if (paid) return (
+   <>
     <div className="tf-animate-in row justify-content-center">
       <div className="col-12 col-md-8 col-lg-6 text-center py-5">
         <div className="display-1 mb-3">🎉</div>
@@ -282,6 +304,13 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
         </div>
       </div>
     </div>
+
+    <SystemReviewModal
+        show={showSystemReview}
+        bookingRef={bookingRef}
+        onClose={() => setShowSystemReview(false)}
+    />
+   </>
   )
 
   // ── Booking flow ─────────────────────────────────────────────────────────

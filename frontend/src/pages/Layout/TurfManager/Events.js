@@ -2,7 +2,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css'
 import { Calendar, dateFnsLocalizer } from "react-big-calendar"
 import { format, parse, startOfWeek, getDay } from "date-fns"
 import enUS from "date-fns/locale/en-US"
-import '../components/Calendar.css'
+import '../../../components/Calendar.css'
 import { useState } from "react"
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000"
