@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
 import StarRating from "./StarRating";
+console.log("SystemReviewModal rendered");
 
 const API = import.meta.env.VITE_API_URL; // Change if your project uses Vite
 
 export default function SystemReviewModal({
-  open,
   onClose,
   bookingRef,
 }) {
@@ -58,6 +58,8 @@ export default function SystemReviewModal({
       setLoading(false);
     }
   };
+
+  
 
  return createPortal(
     <div

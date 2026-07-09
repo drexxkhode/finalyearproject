@@ -65,6 +65,9 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const [psReady,    setPsReady]    = useState(!!window.PaystackPop);
   const [showSystemReview, setShowSystemReview] = useState(false);
   const REVIEW_SHOWN = "system_review_shown";
+  console.log({
+  bookingRef,
+});
   useEffect(() => {
     if (
         paid &&
@@ -266,6 +269,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   })()
 
   if (paid) return (
+    
    <>
     <div className="tf-animate-in row justify-content-center">
       <div className="col-12 col-md-8 col-lg-6 text-center py-5">
@@ -315,6 +319,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   )
 
   // ── Booking flow ─────────────────────────────────────────────────────────
+  console.log("showSystemReview:", showSystemReview);
   return (
     <div className="tf-animate-in row justify-content-center">
       <div className="col-12 col-md-10 col-lg-8 col-xl-7">
