@@ -71,8 +71,7 @@ const createSystemReview =async (req, res ) =>{
         const {
             paystack_ref,
             rating,
-            comment,
-            would_recommend
+            comment
         } = req.body;
 
         if (!rating) {

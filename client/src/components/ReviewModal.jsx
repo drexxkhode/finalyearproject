@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
 import StarRating from "./StarRating";
-console.log("SystemReviewModal rendered");
 
-const API = import.meta.env.VITE_API_URL; // Change if your project uses Vite
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'; // Change if your project uses Vite
 
 export default function SystemReviewModal({
   onClose,
@@ -37,7 +36,7 @@ export default function SystemReviewModal({
       setLoading(true);
 
       await axios.post(
-        `${API}/api/system-reviews`,
+        `${API}/reviews/system-reviews`,
         {
           paystack_ref: bookingRef,
           rating,
