@@ -306,7 +306,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
     </div>
 
     <SystemReviewModal
-        show={showSystemReview}
+        open={showSystemReview}
         bookingRef={bookingRef}
         onClose={() => setShowSystemReview(false)}
     />
