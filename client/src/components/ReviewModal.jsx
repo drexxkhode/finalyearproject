@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import StarRating from "./StarRating";
+import "../css/ReviewCss.css";
 
 const API = import.meta.env.VITE_API_URL;
 
