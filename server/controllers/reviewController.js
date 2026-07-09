@@ -100,16 +100,14 @@ const createSystemReview =async (req, res ) =>{
                 user_id,
                 paystack_ref,
                 rating,
-                comment,
-                would_recommend
+                comment
             )
-            VALUES(?,?,?,?,?)`,
+            VALUES(?,?,?,?)`,
             [
                 userId,
                 paystack_ref,
                 rating,
-                comment || null,
-                would_recommend ?? null
+                comment || null
             ]
         );
 
