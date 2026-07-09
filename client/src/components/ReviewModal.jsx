@@ -18,17 +18,14 @@ export default function SystemReviewModal({
 
   // Prevent background scrolling
   useEffect(() => {
-    if (!open) return;
-
     const prev = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow = prev;
+        document.body.style.overflow = prev;
     };
-  }, [open]);
-
-  if (!open) return null;
+}, []);
 
   const submit = async () => {
     if (!rating) {
@@ -62,68 +59,115 @@ export default function SystemReviewModal({
     }
   };
 
-  return createPortal(
+ return createPortal(
     <div
-      className="tf-modal-overlay"
-      onClick={onClose}
+        className="tf-modal-overlay"
+        onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+        }}
+        style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(10,10,20,.75)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            alignItems: "stretch",
+        }}
     >
-      <div
-        ref={sheetRef}
-        className="tf-modal-sheet"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4">
+        <div
+            className="tf-modal-sheet"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+                background: "#fff",
+                borderRadius: "20px 20px 0 0",
+                boxShadow: "0 -4px 32px rgba(0,0,0,.22)",
+                animation: "tfSlideUp .28s cubic-bezier(.32,1,.32,1)",
+            }}
+        >
+            <div style={{ padding: "12px 20px 4px" }}>
 
-          <button
-            className="btn-close float-end"
-            onClick={onClose}
-          />
+                <div
+                    className="tf-modal-handle"
+                    style={{
+                        width: 36,
+                        height: 4,
+                        borderRadius: 2,
+                        background: "#dee2e6",
+                        margin: "0 auto 18px",
+                    }}
+                />
 
-          <h4 className="text-center mb-2">
-            Help Us Improve
-          </h4>
+                <div
+                    style={{
+                        fontSize: 34,
+                        textAlign: "center",
+                        marginBottom: 8,
+                    }}
+                >
+                    ⭐
+                </div>
 
-          <p className="text-center text-muted mb-4">
-            How was your booking experience?
-          </p>
+                <h5 className="fw-bolder text-center mb-2">
+                    Help Us Improve
+                </h5>
 
-          <div className="d-flex justify-content-center mb-4">
-            <StarRating
-              rating={rating}
-              setRating={setRating}
-            />
-          </div>
+                <p className="text-muted text-center mb-4">
+                    How was your booking experience?
+                </p>
 
-          <textarea
-            className="form-control"
-            rows={4}
-            placeholder="Tell us what can be improved (optional)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
+                <div className="d-flex justify-content-center mb-4">
+                    <StarRating
+                        rating={rating}
+                        setRating={setRating}
+                    />
+                </div>
 
-          <div className="d-flex justify-content-end gap-2 mt-4">
+                <textarea
+                    className="form-control"
+                    rows={4}
+                    placeholder="Tell us what can be improved (optional)"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                />
 
-            <button
-              className="btn btn-outline-secondary"
-              onClick={onClose}
+            </div>
+
+            <div
+                className="d-flex gap-2"
+                style={{
+                    padding: "12px 20px 28px",
+                    borderTop: "1px solid #f0f0f0",
+                }}
             >
-              Skip
-            </button>
 
-            <button
-              className="btn btn-primary"
-              disabled={loading || rating === 0}
-              onClick={submit}
-            >
-              {loading ? "Submitting..." : "Submit"}
-            </button>
+                <button
+                    className="btn btn-outline-secondary fw-bold flex-grow-1"
+                    onClick={onClose}
+                    disabled={loading}
+                >
+                    Skip
+                </button>
 
-          </div>
+                <button
+                    className="btn btn-primary fw-bold flex-grow-1"
+                    onClick={submit}
+                    disabled={loading || rating === 0}
+                >
+                    {loading ? (
+                        <>
+                            <span className="spinner-border spinner-border-sm me-2" />
+                            Submitting...
+                        </>
+                    ) : (
+                        "Submit"
+                    )}
+                </button>
 
+            </div>
         </div>
-      </div>
     </div>,
     document.body
-  );
+);
 }
