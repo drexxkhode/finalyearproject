@@ -75,7 +75,7 @@ const [rating, setRating] = useState(0);
       )}
 
       {reviews.map(e => (
-        <div key={e.r_id} className="tf-enquiry-bubble">
+        <div key={e.id} className="tf-enquiry-bubble">
           
           <div className="d-flex align-items-center gap-2 mb-1">
             <div className="tf-enquiry-avatar">{e.name?.charAt(0).toUpperCase()} </div>
@@ -87,7 +87,7 @@ const [rating, setRating] = useState(0);
             </div>
     
           </div>
-          <p className="mb-0 small">{e.message}</p>
+          <p className="mb-0 small">{e.comment}</p>
         </div>
       ))}
 
@@ -102,28 +102,6 @@ const [rating, setRating] = useState(0);
           <div className="alert alert-danger py-2 small mb-2">{error}</div>
         )}
 
-        {user && (
-  <div className="d-flex align-items-end justify-content-end gap-2 mb-2">
-
-    {/* Rating */}
-    <div className="text-end" style={{ minWidth: "150px" }}>
-  <small className="text-muted fw-bold d-block mb-1">
-    Rating
-  </small>
-
-  <StarRating
-    rating={rating}
-    setRating={setRating}
-  />
-
-  {rating > 0 && (
-    <small className="text-primary">
-      {rating}/5
-    </small>
-  )}
-</div>
-  </div>
-)}
 
 {user && (
   <input

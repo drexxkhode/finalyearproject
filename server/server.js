@@ -25,6 +25,10 @@ const registerSlotLockSocket = require('./sockets/slotLockSocket');
 // 2. Register the admin notification socket
 const registerAdminNotificationSocket = require('./sockets/notificationSocket');
 
+//Cron-Jobs with Node-cron
+
+const { startReviewPromptCron } = require('./utils/reviewPrompts');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -86,7 +90,7 @@ app.get("/", (req, res) => {
 setupAnalyticsSocket(io);
 registerSlotLockSocket(io);
 registerAdminNotificationSocket(io);
-
+startReviewPromptCron();
 // Connect Redis (non-blocking — server starts even if Redis is unavailable)
 const redis = require('./config/RedisClient');
 redis.connect();

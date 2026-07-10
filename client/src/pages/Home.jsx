@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import TurfCard from '../components/TurfCard';
+import TurfReviewModal from '../components/TurfReviewModal';
 import MapView from './Mapview';
 import axios from 'axios';
 
 const PAGE_SIZE = 12
-
+const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
 // turfs + setTurfs are lifted to Inner.jsx so data persists across navigation
 export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurfs }) {
   const [search,   setSearch]  = useState('')
@@ -13,6 +14,8 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
   const [page,     setPage]    = useState(1)
   const [recPage,  setRecPage] = useState(1)
   const [loading,  setLoading] = useState(!turfs.length)
+  const [pendingReview, setPendingReview] = useState(null)  // { turf_id, booking_date, turf_name } | null
+
 
   // Only animate on first mount — not on every re-render (pagination, filter etc.)
   const mountedRef = useRef(false)
@@ -30,7 +33,6 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
     // Skip fetch if data already loaded from a previous navigation
     if (turfs.length > 0) { setLoading(false); return }
     const token = localStorage.getItem('token')
-    const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
     axios.get(`${API}/turf/turf-data`, { headers }).then(res => {
       setTurfs(res.data.data.map(t => ({
@@ -48,7 +50,22 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
-
+// Check for a pending review prompt once per Home mount — logged-in users only
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    axios.get(`${API}/reviews/pending`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(res => {
+      if (res.data.pending) {
+        setPendingReview({
+          turf_id:      res.data.turf_id,
+          booking_date: res.data.booking_date,
+          turf_name:    res.data.turf_name,
+        })
+      }
+    }).catch(() => {}) // silent — not critical if this fails
+  }, [])
   const filtered = turfs
     .filter(t =>
       (fCap === 'All' || t.capacity?.includes(fCap)) &&
@@ -92,7 +109,14 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
   return (
     // animate-in only fires on initial mount, not on pagination/filter re-renders
     <div className={animated ? 'tf-animate-in' : ''}>
-
+        {pendingReview && (
+        <TurfReviewModal
+          turfId={pendingReview.turf_id}
+          bookingDate={pendingReview.booking_date}
+          turfName={pendingReview.turf_name}
+          onClose={() => setPendingReview(null)}
+        />
+      )}
       {/* ── TURFS TAB ── */}
       {activeTab === 'turfs' && (
         <>

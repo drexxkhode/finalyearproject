@@ -10,9 +10,9 @@ const getReviews = async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT
-    r.r_id,
+    r.id,
     u.name,
-    r.message,
+    r.comment,
     r.rating,
     r.created_at
 FROM reviews r
@@ -28,28 +28,47 @@ ORDER BY r.created_at DESC`,
     res.status(500).json({ message: 'Server error' });
   }
 };
-
-// ── POST /api/enquiries — client submits review ───────────────────────────
+// ── POST /api/enquiries — client submits turf review (now tied to a visit) ─
 const createReview = async (req, res) => {
   try {
     const user_id = req.user?.id;
     if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
 
-    const { turf_id, message, rating } = req.body;
-    if (!turf_id || !message?.trim())
-      return res.status(400).json({ message: 'turf_id and message are required' });
+    const { turf_id, booking_date, message, rating } = req.body;
+    if (!turf_id || !booking_date || !message?.trim() || !rating)
+      return res.status(400).json({ message: 'turf_id, booking_date, message and rating are required' });
+
+    // Must correspond to a real, eligible visit
+    const [prompts] = await db.query(
+      `SELECT id, status FROM review_prompts
+       WHERE user_id = ? AND turf_id = ? AND booking_date = ?`,
+      [user_id, turf_id, booking_date]
+    );
+    if (!prompts.length) {
+      return res.status(400).json({ message: 'No completed visit found for this booking.' });
+    }
+    if (prompts[0].status === 'reviewed') {
+      return res.status(400).json({ message: 'You already reviewed this visit.' });
+    }
 
     const [result] = await db.query(
-      `INSERT INTO enquiries (turf_id, user_id, message, rating)
-       VALUES (?, ?, ?,?)`,
-      [turf_id, user_id, message.trim(),rating]
+      `INSERT INTO reviews (turf_id, user_id, booking_date, message, rating)
+       VALUES (?, ?, ?, ?, ?)`,
+      [turf_id, user_id, booking_date, message.trim(), rating]
+    );
+
+    await db.query(
+      `UPDATE review_prompts SET status = 'reviewed' WHERE id = ?`,
+      [prompts[0].id]
     );
 
     const review = {
-      id:         result.insertId,
-      turf_id:    parseInt(turf_id),
+      id: result.insertId,
+      turf_id: parseInt(turf_id),
       user_id,
-      message:    message.trim(),
+      booking_date,
+      message: message.trim(),
+      rating,
       created_at: new Date(),
     };
 
@@ -60,7 +79,61 @@ const createReview = async (req, res) => {
   }
 };
 
-// ── POST /api/reviews — client submits review ───────────────────────────
+// ── GET /api/turf-reviews/pending — one pending prompt for the logged-in user ─
+const getPendingReview = async (req, res) => {
+  try {
+    const user_id = req.user?.id;
+    if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
+
+    const [rows] = await db.query(
+      `SELECT rp.turf_id, rp.booking_date, t.name AS turf_name
+       FROM review_prompts rp
+       JOIN turfs t ON t.id = rp.turf_id
+       WHERE rp.user_id = ? AND rp.status = 'pending'
+       ORDER BY rp.created_at ASC
+       LIMIT 1`,
+      [user_id]
+    );
+
+    if (!rows.length) return res.json({ pending: false });
+
+    res.json({
+      pending: true,
+      turf_id: rows[0].turf_id,
+      booking_date: rows[0].booking_date,
+      turf_name: rows[0].turf_name,
+    });
+  } catch (err) {
+    console.error('getPendingReview error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ── POST /api/turf-reviews/dismiss — user tapped Skip ──────────────────────
+const dismissReview = async (req, res) => {
+  try {
+    const user_id = req.user?.id;
+    if (!user_id) return res.status(401).json({ message: 'Unauthorized' });
+
+    const { turf_id, booking_date } = req.body;
+    if (!turf_id || !booking_date)
+      return res.status(400).json({ message: 'turf_id and booking_date are required' });
+
+    await db.query(
+      `UPDATE review_prompts
+       SET status = 'dismissed'
+       WHERE user_id = ? AND turf_id = ? AND booking_date = ? AND status = 'pending'`,
+      [user_id, turf_id, booking_date]
+    );
+
+    res.json({ message: 'Dismissed' });
+  } catch (err) {
+    console.error('dismissReview error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ── POST /api/reviews — client submits System review ───────────────────────────
 const createSystemReview =async (req, res ) =>{
 // controllers/systemReviewController.js
 
@@ -127,8 +200,8 @@ const createSystemReview =async (req, res ) =>{
 
     }
 };
-
-exports.getAllSystemReviews = async(req,res)=>{
+// ── GET /api/reviews —  gets System review for Super Admin───────────────────────────
+const getAllSystemReviews = async(req,res)=>{
 
     try{
 
@@ -168,8 +241,9 @@ exports.getAllSystemReviews = async(req,res)=>{
     }
 
 };
+// ── GET /api/reviews —  gets System review stats for Super Admin───────────────────────────
 
-exports.getSystemReviewStats = async(req,res)=>{
+const getSystemReviewStats = async(req,res)=>{
 
     try{
 
@@ -224,4 +298,12 @@ exports.getSystemReviewStats = async(req,res)=>{
 
 };
 
-module.exports= {getReviews, createReview, createSystemReview};
+module.exports = {
+  getReviews,
+  createReview,
+  createSystemReview,
+  getPendingReview,
+  dismissReview,
+  getAllSystemReviews,
+  getSystemReviewStats,
+};
