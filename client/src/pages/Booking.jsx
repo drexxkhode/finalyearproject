@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
-import SystemReviewModal from '../components/ReviewModal';
+import SystemReviewModal from '../components/SystemReviewModal';
 
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ?? ''
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'

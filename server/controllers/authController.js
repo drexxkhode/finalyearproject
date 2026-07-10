@@ -348,7 +348,7 @@ exports.getAdminDetails = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, contact
+              email, role, photo, contact, created_at
        FROM admins WHERE id = ?`,
       [req.params.id]
     );
@@ -366,7 +366,7 @@ exports.getAllAdmins = async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, contact
+              email, role, photo, contact, created_at
        FROM admins WHERE turf_id = ?`,
       [req.user.turf_id]
     );
@@ -383,7 +383,7 @@ exports.getMe = async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, address, contact
+              email, role, photo, contact, created_at
        FROM admins WHERE id = ?`,
       [userId]
     );

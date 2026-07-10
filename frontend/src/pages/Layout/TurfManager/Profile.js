@@ -20,6 +20,17 @@ const Profile = () => {
     }
   };
 
+  //DATE FUNCTION HELPER
+  function formatDate(timestamp) {
+  if (!timestamp) return "";
+
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (id) {
@@ -91,7 +102,7 @@ const Profile = () => {
           <div className="col-md-3">
             <div className="card stat-card">
               <div className="stat-icon text-success">
-                <i className="bi bi-percent"></i>
+                <i className="bi bi-envelope-at"></i>
               </div>
               <small className="text-muted">Email</small>
               <h6 className="fw-bold mt-2">
@@ -103,15 +114,6 @@ const Profile = () => {
           </div>
           <div className="col-md-3">
             <div className="card stat-card">
-              <div className="stat-icon text-danger">
-                <i className="bi bi-heart"></i>
-              </div>
-              <small className="text-muted">Marital Status</small>
-              <h6 className="fw-bold mt-2">{admin.maritalStatus || "N/A"}</h6>
-            </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card stat-card">
               <div className="stat-icon text-warning">
                 <i className="bi bi-briefcase"></i>
               </div>
@@ -119,6 +121,16 @@ const Profile = () => {
               <h6 className="fw-bold mt-2">{admin.role || "N/A"}</h6>
             </div>
           </div>
+          <div className="col-md-3">
+            <div className="card stat-card">
+              <div className="stat-icon text-danger">
+                <i className="bi bi-calendar-plus"></i>
+              </div>
+              <small className="text-muted">Enrollment Date</small>
+              <h6 className="fw-bold mt-2">{formatDate(admin.created_at) || "N/A"}</h6>
+            </div>
+          </div>
+          
         </div>
       </div>
 
