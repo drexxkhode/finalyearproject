@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const sendEmail = require("../utils/enquirieMail");
 
 // ── POST /api/enquiries — client submits enquiry ───────────────────────────
 const createEnquiry = async (req, res) => {
@@ -54,7 +55,6 @@ const replyEnquiry = async (req, res) => {
     if (!reply?.trim())
       return res.status(400).json({ message: 'Reply text is required' });
 
-    // Verify enquiry belongs to this admin's turf
     const [rows] = await db.query(
       'SELECT id, turf_id, user_id FROM enquiries WHERE id = ? AND turf_id = ? LIMIT 1',
       [enquiry_id, turf_id]
@@ -62,7 +62,6 @@ const replyEnquiry = async (req, res) => {
     if (!rows.length)
       return res.status(404).json({ message: 'Enquiry not found' });
 
-    // Upsert reply (one reply per enquiry)
     await db.query(
       `INSERT INTO enquiry_replies (enquiry_id, admin_id, reply)
        VALUES (?, ?, ?)
@@ -70,21 +69,79 @@ const replyEnquiry = async (req, res) => {
       [enquiry_id, req.user.id, reply.trim()]
     );
 
-    // Mark enquiry as resolved
+    const [[enquiryDetail]] = await db.query(
+      `SELECT e.id, u.name, u.email, e.message
+       FROM enquiries e
+       LEFT JOIN users u ON e.user_id = u.id
+       WHERE e.id = ?
+       LIMIT 1`,
+      [enquiry_id]
+    );
+
+    if (enquiryDetail?.email) {
+      try {
+        await sendEmail(
+          enquiryDetail.email,
+          'Reply to your enquiry',
+          `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;background-color:#e8edf2;font-family:Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:#e8edf2;padding:20px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:520px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #d0d7e2;">
+        <tr>
+          <td style="background-color:#1565c0;padding:16px 24px 0 24px;text-align:center;">
+            <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
+                 alt="TurfArena" width="90" style="display:block;margin:0 auto;" />
+            <h2 style="color:#ffffff;margin:8px 0 14px 0;font-size:17px;font-weight:600;">
+              Reply to Your Enquiry
+            </h2>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 24px 16px 24px;">
+            <p style="font-size:14px;color:#222;margin:0 0 10px 0;">
+              Hello, <strong style="color:#1565c0;">${enquiryDetail.name}!</strong>
+            </p>
+            <p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 16px 0;">
+              ${reply}
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="border-top:1px solid #eaecf0;padding:12px 24px;text-align:center;background:#ffffff;">
+            <p style="font-size:12px;color:#aaa;margin:0 0 4px 0;">
+              &copy; ${new Date().getFullYear()}
+              <span style="color:#15803d;font-weight:bold;">Turf</span><span style="color:#1565c0;font-weight:bold;">Arena</span>.
+              All rights reserved.
+            </p>
+            <p style="font-size:11px;margin:0;">
+              <a href="#" style="color:#999;text-decoration:underline;">Privacy Policy</a>
+              &nbsp;&middot;&nbsp;
+              <a href="#" style="color:#999;text-decoration:underline;">Unsubscribe</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+          turf_id   // ← this is the key addition
+        );
+      } catch (mailErr) {
+        console.error('replyEnquiry sendEmail error:', mailErr);
+        // Reply already saved — don't fail the request just because mail failed
+      }
+    }
+
     await db.query(
       `UPDATE enquiries SET status = 'resolved', updated_at = NOW() WHERE id = ?`,
       [enquiry_id]
     );
-
-    // ── Emit reply to the user's socket room so they see it live ─────────
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`user:${rows[0].user_id}`).emit('enquiry:reply', {
-        enquiry_id,
-        reply:      reply.trim(),
-        replied_at: new Date(),
-      });
-    }
 
     res.json({ message: 'Reply sent' });
   } catch (err) {
