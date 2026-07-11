@@ -50,11 +50,11 @@ const createReview = async (req, res) => {
     if (prompts[0].status === 'reviewed') {
       return res.status(400).json({ message: 'You already reviewed this visit.' });
     }
-
+    const dateOnly = String(booking_date).slice(0, 10);
     const [result] = await db.query(
       `INSERT INTO reviews (turf_id, user_id, booking_date, comment, rating)
        VALUES (?, ?, ?, ?, ?)`,
-      [turf_id, user_id, booking_date, message.trim(), rating]
+      [turf_id, user_id, dateOnly, message.trim(), rating]
     );
 
     await db.query(
@@ -100,7 +100,7 @@ const getPendingReview = async (req, res) => {
     res.json({
       pending: true,
       turf_id: rows[0].turf_id,
-      booking_date: rows[0].booking_date,
+      booking_date: String(rows[0].booking_date).slice(0, 10),
       turf_name: rows[0].turf_name,
     });
   } catch (err) {
@@ -118,12 +118,12 @@ const dismissReview = async (req, res) => {
     const { turf_id, booking_date } = req.body;
     if (!turf_id || !booking_date)
       return res.status(400).json({ message: 'turf_id and booking_date are required' });
-
+    const dateOnly = String(booking_date).slice(0, 10);
     await db.query(
       `UPDATE review_prompts
        SET status = 'dismissed'
        WHERE user_id = ? AND turf_id = ? AND booking_date = ? AND status = 'pending'`,
-      [user_id, turf_id, booking_date]
+      [user_id, turf_id, dateOnly]
     );
 
     res.json({ message: 'Dismissed' });
