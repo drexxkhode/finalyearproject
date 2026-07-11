@@ -130,7 +130,7 @@ exports.getTurfData = async (req, res) => {
       `SELECT
   t.id, t.name, t.email, t.contact, t.district,
   t.latitude, t.longitude, t.location,
-  t.price_per_hour, t.about, t.rating, t.capacity, t.amenities,
+  t.price_per_hour, t.about, t.capacity, t.amenities,
 
   (
     SELECT url
@@ -138,6 +138,16 @@ exports.getTurfData = async (req, res) => {
     WHERE turf_id = t.id AND is_cover = 1
     LIMIT 1
   ) AS cover_image,
+   (
+           SELECT ROUND(AVG(r.rating), 1)
+           FROM reviews r
+           WHERE r.turf_id = t.id
+         ) AS rating,
+         (
+           SELECT COUNT(*)
+           FROM reviews r
+           WHERE r.turf_id = t.id
+         ) AS review_count,
 
   (
     SELECT COUNT(*)

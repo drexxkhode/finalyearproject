@@ -216,7 +216,20 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
                     </div>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,.15)', backdropFilter: 'blur(6px)', borderRadius: 8, padding: '4px 10px', textAlign: 'center' }}>
-                    <div style={{ color: '#ffc107', fontWeight: 800, fontSize: 15 }}>⭐ {featured.rating}</div>
+                    {featured.rating !== null && featured.rating !== undefined ? (
+                <span className="tf-badge tf-badge-yellow">
+                  ⭐ {featured.rating}
+                  {featured.review_count > 0 && (
+                    <span style={{ fontWeight: 400 }}>
+                      {" "}
+                      ({featured.review_count} review
+                      {featured.review_count !== 1 ? "s" : ""})
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="tf-badge tf-badge-gray">No ratings yet</span>
+              )}
                   </div>
                 </div>
               </div>
