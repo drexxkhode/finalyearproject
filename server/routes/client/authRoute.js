@@ -5,6 +5,8 @@ const {
   login,
   updateUser,
   deleteUser,
+  deleteUserFromSystem,
+  getAllUsers,
   changePassword,
   forgotPassword,
   resetPassword,
@@ -33,6 +35,8 @@ router.post("/resend-verification", protect, resendVerification);  // resend OTP
 
 router.put("/update-user/:id", protect, updateUser);
 router.delete("/delete-user", protect, deleteUser);
+router.delete("/del-user/:id", protect, deleteUserFromSystem);
+router.get("/all-users", protect, getAllUsers);
 router.put("/change-password/:id", protect, changePassword);
 
 

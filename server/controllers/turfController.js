@@ -288,3 +288,26 @@ exports.getDashboardDetails = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+exports.getAllTurfs = async (req, res) => {
+try {
+  const [turfs] = await db.execute("SELECT id, name, contact, email, location, district FROM turfs");
+  if(!turfs.length) return res.status(404).json({message: "No turf Registered"});
+  res.json(turfs);
+} catch (error) {
+  console.log("Could not fetch all turfs", error);
+  res.status(500).json({ message: "Failed to load turfs" });
+}
+};
+
+exports.deleteTurf = async (req, res) =>{
+try {
+  const turf_id = parseInt(req.params.id);
+  await db.query("DELETE FROM turfs WHERE id = ?",[turf_id] );
+  res.json({ message: "Turf deleted successfully" });
+
+} catch (error) {
+  res.json({ message: "Error deleting turf" });
+  console.log("Turf delete Error", error);
+}
+};

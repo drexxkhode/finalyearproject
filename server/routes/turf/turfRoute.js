@@ -10,6 +10,8 @@ const {
   getDashboardDetails,
   getTurfData,        // ← NEW
   getSingleTurf,      // ← NEW
+  getAllTurfs,
+  deleteTurf
 } = require("../../controllers/turfController");
 
 // ── Admin routes (protected) ──────────────────────────────────────────────
@@ -17,6 +19,8 @@ router.get("/turf-details",     auth, getTurfDetails);
 router.put("/update-turf",      auth, updateTurfDetails);
 router.get("/turf-name",        auth, getTurfName);
 router.get("/dashboard",        auth, getDashboardDetails);
+router.get("/all-turfs",        auth, getAllTurfs);          // Get all Turfs  — auth required
+router.get("/delete-turf/:id",  auth,      deleteTurf);            // Home + Map — no auth required
 
 // ── Client routes (public — guests must be able to browse) ──────────────
 router.get("/turf-data",        getTurfData);            // Home + Map — no auth required

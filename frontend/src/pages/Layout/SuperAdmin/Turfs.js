@@ -11,8 +11,8 @@ const customStyles = {
   rows:      { style: { fontSize:13 }, highlightOnHoverStyle: { background:"#f0f4ff", borderBottomColor:"#e0e7ff" } },
 }
 
-const SystemUsers = () => {
-  const [users,  setUsers]  = useState([])
+const AllTurfs = () => {
+  const [turfs,  setTurfs]  = useState([]);
   const [loading, setLoading] = useState(true)
   const [search,  setSearch]  = useState("")
   const navigate = useNavigate()
@@ -20,21 +20,21 @@ const SystemUsers = () => {
   const token   = localStorage.getItem("token")
   const headers = { Authorization: `Bearer ${token}` }
 
-  const fetchUsers = () => {
+  const fetchAllTurfs = () => {
     setLoading(true)
-    axios.get(`${API}/api/users/all-users`, { headers })
-      .then(res => setUsers(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setUsers([]))
+    axios.get(`${API}/api/turf/all-turfs`, { headers })
+      .then(res => setTurfs(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setTurfs([]))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchUsers() }, [])
+  useEffect(() => { fetchAllTurfs() }, [])
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return
+    if (!window.confirm("Are you sure you want to delete this turf?")) return
     try {
-      await axios.delete(`${API}/api/users/del-user/${id}`, { headers })
-      fetchUsers()
+      await axios.delete(`${API}/api/turf/delete-turf/${id}`, { headers })
+      fetchAllTurfs()
     } catch (err) {
       console.error("Delete failed:", err)
     }
@@ -42,14 +42,7 @@ const SystemUsers = () => {
 
   const columns = [
     { name:"#",         width:"55px", cell:(_,i) => i+1 },
-    { name:"Photo",     width:"70px", cell: r => (
-      <img
-        src={r.photo || "/assets/images/admin/avatar.webp"}
-        onError={e => e.target.src="/assets/images/admin/avatar.webp"}
-        style={{width:40,height:40,borderRadius:"20%",objectFit:"cover"}}
-      />
-    )},
-    { name:"Full Name", grow:2, selector: r => `${r.name}`.trim(),
+    { name:"Turf Name", grow:2, selector: r => `${r.name} `.trim(),
       cell: r => (
         <div>
           <div className="fw-semibold" style={{fontSize:13}}>{`${r.name} `.trim()}</div>
@@ -57,10 +50,10 @@ const SystemUsers = () => {
         </div>
       )
     },
-    { name:"Contact",   selector: r => r.contact, cell: r => r.contact||"—" },
-    { name:"Account Verified",      selector: r => r.email_verified,    cell: r => (
+    { name:"Location",   selector: r => r.location, cell: r => r.location||"—" },
+    { name:"Municipal",      selector: r => r.district,    cell: r => (
       <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal" style={{fontSize:11}}>
-        {r.email_verified}
+        {r.district}
       </span>
     )},
     { name:"Actions",   width:"160px", cell: r => (
@@ -68,25 +61,28 @@ const SystemUsers = () => {
         <button className="btn btn-sm btn-danger" onClick={() => handleDelete(r.id)}>
           <i className="bi bi-trash"></i>
         </button>
+        <button className="btn btn-sm btn-primary" onClick={() => navigate(`/profile/${r.id}`)}>
+          View <i className="bi bi-arrow-right-circle"></i>
+        </button>
       </div>
     )},
   ]
 
-  const filtered = useMemo(() => users.filter(r => {
+  const filtered = useMemo(() => turfs.filter(r => {
     const q = search.toLowerCase()
     const name = `${r.name} `.toLowerCase()
-    return !q || name.includes(q) || r.email?.toLowerCase().includes(q) 
-  }), [users, search])
+    return !q || name.includes(q) || r.location?.toLowerCase().includes(q) || r.district?.toLowerCase().includes(q)
+  }), [turfs, search])
 
   return (
     <div className="col-xxl-12">
       <div className="card mb-3">
         <div className="card-header d-flex flex-wrap align-items-center gap-2">
-          <h5 className="card-title mb-0 me-auto"> System Users</h5>
+          <h5 className="card-title mb-0 me-auto">All Turfs</h5>
 
           <div className="input-group input-group-sm" style={{width:210}}>
             <span className="input-group-text"><i className="bi bi-search"></i></span>
-            <input className="form-control" placeholder="Name, email….."
+            <input className="form-control" placeholder="Turf name, location, Municipal…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
@@ -96,9 +92,13 @@ const SystemUsers = () => {
             </button>
           )}
 
-          <button className="btn btn-outline-secondary btn-sm" onClick={fetchUsers}>
+          <button className="btn btn-outline-secondary btn-sm" onClick={fetchAllTurfs}>
             <i className="bi bi-arrow-clockwise"></i>
           </button>
+
+          <Link className="btn btn-primary btn-sm" to="/register">
+            <i className="bi bi-plus"></i> Add New
+          </Link>
         </div>
 
         <div className="card-body p-0">
@@ -114,7 +114,7 @@ const SystemUsers = () => {
             noDataComponent={
               <div className="py-5 text-muted text-center">
                 <i className="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
-                No User found
+                No turf found
               </div>
             }
           />
@@ -124,4 +124,4 @@ const SystemUsers = () => {
   )
 }
 
-export default SystemUsers;
+export default AllTurfs;

@@ -52,7 +52,7 @@ const createReview = async (req, res) => {
     }
 
     const [result] = await db.query(
-      `INSERT INTO reviews (turf_id, user_id, booking_date, message, rating)
+      `INSERT INTO reviews (turf_id, user_id, booking_date, comment, rating)
        VALUES (?, ?, ?, ?, ?)`,
       [turf_id, user_id, booking_date, message.trim(), rating]
     );
@@ -67,7 +67,7 @@ const createReview = async (req, res) => {
       turf_id: parseInt(turf_id),
       user_id,
       booking_date,
-      message: message.trim(),
+      comment: message.trim(),
       rating,
       created_at: new Date(),
     };

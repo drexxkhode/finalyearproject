@@ -533,3 +533,34 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server Error ⚠️" });
   }
 };
+
+/* ================= GET ALL SYSTEM USERS ======================================== */
+exports.getAllUsers = async (req,res) =>{
+try {
+  
+    const [rows] = await db.query(
+      `SELECT id, name, email, contact, photo, email_verified, created_at FROM users`
+    );
+
+    if (!rows.length)
+      return res.status(404).json({ message: "No users found" });
+
+    res.json(rows);
+  } catch (err) {
+    console.error("GET All Users error:", err);
+    res.status(500).json({ message: "Failed to load user" });
+  }
+};
+
+/* ================= DELETE USER FROM SYSTEM ======================================== */
+exports.deleteUserFromSystem = async (req,res) =>{
+try {
+  const user_id = parseInt(req.params?.id);
+  await db.query("DELETE FROM users WHERE id = ?", [user_id] );
+  res.json({ message: "User deleted successfully" });
+
+} catch (error) {
+  console.log("User delete Error", error);
+  res.status(500).json({ message: "Error deleting User" });
+}
+};

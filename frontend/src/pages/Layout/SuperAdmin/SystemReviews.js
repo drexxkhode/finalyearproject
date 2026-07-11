@@ -11,8 +11,8 @@ const customStyles = {
   rows:      { style: { fontSize:13 }, highlightOnHoverStyle: { background:"#f0f4ff", borderBottomColor:"#e0e7ff" } },
 }
 
-const SystemUsers = () => {
-  const [users,  setUsers]  = useState([])
+const Users = () => {
+  const [admins,  setAdmins]  = useState([])
   const [loading, setLoading] = useState(true)
   const [search,  setSearch]  = useState("")
   const navigate = useNavigate()
@@ -20,21 +20,21 @@ const SystemUsers = () => {
   const token   = localStorage.getItem("token")
   const headers = { Authorization: `Bearer ${token}` }
 
-  const fetchUsers = () => {
+  const fetchAdmins = () => {
     setLoading(true)
-    axios.get(`${API}/api/users/all-users`, { headers })
-      .then(res => setUsers(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setUsers([]))
+    axios.get(`${API}/api/auth/admins`, { headers })
+      .then(res => setAdmins(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setAdmins([]))
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchUsers() }, [])
+  useEffect(() => { fetchAdmins() }, [])
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return
+    if (!window.confirm("Are you sure you want to delete this admin?")) return
     try {
-      await axios.delete(`${API}/api/users/del-user/${id}`, { headers })
-      fetchUsers()
+      await axios.delete(`${API}/api/auth/delete/${id}`, { headers })
+      fetchAdmins()
     } catch (err) {
       console.error("Delete failed:", err)
     }
@@ -49,18 +49,18 @@ const SystemUsers = () => {
         style={{width:40,height:40,borderRadius:"20%",objectFit:"cover"}}
       />
     )},
-    { name:"Full Name", grow:2, selector: r => `${r.name}`.trim(),
+    { name:"Full Name", grow:2, selector: r => `${r.firstName} ${r.middleName||""} ${r.lastName}`.trim(),
       cell: r => (
         <div>
-          <div className="fw-semibold" style={{fontSize:13}}>{`${r.name} `.trim()}</div>
+          <div className="fw-semibold" style={{fontSize:13}}>{`${r.firstName} ${r.middleName||""} ${r.lastName}`.trim()}</div>
           <div className="text-muted" style={{fontSize:11}}>{r.email}</div>
         </div>
       )
     },
     { name:"Contact",   selector: r => r.contact, cell: r => r.contact||"—" },
-    { name:"Account Verified",      selector: r => r.email_verified,    cell: r => (
+    { name:"Role",      selector: r => r.role,    cell: r => (
       <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal" style={{fontSize:11}}>
-        {r.email_verified}
+        {r.role}
       </span>
     )},
     { name:"Actions",   width:"160px", cell: r => (
@@ -68,25 +68,28 @@ const SystemUsers = () => {
         <button className="btn btn-sm btn-danger" onClick={() => handleDelete(r.id)}>
           <i className="bi bi-trash"></i>
         </button>
+        <button className="btn btn-sm btn-primary" onClick={() => navigate(`/profile/${r.id}`)}>
+          View <i className="bi bi-arrow-right-circle"></i>
+        </button>
       </div>
     )},
   ]
 
-  const filtered = useMemo(() => users.filter(r => {
+  const filtered = useMemo(() => admins.filter(r => {
     const q = search.toLowerCase()
-    const name = `${r.name} `.toLowerCase()
-    return !q || name.includes(q) || r.email?.toLowerCase().includes(q) 
-  }), [users, search])
+    const name = `${r.firstName} ${r.middleName||""} ${r.lastName}`.toLowerCase()
+    return !q || name.includes(q) || r.email?.toLowerCase().includes(q) || r.role?.toLowerCase().includes(q)
+  }), [admins, search])
 
   return (
     <div className="col-xxl-12">
       <div className="card mb-3">
         <div className="card-header d-flex flex-wrap align-items-center gap-2">
-          <h5 className="card-title mb-0 me-auto"> System Users</h5>
+          <h5 className="card-title mb-0 me-auto">Users</h5>
 
           <div className="input-group input-group-sm" style={{width:210}}>
             <span className="input-group-text"><i className="bi bi-search"></i></span>
-            <input className="form-control" placeholder="Name, email….."
+            <input className="form-control" placeholder="Name, email, role…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
@@ -96,9 +99,13 @@ const SystemUsers = () => {
             </button>
           )}
 
-          <button className="btn btn-outline-secondary btn-sm" onClick={fetchUsers}>
+          <button className="btn btn-outline-secondary btn-sm" onClick={fetchAdmins}>
             <i className="bi bi-arrow-clockwise"></i>
           </button>
+
+          <Link className="btn btn-primary btn-sm" to="/register">
+            <i className="bi bi-plus"></i> Add New
+          </Link>
         </div>
 
         <div className="card-body p-0">
@@ -124,4 +131,4 @@ const SystemUsers = () => {
   )
 }
 
-export default SystemUsers;
+export default Users;
