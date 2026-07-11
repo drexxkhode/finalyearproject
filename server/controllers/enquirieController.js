@@ -132,6 +132,7 @@ const replyEnquiry = async (req, res) => {
 </html>`,
           turf_id   // ← this is the key addition
         );
+        res.json({message: "Reply sent!"})
       } catch (mailErr) {
         console.error('replyEnquiry sendEmail error:', mailErr);
         // Reply already saved — don't fail the request just because mail failed

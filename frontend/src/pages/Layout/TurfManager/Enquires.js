@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import DataTable from "react-data-table-component"
+import { toast,ToastContainer } from "react-toastify";
 import axios from "axios"
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000"
@@ -64,7 +65,16 @@ export default function AdminEnquiries() {
       await axios.post(`${API}/api/enquiries/${selected.id}/reply`, { reply: reply.trim() }, { headers })
       const updated = { ...selected, reply: reply.trim(), status:"resolved", replied_at: new Date() }
       setEnquiries(prev => prev.map(e => e.id === selected.id ? updated : e))
+       toast.success( "Reply sent!", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
       setSelected(updated)
+      
     } catch (err) {
       alert(err.response?.data?.message ?? "Failed to send reply")
     } finally {
@@ -235,6 +245,7 @@ export default function AdminEnquiries() {
           </div>
         </div>
       )}
+      <ToastContainer/>
     </div>
   )
 }
