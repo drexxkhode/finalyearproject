@@ -135,26 +135,25 @@ function ClusteredMarkers({ turfs, onOpenTurf, clusterReady }) {
 
       const marker = L.marker([lat, lng], { icon: turfIcon })
 
-      marker.bindPopup(`
-        <div style="font-family:sans-serif;min-width:170px;padding:4px 0;">
-          <div style="font-weight:800;font-size:14px;color:#1a1a2e;margin-bottom:6px;line-height:1.3;">
-            ${turf.name}
-          </div>
-          <div style="color:#6c757d;font-size:12px;margin-bottom:10px;line-height:1.6;">
-            📍 ${turf.location ?? turf.district ?? ''}<br/>
-            ⭐ ${turf.rating ?? '4.5'} &nbsp;·&nbsp; ₵${turf.pricePerHour}/hr
-          </div>
-          <button
-            onclick="window.__mapOpenTurf(${turf.id})"
-            style="
-              width:100%;padding:8px;border:none;border-radius:8px;
-              background:#0d6efd;color:#fff;font-weight:700;
-              font-size:13px;cursor:pointer;
-            "
-          >View & Book</button>
-        </div>
-      `, { maxWidth: 220 })
-
+     marker.bindPopup(`
+  <div style="font-family:sans-serif;min-width:170px;padding:4px 0;">
+    <div style="font-weight:800;font-size:14px;color:#1a1a2e;margin-bottom:6px;line-height:1.3;">
+      ${turf.name}
+    </div>
+    <div style="color:#6c757d;font-size:12px;margin-bottom:10px;line-height:1.6;">
+      📍 ${turf.address } . ${ turf.location ?? ''}<br/>
+      ${turf.rating !== null && turf.rating !== undefined ? `⭐ ${turf.rating}` : 'No ratings yet'} &nbsp;·&nbsp; ₵${turf.pricePerHour}/hr
+    </div>
+    <button
+      onclick="window.__mapOpenTurf(${turf.id})"
+      style="
+        width:100%;padding:8px;border:none;border-radius:8px;
+        background:#0d6efd;color:#fff;font-weight:700;
+        font-size:13px;cursor:pointer;
+      "
+    >View & Book</button>
+  </div>
+`, { maxWidth: 220 })
       mcg.addLayer(marker)
     })
 
@@ -356,7 +355,7 @@ export default function MapView({ turfs, onOpenTurf }) {
               />
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div className="fw-bold small text-truncate">{t.name}</div>
-                <div className="text-muted" style={{ fontSize: 11 }}>{t.location} · {t.distance ?? '—'} km</div>
+                <div className="text-muted" style={{ fontSize: 11 }}>{t.address} · {t.location ?? '—'} </div>
                 <div className="text-primary fw-bold" style={{ fontSize: 12 }}>₵{t.pricePerHour}/hr</div>
               </div>
               <i className="bi bi-chevron-right text-muted" />
