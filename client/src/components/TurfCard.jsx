@@ -4,6 +4,7 @@ export default function TurfCard({ turf, onOpen }) {
   const avail = turf.available_slots ?? 0
   // cover_image is the URL of the is_cover=1 image, joined in the API response
   const coverImg = turf.cover_image || FALLBACK
+  const hasRating = turf.rating !== null && turf.rating !== undefined
 
   return (
     <div className="tf-card h-100" onClick={() => onOpen(turf)}>
@@ -16,8 +17,15 @@ export default function TurfCard({ turf, onOpen }) {
         <div className="tf-card-cover-overlay" />
         <div className="tf-card-cover-badges">
           <span className="tf-badge tf-badge-blue">{turf.capacity}</span>
-          <span className="tf-badge tf-badge-yellow">⭐ <span className="text-dark" >{turf.rating}</span></span>
-        </div>
+          {hasRating && (
+            <span className="tf-badge tf-badge-yellow">
+              ⭐ <span className="text-dark">{turf.rating}</span>
+              {turf.review_count > 0 && (
+                <span className="text-dark" style={{ fontWeight: 400 }}> ({turf.review_count})</span>
+              )}
+            </span>
+          )}
+          </div>
         <div className="tf-card-avail-tag">{avail} open</div>
       </div>
       <div className="tf-card-body">

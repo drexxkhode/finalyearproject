@@ -42,7 +42,8 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
         address:      t.location,
         cover_image:  t.cover_image ?? null,
         images:       t.images       ?? [],
-        rating:       t.rating   ?? 4.5,
+        rating: t.rating,
+        review_count: t.review_count,
         capacity:     t.capacity ?? '5',
         amenities:    Array.isArray(t.amenities) ? t.amenities : [],
         about:        t.about    ?? '',
@@ -74,10 +75,10 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
         t.location?.toLowerCase().includes(search.toLowerCase()))
     )
     .sort((a, b) =>
-      sort === 'price'  ? a.pricePerHour - b.pricePerHour :
-      sort === 'rating' ? b.rating - a.rating :
-      parseFloat(a.distance ?? 0) - parseFloat(b.distance ?? 0)
-    )
+  sort === 'price'  ? a.pricePerHour - b.pricePerHour :
+  sort === 'rating' ? (b.rating ?? 0) - (a.rating ?? 0) :
+  parseFloat(a.distance ?? 0) - parseFloat(b.distance ?? 0)
+)
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -92,7 +93,7 @@ export default function Home({ slots = {}, onOpenTurf, activeTab, turfs, setTurf
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [page])
 
-  const rec          = [...turfs].sort((a, b) => b.rating - a.rating)
+  const rec = [...turfs].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
   const recTotal     = Math.ceil(rec.length / REC_PAGE_SIZE)
   const recPaginated = rec.slice((recPage - 1) * REC_PAGE_SIZE, recPage * REC_PAGE_SIZE)
   const featured     = rec[(recPage - 1) * REC_PAGE_SIZE] ?? rec[0]

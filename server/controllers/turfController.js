@@ -173,14 +173,12 @@ exports.getSingleTurf = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
 
-    // ── Cache check ───────────────────────────────────────────────────────
     const cached = await redis.get(redis.KEYS.turf(id));
     if (cached) {
       console.log(`[cache] HIT turfs:${id}`);
       return res.json(cached);
     }
 
-    // ── Stampede prevention ───────────────────────────────────────────────
     const lockKey  = `lock:turfs:${id}`;
     const isLeader = await redis.setNX(lockKey, '1', 10);
 
@@ -200,12 +198,22 @@ exports.getSingleTurf = async (req, res) => {
       `SELECT
          t.id, t.name, t.email, t.contact, t.district,
          t.latitude, t.longitude, t.location,
-         t.price_per_hour, t.about, t.rating, t.capacity, t.amenities, 
+         t.price_per_hour, t.about, t.capacity, t.amenities,
          (
            SELECT url FROM turf_images
            WHERE turf_id = t.id AND is_cover = 1
            LIMIT 1
-         ) AS cover_image
+         ) AS cover_image,
+         (
+           SELECT ROUND(AVG(r.rating), 1)
+           FROM reviews r
+           WHERE r.turf_id = t.id
+         ) AS rating,
+         (
+           SELECT COUNT(*)
+           FROM reviews r
+           WHERE r.turf_id = t.id
+         ) AS review_count
        FROM turfs t
        WHERE t.id = ?`,
       [id]
@@ -222,11 +230,16 @@ exports.getSingleTurf = async (req, res) => {
       [id]
     );
 
-    const payload = { ...turf, amenities: parseAmenities(turf.amenities), images };
+    const payload = {
+      ...turf,
+      rating: turf.rating !== null ? Number(turf.rating) : null,
+      review_count: Number(turf.review_count),
+      amenities: parseAmenities(turf.amenities),
+      images,
+    };
 
-    // ── Cache store ───────────────────────────────────────────────────────
     await redis.set(redis.KEYS.turf(id), payload, redis.TTL.turf);
-    await redis.del(lockKey); // release lock early so waiters can proceed
+    await redis.del(lockKey);
     console.log(`[cache] MISS turfs:${id} — cached`);
 
     res.json(payload);

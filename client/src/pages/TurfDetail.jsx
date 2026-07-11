@@ -118,9 +118,20 @@ export default function TurfDetail({
               <span className="tf-badge tf-badge-blue">
                 {turf.capacity ?? "N/A"}
               </span>
-              <span className="tf-badge tf-badge-yellow">
-                ⭐ {turf.rating ?? "4.5"}
-              </span>
+              {turf.rating !== null && turf.rating !== undefined ? (
+                <span className="tf-badge tf-badge-yellow">
+                  ⭐ {turf.rating}
+                  {turf.review_count > 0 && (
+                    <span style={{ fontWeight: 400 }}>
+                      {" "}
+                      ({turf.review_count} review
+                      {turf.review_count !== 1 ? "s" : ""})
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="tf-badge tf-badge-gray">No ratings yet</span>
+              )}
             </div>
             <div className="d-flex gap-4 mb-3">
               <div>
