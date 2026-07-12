@@ -410,7 +410,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
                     : new Date().toLocaleDateString('en-GB')
                   return [
                     ['Turf',     turf.name],
-                    ['Location', turf.location],
+                    ['Location', turf.address],
                     ['Date',     dateDisplay],
                     ['Name',     info.name],
                     ['Phone',    info.phone],
