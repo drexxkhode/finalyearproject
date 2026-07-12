@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import EnquiriesSection from "../components/EnquiriesSection";
 import Gallery from "../components/Gallery";
+import useUserLocation from '../hooks/useUserLocation';
+import { haversineDistance } from '../utils/haversine';
 
 export default function TurfDetail({
   turf,
@@ -32,7 +34,11 @@ export default function TurfDetail({
 
   const API = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
   const [turfImages, setTurfImages] = useState(turf.images ?? []);
-
+// near your other hooks in TurfDetail
+const { coords: userCoords } = useUserLocation();
+const distanceKm = userCoords
+  ? haversineDistance(userCoords.lat, userCoords.lng, turf.latitude, turf.longitude)
+  : null;
   // Today's date string for min attribute e.g. "2026-03-12"
   const today = new Date().toISOString().split("T")[0];
 
@@ -111,8 +117,8 @@ export default function TurfDetail({
             )}
             <p className="text-muted small mb-3">
               <i className="bi bi-geo-alt-fill me-1"></i>
-              {turf.address || turf.location}
-              {turf.district && turf.address ? `, ${turf.district}` : ""}
+             {turf.address || turf.location}
+           {turf.district && turf.address ? `, ${turf.district}` : ""}
             </p>
             <div className="d-flex flex-wrap gap-2 mb-3">
               <span className="tf-badge tf-badge-blue">
@@ -138,6 +144,10 @@ export default function TurfDetail({
                 <div className="tf-info-price-big">₵{turf.pricePerHour}</div>
                 <div className="tf-info-label">per hour</div>
               </div>
+              <div>
+                <div className="tf-info-dist-big"> {distanceKm !== null && ` ${distanceKm} km`} </div>
+                <div className="tf-info-label">from you</div>
+               </div> 
             </div>
             {amenities.length > 0 && (
               <div className="d-flex flex-wrap gap-2">

@@ -191,7 +191,8 @@ export default function MapView({ turfs, onOpenTurf }) {
   const filtered = turfs.filter(t =>
     !search ||
     t.name?.toLowerCase().includes(search.toLowerCase()) ||
-    t.location?.toLowerCase().includes(search.toLowerCase())
+    t.location?.toLowerCase().includes(search.toLowerCase()) ||
+    t.address?.toLowerCase().includes(search.toLowerCase()) 
   )
 
   // Pagination — derived from filtered list

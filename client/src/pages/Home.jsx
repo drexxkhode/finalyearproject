@@ -3,9 +3,28 @@ import TurfCard from "../components/TurfCard";
 import TurfReviewModal from "../components/TurfReviewModal";
 import MapView from "./Mapview";
 import axios from "axios";
-
+import useUserLocation from '../hooks/useUserLocation';
+import { haversineDistance } from '../utils/haversine';
 const PAGE_SIZE = 12;
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
+
+
+// Higher score = better recommendation.
+// Unrated turfs get a neutral rating (2.5) instead of 0, so a single
+// great review doesn't get buried by "no rating yet" turfs, and vice versa.
+// Distance decays the score gently — a turf 5km further away loses
+// roughly 0.5 points, not enough to bury a 5-star turf behind a 3-star one 500m closer.
+function recommendationScore(t) {
+  const rating   = t.rating ?? 2.5;
+  const distance = t.distance ?? null;
+
+  const RATING_WEIGHT   = 1;
+  const DISTANCE_WEIGHT = 0.1; // tune this — higher = distance matters more
+
+  const distancePenalty = distance !== null ? distance * DISTANCE_WEIGHT : 0;
+  return (rating * RATING_WEIGHT) - distancePenalty;
+}
+
 // turfs + setTurfs are lifted to Inner.jsx so data persists across navigation
 export default function Home({
   slots = {},
@@ -21,7 +40,7 @@ export default function Home({
   const [recPage, setRecPage] = useState(1);
   const [loading, setLoading] = useState(!turfs.length);
   const [pendingReview, setPendingReview] = useState(null); // { turf_id, booking_date, turf_name } | null
-
+    const { coords: userCoords } = useUserLocation();
   // Only animate on first mount — not on every re-render (pagination, filter etc.)
   const mountedRef = useRef(false);
   const [animated, setAnimated] = useState(false);
@@ -83,6 +102,23 @@ export default function Home({
       })
       .catch(() => {}); // silent — not critical if this fails
   }, []);
+  useEffect(() => {
+  if (!userCoords || turfs.length === 0) return;
+  // Only recompute if distance isn't already set, to avoid an infinite loop
+  // (this effect depends on `turfs`, and setTurfs below changes `turfs`)
+  const alreadyComputed = turfs.every(t => t.distance !== undefined);
+  if (alreadyComputed) return;
+
+  setTurfs(turfs.map(t => ({
+    ...t,
+    distance: haversineDistance(userCoords.lat, userCoords.lng, t.latitude, t.longitude),
+  })));
+}, [userCoords, turfs]);
+  // Scroll to top on page change — prevents mobile green blank from content being off-screen
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
+
   const filtered = turfs
     .filter(
       (t) =>
@@ -107,12 +143,7 @@ export default function Home({
     setPage(1);
   }, [search, fCap, sort]);
 
-  // Scroll to top on page change — prevents mobile green blank from content being off-screen
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [page]);
-
-  const rec = [...turfs].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+const rec = [...turfs].sort((a, b) => recommendationScore(b) - recommendationScore(a));
   const recTotal = Math.ceil(rec.length / REC_PAGE_SIZE);
   const recPaginated = rec.slice(
     (recPage - 1) * REC_PAGE_SIZE,
@@ -473,7 +504,7 @@ export default function Home({
                         {t.rating !== null && t.rating !== undefined
                           ? `⭐ ${t.rating}`
                           : "No ratings yet"}
-                        {t.capacity ? ` · ${t.capacity}` : ""}
+                        {t.distance !== null && `. ${t.distance} km`}
                       </div>
                       <div
                         className="text-primary fw-bold"
