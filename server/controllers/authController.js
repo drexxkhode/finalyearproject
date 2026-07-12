@@ -90,79 +90,74 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
   try {
-
-     //=============================================
-  //1. Check Manager
-  //=============================================
-   const [managers] = await db.query(
+    // ── 1. Check Manager/Admin ──────────────────────────────────────────
+    const [managers] = await db.query(
       "SELECT * FROM admins WHERE email = ?", [email]
     );
     if (managers.length > 0) {
+      const manager = managers[0];
+      const match = await bcrypt.compare(password, manager.password);
+      if (!match)
+        return res.status(401).json({ message: "Invalid credentials" });
 
-    const manager  = managers[0];
-    const match = await bcrypt.compare(password, manager.password);
-    if (!match)
-      return res.status(401).json({ message: "Invalid credentials" });
+      const token = generateToken({
+        id:      manager.id,
+        role:    manager.role,
+        turf_id: manager.turf_id
+      });
 
-    const token = generateToken({
-      id:      manager.id,
-      role:    manager.role,
-      turf_id: manager.turf_id  
-    });
+      return res.json({
+        message: "Login successful",
+        token,
+        user: {
+          id:         manager.id,
+          firstName:  manager.firstName,
+          middleName: manager.middleName,
+          lastName:   manager.lastName,
+          email:      manager.email,
+          role:       manager.role,
+          turf_id:    manager.turf_id,
+          photo:      manager.photo ?? null,
+        },
+      });
+    }
 
-    res.json({
-      message: "Login successful",
-      token,
-      user: {
-        id:           manager.id,
-        firstName:    manager.firstName,
-        middleName:   manager.middleName,
-        lastName:     manager.lastName,
-        email:        manager.email,
-        role:         manager.role,
-        turf_id:       manager.turf_id,
-        photo:        manager.photo ?? null,  // already a Cloudinary URL or null
-      },
-    });
-
-  }
- 
-//===================================================
-// 2. Check Super Admin
-//===================================================
-
+    // ── 2. Check Super Admin ─────────────────────────────────────────────
     const [admins] = await db.query(
       "SELECT * FROM super_admins WHERE email = ?", [email]
     );
     if (admins.length > 0) {
+      const admin = admins[0];
+      const match = await bcrypt.compare(password, admin.password);
+      if (!match)
+        return res.status(401).json({ message: "Invalid credentials" });
 
-    const admin  = admins[0];
-    const match = await bcrypt.compare(password, admin.password);
-    if (!match)
-      return res.status(401).json({ message: "Invalid credentials" });
+      const token = generateToken({
+        id:   admin.s_id,
+        role: admin.role,
+      });
 
-    const token = generateToken({
-      id:      admin.s_id,
-      role:    admin.role,
-    });
+      return res.json({
+        message: "Login successful",
+        token,
+        user: {
+          id:         admin.s_id,
+          firstName:  admin.firstName,
+          middleName: admin.middleName,
+          lastName:   admin.lastName,
+          email:      admin.email,
+          role:       admin.role,
+          photo:      admin.photo ?? null,
+        },
+      });
+    }
 
-    res.json({
-      message: "Login successful",
-      token,
-      user: {
-        id:           admin.s_id,
-        firstName:    admin.firstName,
-        middleName:   admin.middleName,
-        lastName:     admin.lastName,
-        email:        admin.email,
-        role:         admin.role,
-        photo:        admin.photo ?? null,  // already a Cloudinary URL or null
-      },
-    });
+    // ── 3. Not found in either table ────────────────────────────────────
+    return res.status(401).json({ message: "Invalid credentials" });
 
-  }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('login error:', err);
+    return res.status(500).json({ error: err.message });
   }
 };
 
