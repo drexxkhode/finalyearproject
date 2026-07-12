@@ -192,7 +192,7 @@ function DeleteModal({ booking, onConfirm, onClose, loading }) {
 }
 
 function BookingCard({ b, index, onCancel, onDelete }) {
-  const photo  = FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]
+  const photo  = b.cover_image || FALLBACK_PHOTOS[index % FALLBACK_PHOTOS.length]
   const status = (b.status ?? 'confirmed').toLowerCase()
   // Don't show cancel button once the slot time has already passed —
   // the server would still process it but the user gets 0 refund (100% penalty).
