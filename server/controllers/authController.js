@@ -133,7 +133,7 @@ exports.login = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
 
       const token = generateToken({
-        id:   admin.s_id,
+        id:   admin.id,
         role: admin.role,
       });
 
@@ -141,7 +141,7 @@ exports.login = async (req, res) => {
         message: "Login successful",
         token,
         user: {
-          id:         admin.s_id,
+          id:         admin.id,
           firstName:  admin.firstName,
           middleName: admin.middleName,
           lastName:   admin.lastName,
@@ -375,6 +375,19 @@ exports.getAllAdmins = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const userId = req.user.id;
+    const role   = req.user.role;
+
+    if (role === 'Super_admin') {
+      const [rows] = await db.query(
+        `SELECT id, firstName, middleName, lastName,
+                email, role, photo, contact, created_at
+         FROM super_admins WHERE id = ?`,
+        [userId]
+      );
+      if (!rows.length)
+        return res.status(404).json({ message: "User not found" });
+      return res.json(rows[0]);
+    }
 
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
@@ -382,17 +395,15 @@ exports.getMe = async (req, res) => {
        FROM admins WHERE id = ?`,
       [userId]
     );
-
     if (!rows.length)
       return res.status(404).json({ message: "User not found" });
 
-    res.json(rows[0]); // photo is already a Cloudinary URL or null
+    res.json(rows[0]);
   } catch (err) {
     console.error("GET /me error:", err);
     res.status(500).json({ message: "Failed to load user" });
   }
 };
-
 /* ================= CHANGE PASSWORD ======================================= */
 exports.changePassword = async (req, res) => {
   try {
