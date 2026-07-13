@@ -82,7 +82,7 @@ const [rating, setRating] = useState(0);
             
             <div>
               <div className="fw-bold" style={{ fontSize: 13 }}>{e.name}</div>
-              <div className="text-muted" style={{ fontSize: 7 }}>{"⭐".repeat(e.rating)}</div>
+              <div className="text-muted" style={{ color: "#f5bd16", fontSize: 10, whiteSpace: "nowrap" }}>{"★".repeat(e.rating)}{"☆".repeat(5 - e.rating)}</div>
               <div className="text-muted" style={{ fontSize: 11 }}>{formatTime(e.created_at)}</div>
             </div>
     
