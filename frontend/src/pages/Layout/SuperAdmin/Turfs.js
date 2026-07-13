@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react"
 import DataTable from "react-data-table-component"
 import { Link, useNavigate } from "react-router-dom"
-import axios from "axios"
+import axios from "axios";
+import { toast,ToastContainer } from "react-toastify";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
@@ -40,6 +41,26 @@ const AllTurfs = () => {
     }
   }
 
+ const handleStatusChange = async (id) => {
+  try {
+const response =  await axios.put(
+    `${API}/api/super/change-status/${id}`,
+    {},
+    { headers }
+  );
+   fetchAllTurfs();
+   toast.success( response?.data?.message ||"Turf status updated.",{
+    position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,})
+} catch (err) {
+  console.log(err.response);
+  toast.error(err.response?.data || "Error happened");
+}
+};
   const columns = [
     { name:"#",         width:"55px", cell:(_,i) => i+1 },
     { name:"Turf Name", grow:2, selector: r => `${r.name} `.trim(),
@@ -51,19 +72,44 @@ const AllTurfs = () => {
       )
     },
     { name:"Location",   selector: r => r.location, cell: r => r.location||"—" },
-    { name:"Municipal",      selector: r => r.district,    cell: r => (
-      <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal" style={{fontSize:11}}>
-        {r.district}
+    { name:"Municipal",   selector: r => r.district, cell: r => r.district },
+   {
+  name: "Status",
+  selector: (r) => r.status,
+  cell: (r) => {
+    const active = r.status?.toLowerCase() === "active";
+
+    return (
+      <span
+        className={`badge ${
+          active
+            ? "bg-success bg-opacity-10 text-success border border-success border-opacity-25"
+            : "bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"
+        } fw-normal`}
+        style={{ fontSize: 11 }}
+      >
+        {active ? "Active" : "Inactive"}
       </span>
-    )},
+    );
+  },
+},
     { name:"Actions",   width:"160px", cell: r => (
       <div className="d-flex gap-1">
         <button className="btn btn-sm btn-danger" onClick={() => handleDelete(r.id)}>
           <i className="bi bi-trash"></i>
         </button>
-        <button className="btn btn-sm btn-primary" onClick={() => navigate(`/profile/${r.id}`)}>
-          View <i className="bi bi-arrow-right-circle"></i>
-        </button>
+       <button
+  className={`btn btn-sm ${
+    r.status === "active"
+      ? "btn-warning"
+      : "btn-success"
+  }`}
+  onClick={() => handleStatusChange(r.id)}
+>
+  {r.status === "active"
+    ? "Deactivate"
+    : "Activate"}
+</button>
       </div>
     )},
   ]
@@ -120,6 +166,7 @@ const AllTurfs = () => {
           />
         </div>
       </div>
+      <ToastContainer/>
     </div>
   )
 }

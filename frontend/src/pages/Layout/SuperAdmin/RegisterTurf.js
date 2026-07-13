@@ -6,158 +6,67 @@ import ClipLoader from "react-spinners/ClipLoader";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
-const Register = () => {
+const RegisterTurf = () => {
   const [activeTab, setActiveTab] = useState("oneA");
-  const [showPassword, setShowPassword] = useState(false);
   const [save, setSave] = useState(false);
-  const [showImageModal, setShowImageModal] = useState(false);
-  const [useCamera, setUseCamera] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
   const [errors, setErrors] = useState({});
-  const [passwordStrength, setPasswordStrength] = useState({
-    score: 0,
-    label: "Very Weak",
-    color: "bg-danger",
-    message: "Password is too weak",
-  });
 
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-
-  const [formData, setFormData] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    contact: "",
+  const initialForm = {
+    turfName: "",
     email: "",
-    role: "",
-    password: "",
-    photo: null,
-  });
-
-  // ------------------- Camera -------------------
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-      });
-      videoRef.current.srcObject = stream;
-      videoRef.current.play();
-    } catch {
-      alert("Camera access denied or not available");
-    }
+    contact: "",
+    location: "",
+    longitude: "",
+    latitude: "",
+    district: "",
   };
 
-  const stopCamera = () => {
-    const stream = videoRef.current?.srcObject;
-    if (stream) stream.getTracks().forEach((t) => t.stop());
-  };
-
-  const capturePhoto = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-    canvas.toBlob((blob) => {
-      const file = new File([blob], "profile-photo.png", { type: "image/png" });
-      setFormData((p) => ({ ...p, photo: file }));
-      setPreviewImage(URL.createObjectURL(blob));
-      stopCamera();
-      setUseCamera(false);
-      setShowImageModal(false);
-    });
-  };
-
-  useEffect(() => {
-    return () => stopCamera();
-  }, []);
-
-  // ------------------- Password Strength -------------------
-  const checkPasswordStrength = (password) => {
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[a-z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
-
-    const map = [
-      {
-        label: "Very Weak",
-        color: "bg-danger",
-        message: "Use at least 8 characters, numbers, letters, and symbols.",
-      },
-      {
-        label: "Very Weak",
-        color: "bg-danger",
-        message: "Use at least 8 characters, numbers, letters, and symbols.",
-      },
-      {
-        label: "Weak",
-        color: "bg-warning",
-        message: "Add uppercase letters, numbers, or symbols.",
-      },
-      {
-        label: "Medium",
-        color: "bg-info",
-        message: "Stronger, but could add symbols or numbers.",
-      },
-      { label: "Strong", color: "bg-success", message: "Good password." },
-      {
-        label: "Very Strong",
-        color: "bg-success",
-        message: "Excellent password!",
-      },
-    ];
-    setPasswordStrength({ score, ...map[score] });
-  };
+  const [formData, setFormData] = useState(initialForm);
 
   // ------------------- Input Change -------------------
   const handleChange = (e) => {
     const { id, value, files } = e.target;
-    if (id === "photo" && files?.length) {
-      setFormData((p) => ({ ...p, photo: files[0] }));
-      setPreviewImage(URL.createObjectURL(files[0]));
-      setShowImageModal(false);
-      return;
+
+    setFormData((prev) => ({
+      ...prev,
+      [id]: files ? files[0] : value,
+    }));
+
+    if (errors[id]) {
+      setErrors((prev) => ({
+        ...prev,
+        [id]: "",
+      }));
     }
-    setFormData((p) => ({ ...p, [id]: value }));
-    if (id === "password") checkPasswordStrength(value);
   };
 
   // ------------------- Validation -------------------
   const validateForm = () => {
     const newErrors = {};
-    const requiredFields = [
-      "firstName",
-      "lastName",
-      "contact",
-      "email",
-      "role",
-      "password",
-    ];
 
-    requiredFields.forEach((field) => {
-      if (!formData[field] || formData[field].toString().trim() === "") {
-        newErrors[field] = "This field is required";
-      }
-    });
+    if (!formData.turfName.trim()) newErrors.turfName = "Turf name is required.";
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      toast.warning("Please fill in the highlighted fields.");
-      return false; // ← was returning undefined
+    if (!formData.email.trim()) newErrors.email = "Email is required.";
+
+    if (!formData.contact.trim()) newErrors.contact = "Contact is required.";
+
+    if (!formData.location.trim()) newErrors.location = "Location is required.";
+
+    if (!formData.district.trim())
+      newErrors.district = "Municipal is required.";
+
+    if (formData.contact && !/^\d{10,15}$/.test(formData.contact)) {
+      newErrors.contact = "Enter a valid phone number.";
     }
 
-    if (formData.contact && !/^\d{10,15}$/.test(formData.contact))
-      newErrors.contact = "Enter a valid phone number";
-
-    if (formData.password && passwordStrength.score < 3)
-      newErrors.password = "Password is too weak";
-
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    if (Object.keys(newErrors).length) {
+      toast.warning("Please fill all required fields.");
+      return false;
+    }
+
+    return true;
   };
 
   // ------------------- Submit -------------------
@@ -168,18 +77,12 @@ const Register = () => {
     try {
       setSave(true);
 
-      // ← Build FormData properly — letting axios set the multipart boundary
-      const payload = new FormData();
-      Object.entries(formData).forEach(([k, v]) => {
-        if (v !== null) payload.append(k, v);
-      });
-
-      const response = await axios.post(`${API}/api/auth/register`, payload, {
+      const response = await axios.post(`${API}/api/super/reg-turf`, formData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         // Do NOT set Content-Type manually — axios sets multipart/form-data with boundary
       });
 
-      toast.success(response?.data?.message || "Registration successful!", {
+      toast.success(response?.data?.message || "Turf Registered successful!", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: false,
@@ -189,107 +92,28 @@ const Register = () => {
       });
 
       // Reset form after success
-      setFormData({
-        firstName: "",
-        middleName: "",
-        lastName: "",
-        contact: "",
-        email: "",
-        role: "",
-        password: "",
-        photo: null,
-      });
-      setPreviewImage(null);
+      setFormData(initialForm);
       setErrors({});
       setActiveTab("oneA");
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Registration failed!", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      toast.error(
+        error?.response?.data?.message || "Turf Registration failed!",
+        {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        },
+      );
     } finally {
       setSave(false);
     }
   };
 
-  const AVATAR = "/assets/images/admin/avatar.webp";
-
   return (
     <>
-      {/* =================== Image Modal =================== */}
-      {showImageModal && (
-        <>
-          <div className="custom-backdrop-blur"></div>
-          <div className="modal fade show d-block" tabIndex={-1}>
-            <div className="modal-dialog modal-dialog-centered">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">
-                    <i className="bi bi-camera-fill" /> Profile Photo
-                  </h5>
-                  <button
-                    className="btn-close"
-                    onClick={() => {
-                      stopCamera();
-                      setUseCamera(false);
-                      setShowImageModal(false);
-                    }}
-                  />
-                </div>
-                <div className="modal-body">
-                  {!useCamera ? (
-                    <>
-                      <button
-                        className="btn btn-outline-primary w-100 mb-2"
-                        onClick={() => {
-                          setUseCamera(true);
-                          startCamera();
-                        }}
-                      >
-                        <i className="bi bi-camera me-2" /> Open Camera
-                      </button>
-                      <label className="btn btn-outline-secondary w-100">
-                        <i className="bi bi-upload me-2" /> Choose from device
-                        <input
-                          type="file"
-                          accept="image/*"
-                          hidden
-                          id="photo"
-                          onChange={handleChange}
-                        />
-                      </label>
-                    </>
-                  ) : (
-                    <>
-                      <div className="camera-preview-wrapper">
-                        <video
-                          ref={videoRef}
-                          className="camera-video"
-                          autoPlay
-                          playsInline
-                        />
-                        <div className="face-guide"></div>
-                      </div>
-                      <canvas ref={canvasRef} hidden />
-                      <button
-                        className="btn btn-success w-100"
-                        onClick={capturePhoto}
-                      >
-                        <i className="bi bi-camera-fill me-2" /> Capture Photo
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* =================== Form =================== */}
       <div className="row gx-3">
         <div className="col-xxl-12">
@@ -321,39 +145,31 @@ const Register = () => {
                     >
                       <div className="card mb-3">
                         <div className="card-header">
-                          <h5 className="card-title">Personal Details</h5>
+                          <h5 className="card-title">Registration Details</h5>
                         </div>
                         <div className="card-body">
                           <div className="row gx-3">
-                            {[
-                              { id: "firstName", label: "First Name" },
-                              { id: "lastName", label: "Last Name" },
-                              {
-                                id: "middleName",
-                                label: "Other Name",
-                                optional: true,
-                              },
-                            ].map(({ id, label, optional }) => (
-                              <div className="col-6" key={id}>
-                                <label htmlFor={id} className="form-label">
-                                  {label}
-                                </label>
-                                <input
-                                  id={id}
-                                  className={`form-control ${errors[id] ? "is-invalid" : ""}`}
-                                  value={formData[id]}
-                                  onChange={handleChange}
-                                />
-                                {errors[id] && (
-                                  <div className="invalid-feedback">
-                                    {errors[id]}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                            <div className="col-6">
+                            <div className="col-md-6">
+                              <label htmlFor="turfName" className="form-label">
+                                Turf Name
+                              </label>
+                              <input
+                                type="text"
+                                id="turfName"
+                                className={`form-control ${errors.turfName ? "is-invalid" : ""}`}
+                                value={formData.turfName}
+                                onChange={handleChange}
+                              />
+                              {errors.turfName && (
+                                <div className="invalid-feedback">
+                                  {errors.turfName}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="col-md-6">
                               <label htmlFor="email" className="form-label">
-                                Email{" "}
+                                Email
                               </label>
                               <input
                                 type="email"
@@ -368,11 +184,13 @@ const Register = () => {
                                 </div>
                               )}
                             </div>
-                            <div className="col-6">
+
+                            <div className="col-md-6 mt-3">
                               <label htmlFor="contact" className="form-label">
                                 Contact
                               </label>
                               <input
+                                type="text"
                                 id="contact"
                                 className={`form-control ${errors.contact ? "is-invalid" : ""}`}
                                 value={formData.contact}
@@ -385,48 +203,22 @@ const Register = () => {
                               )}
                             </div>
 
-                            <div className="col-6">
-                              <label htmlFor="password" className="form-label">
-                                Password
+                            <div className="col-md-6 mt-3">
+                              <label htmlFor="location" className="form-label">
+                                Location
                               </label>
-                              <div className="input-group">
-                                <input
-                                  type={showPassword ? "text" : "password"}
-                                  id="password"
-                                  className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                                  value={formData.password}
-                                  onChange={handleChange}
-                                />
-                                <span
-                                  className="input-group-text"
-                                  style={{ cursor: "pointer" }}
-                                  onClick={() => setShowPassword((p) => !p)}
-                                >
-                                  <i
-                                    className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}
-                                  />
-                                </span>
-                                {errors.password && (
-                                  <div className="invalid-feedback">
-                                    {errors.password}
-                                  </div>
-                                )}
-                              </div>
-                              <div
-                                className="progress mt-2"
-                                style={{ height: "6px" }}
-                              >
-                                <div
-                                  className={`progress-bar ${passwordStrength.color}`}
-                                  style={{
-                                    width: `${(passwordStrength.score / 5) * 100}%`,
-                                  }}
-                                />
-                              </div>
-                              <small className="text-muted">
-                                <strong>{passwordStrength.label}:</strong>{" "}
-                                {passwordStrength.message}
-                              </small>
+                              <input
+                                type="text"
+                                id="location"
+                                className={`form-control ${errors.location ? "is-invalid" : ""}`}
+                                value={formData.location}
+                                onChange={handleChange}
+                              />
+                              {errors.location && (
+                                <div className="invalid-feedback">
+                                  {errors.location}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -442,79 +234,71 @@ const Register = () => {
                       </div>
                     </div>
 
-
                     {/* ===== SECURITY & PHOTO ===== */}
                     <div
                       className={`tab-pane ${activeTab === "threeA" ? "show active" : "d-none"}`}
                     >
                       <div className="card mb-3">
                         <div className="card-header">
-                          <h5 className="card-title"> Photo & Role</h5>
+                          <h5 className="card-title"> Location</h5>
                         </div>
                         <div className="card-body">
-                          <div
-                            className="profile-header mb-1"
-                            style={{ padding: "5px", background: "#0073d8" }}
-                          >
-                            <div
-                              className="camera-btn shadow"
-                              onClick={() => setShowImageModal(true)}
-                              style={{ cursor: "pointer" }}
-                            >
-                              <i
-                                className="bi bi-camera-fill text-black"
-                                style={{ fontSize: "1.5rem" }}
-                              />
-                            </div>
-                            {previewImage && (
-                              <button
-                                type="button"
-                                className="btn btn-close text-danger removeBtn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewImage(null);
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    photo: null,
-                                  }));
-                                }}
-                              ></button>
-                            )}
-                            <div className="d-flex align-items-center gap-4">
-                              <img
-                                src={previewImage || AVATAR}
-                                className={`profile-img ${errors.photo ? "is-invalid" : ""}`}
-                                alt="Profile"
-                                onError={(e) => {
-                                  e.target.src = AVATAR;
-                                }}
-                              />
-                              {errors.photo && (
-                                <div className="text-danger">
-                                  {errors.photo}
+                          <div className="row gx-3">
+                            <div className="col-6">
+                              <label htmlFor="district" className="form-label">
+                                Municipal
+                              </label>
+                              <select
+                                id="district"
+                                className={`form-control ${errors.district ? "is-invalid" : ""}`}
+                                value={formData.district}
+                                onChange={handleChange}
+                              >
+                                <option value="">-- Select Municipal --</option>
+                                <option value="Ayawaso West">
+                                  Ayawaso West
+                                </option>
+                                <option value="Dome Kwabenya">
+                                  Dome Kwabenya
+                                </option>
+                              </select>
+                              {errors.district && (
+                                <div className="invalid-feedback">
+                                  {errors.district}
                                 </div>
                               )}
                             </div>
-                          </div>
-                          <hr />
-                          <div className="row gx-3">
-                            <div className="col-6">
-                              <label htmlFor="role" className="form-label">
-                                Role
+                            <div className="col-md-6">
+                              <label htmlFor="longitude" className="form-label">
+                                Longitude
                               </label>
-                              <select
-                                id="role"
-                                className={`form-control ${errors.role ? "is-invalid" : ""}`}
-                                value={formData.role}
+                              <input
+                                type="text"
+                                id="longitude"
+                                className={`form-control ${errors.longitude ? "is-invalid" : ""}`}
+                                value={formData.longitude}
                                 onChange={handleChange}
-                              >
-                                <option value="">-- Select Role --</option>
-                                <option value="Staff">Staff</option>
-                                <option value="Manager">Manager</option>
-                              </select>
-                              {errors.role && (
+                              />
+                              {errors.longitude && (
                                 <div className="invalid-feedback">
-                                  {errors.role}
+                                  {errors.longitude}
+                                </div>
+                              )}
+                            </div>
+                            <div className="col-md-6">
+                              <label htmlFor="latitude" className="form-label">
+                                Latitude
+                              </label>
+                              <input
+                                type="text"
+                                id="latitude"
+                                className={`form-control ${errors.latitude ? "is-invalid" : ""}`}
+                                value={formData.latitude}
+                                onChange={handleChange}
+                              />
+                              {errors.latitude && (
+                                <div className="invalid-feedback">
+                                  {errors.latitude}
                                 </div>
                               )}
                             </div>
@@ -559,4 +343,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default RegisterTurf;

@@ -44,7 +44,7 @@ function Sidebar() {
     <nav id="sidebar" className="sidebar-wrapper">
       <div className="shop-profile">
         <p className="mb-1 fw-bold text-primary">
-          {isSuperAdmin ? "Super Admin Dashboard" : "Admin Dashboard"}
+          {isSuperAdmin ? "System Admin Dashboard" : "Admin Dashboard"}
         </p>
         <p className="m-0">{isSuperAdmin ? "TurfArena Platform" : name}</p>
       </div>

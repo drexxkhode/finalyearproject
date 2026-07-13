@@ -130,7 +130,7 @@ exports.getTurfData = async (req, res) => {
       `SELECT
   t.id, t.name, t.email, t.contact, t.district,
   t.latitude, t.longitude, t.location,
-  t.price_per_hour, t.about, t.capacity, t.amenities,
+  t.price_per_hour, t.about, t.capacity, t.amenities, t.status AS status,
 
   (
     SELECT url
@@ -155,7 +155,7 @@ exports.getTurfData = async (req, res) => {
     WHERE s.turf_id = t.id
   ) AS available_slots
 
-FROM turfs t
+FROM turfs t WHERE status = 'active'
 ORDER BY t.name`
     );
 
@@ -314,7 +314,7 @@ exports.getDashboardDetails = async (req, res) => {
 
 exports.getAllTurfs = async (req, res) => {
 try {
-  const [turfs] = await db.execute("SELECT id, name, contact, email, location, district FROM turfs");
+  const [turfs] = await db.execute("SELECT id, name, contact, email, location, district, status FROM turfs");
   if(!turfs.length) return res.status(404).json({message: "No turf Registered"});
   res.json(turfs);
 } catch (error) {
@@ -333,4 +333,80 @@ try {
   res.json({ message: "Error deleting turf" });
   console.log("Turf delete Error", error);
 }
+};
+
+exports.registerTurf = async (req, res) => {
+  try {
+    if (req.user?.role !== "Super_admin")
+      return res.status(403).json({ message: "Not authorized" });
+
+    const {
+    turfName,
+    email,
+    contact,
+    location,
+    district,
+    longitude,
+    latitude,
+} = req.body;
+
+    if (!turfName || !contact || 
+     !email ||  !location)
+      return res.status(400).json({ message: "Some fields are missing" });
+
+    await db.query(
+      `INSERT INTO turfs
+       (name, email, contact, location, 
+         longitude, latitude, district)
+       VALUES (?,?,?,?,?,?,?)`,
+      [turfName, email,contact,
+        location, longitude,latitude, district  
+      ]
+    );
+
+    res.status(201).json({ message: "Turf Registered successful" });
+  } catch (err) {
+    console.error("Turf registration error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.changeTurfStatus = async (req, res) => {
+  try {
+
+    const turf_id = req.params.id;
+
+    // Get current status
+    const [rows] = await db.query(
+      "SELECT status FROM turfs WHERE id = ?",
+      [turf_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "Turf not found",
+      });
+    }
+
+    // Toggle status
+    const newStatus =
+      rows[0].status === "active" ? "inactive" : "active";
+
+    await db.query(
+      `UPDATE turfs
+       SET status = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [newStatus, turf_id]
+    );
+
+    res.json({
+      message: `Turf ${newStatus} successfully.`,
+      status: newStatus,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Server error",
+    });
+  }
 };

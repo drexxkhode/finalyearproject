@@ -17,6 +17,11 @@ const {
   deleteSystemReview
 } = require('../../controllers/reviewController');
 
+const {
+  registerTurf,
+  changeTurfStatus
+} = require('../../controllers/turfController');
+
 const protect = require("../../middleware/auth");
 const passwordResetRateLimit  = require("../../middleware/passwordResetRateLimit");
 const {upload} =require('../../middleware/upload');
@@ -29,10 +34,12 @@ router.get("/details/:id", protect, getAdminDetails);
 router.get("/admins", protect, getAllAdmins);
 router.get("/me", protect, getMe);
 router.put("/change-password", protect, changePassword);
+router.put("/change-status/:id", protect, changeTurfStatus);
 router.post("/forgot-password", passwordResetRateLimit , forgotPassword);
 router.post("/reset-password", resetPassword);
 router.delete('/:id/photo', protect,                         deleteAdminPhoto);
 router.get("/get-reviews", protect,   getAllSystemReviews);
 router.delete("/del-review/:id", protect,   deleteSystemReview);
+router.post("/reg-turf", protect, registerTurf);
 
 module.exports = router;
