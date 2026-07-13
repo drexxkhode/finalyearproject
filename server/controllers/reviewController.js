@@ -208,26 +208,18 @@ const getAllSystemReviews = async(req,res)=>{
         const [reviews] = await db.query(
 
             `SELECT
-
                 s.id,
                 s.rating,
                 s.comment,
-                s.would_recommend,
                 s.created_at,
-
                 u.name,
                 u.email
-
             FROM system_reviews s
-
             JOIN users u
-
             ON s.user_id=u.id
-
             ORDER BY s.created_at DESC`
 
         );
-
         res.json(reviews);
 
     }catch(err){
@@ -298,6 +290,22 @@ const getSystemReviewStats = async(req,res)=>{
 
 };
 
+const deleteSystemReview = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [result] = await db.query(
+      "DELETE FROM system_reviews WHERE id = ?",
+      [id]
+    );
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "Review not found" });
+
+    res.json({ message: "Review deleted" });
+  } catch (err) {
+    console.error("deleteSystemReview error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 module.exports = {
   getReviews,
   createReview,
@@ -306,4 +314,5 @@ module.exports = {
   dismissReview,
   getAllSystemReviews,
   getSystemReviewStats,
+  deleteSystemReview
 };

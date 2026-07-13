@@ -17,6 +17,7 @@ const bookingsRoute = require('./routes/admin/bookingsRoute');
 const dashbaordRoute = require('./routes/admin/dashboardRoute');
 const paymentsRoute = require('./routes/admin/paymentRoute')
 const turfImageRoute = require('./routes/turf/turfImageRoute');
+const superAdminRoute = require('./routes/super/superAdminRoute');
 // 4. Add enquiries route
 const enquiriesRoute = require('./routes/client/enquirieRoute');
 const reviewRoute = require('./routes/client/reviewsRoute');
@@ -81,6 +82,7 @@ app.use('/api/turf/:id/images', turfImageRoute);
 app.use('/api/enquiries', enquiriesRoute);
 app.use('/api/reviews', reviewRoute);
 app.use('/api/payments', paymentsRoute);
+app.use('/api/super', superAdminRoute);
 
 app.get("/", (req, res) => {
   res.send("Astro Turf API running");

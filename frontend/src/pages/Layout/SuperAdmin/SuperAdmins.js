@@ -22,7 +22,7 @@ const Users = () => {
 
   const fetchAdmins = () => {
     setLoading(true)
-    axios.get(`${API}/api/auth/admins`, { headers })
+    axios.get(`${API}/api/super/admins`, { headers })
       .then(res => setAdmins(Array.isArray(res.data) ? res.data : []))
       .catch(() => setAdmins([]))
       .finally(() => setLoading(false))
@@ -33,7 +33,7 @@ const Users = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this admin?")) return
     try {
-      await axios.delete(`${API}/api/auth/delete/${id}`, { headers })
+      await axios.delete(`${API}/api/super/delete/${id}`, { headers })
       fetchAdmins()
     } catch (err) {
       console.error("Delete failed:", err)
@@ -85,7 +85,7 @@ const Users = () => {
     <div className="col-xxl-12">
       <div className="card mb-3">
         <div className="card-header d-flex flex-wrap align-items-center gap-2">
-          <h5 className="card-title mb-0 me-auto">Users</h5>
+          <h5 className="card-title mb-0 me-auto">System Administrators</h5>
 
           <div className="input-group input-group-sm" style={{width:210}}>
             <span className="input-group-text"><i className="bi bi-search"></i></span>
@@ -103,7 +103,7 @@ const Users = () => {
             <i className="bi bi-arrow-clockwise"></i>
           </button>
 
-          <Link className="btn btn-primary btn-sm" to="/register">
+          <Link className="btn btn-primary btn-sm" to="/super/register">
             <i className="bi bi-plus"></i> Add New
           </Link>
         </div>

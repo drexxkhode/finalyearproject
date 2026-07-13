@@ -4,23 +4,29 @@ function Hero() {
   const location = useLocation();
 
   const routes = [
-    { path: '/', name: 'Dashboard' },
-    { path: '/slots', name: 'Manage Time Slots' },
-    { path: '/profile', name: 'My Profile' },
-    { path: '/profile/:id', name: 'User Profile' },
-    { path: '/bookings', name: 'Bookings' },
-    { path: '/enquiries', name: 'Enquiries' },
-    { path: '/users', name: 'Active Users' },
-    { path: '/history/bookings', name: 'Booking History' },
-    { path: '/history/payments', name: 'Payment History' },
-    { path: '/report/payments', name: 'Payment Report' },
-    { path: '/report/bookings', name: 'Booking Report' },
-    { path: '/register', name: 'Register New User' },
-    { path: '/edit-details/:id', name: 'Edit User Details' },
-    { path: '/settings', name: 'General Settings' },
-    { path: '/reset-password', name: 'Reset Password' },
-  ];
-
+  { path: '/', name: 'Dashboard' },
+  { path: '/slots', name: 'Manage Time Slots' },
+  { path: '/profile', name: 'My Profile' },
+  { path: '/profile/:id', name: 'User Profile' },
+  { path: '/bookings', name: 'Bookings' },
+  { path: '/enquiries', name: 'Enquiries' },
+  { path: '/users', name: 'Active Users' },
+  { path: '/history/bookings', name: 'Booking History' },
+  { path: '/history/payments', name: 'Payment History' },
+  { path: '/report/payments', name: 'Payment Report' },
+  { path: '/report/bookings', name: 'Booking Report' },
+  { path: '/register', name: 'Register New User' },
+  { path: '/edit-details/:id', name: 'Edit User Details' },
+  { path: '/settings', name: 'General Settings' },
+  { path: '/reset-password', name: 'Reset Password' },
+  { path: '/super/turfs', name: 'All Turfs' },
+  { path: '/super/register-turf', name: 'Register Turf' },
+  { path: '/super/turf-owners', name: 'Turf Managers' },
+  { path: '/super/admins', name: 'Super Admins' },
+  { path: '/super/system-users', name: 'App Users' },
+  { path: '/super/system-reviews', name: 'System Reviews' },
+  { path: '/super/register', name: 'Register New System Administrator' },
+];
   const currentRoute = routes.find(route =>
     matchPath({ path: route.path, end: true }, location.pathname)
   );
