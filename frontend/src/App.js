@@ -32,6 +32,7 @@ import SystemReviews from './pages/Layout/SuperAdmin/SystemReviews';
 import RegisterTurf from './pages/Layout/SuperAdmin/RegisterTurf';
 import RegisterSuperAdmin from './pages/Layout/SuperAdmin/RegisterSuperAdmin';
 import RegisterTurfOwner from './pages/Layout/SuperAdmin/RegisterTurfOwner';
+import EditSuperAdmin from './pages/Layout/SuperAdmin/EditSuperAdmin';
 
 const MANAGER_ROLES     = ['Manager', 'Staff'];
 const SUPER_ADMIN_ROLES = ['Super_admin'];
@@ -119,6 +120,9 @@ function App() {
                         } />
                         <Route path="/super/admins" element={
                           <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES}><SuperAdmins /></ProtectedRoute>
+                        } />
+                         <Route path="super/edit/:id" element={
+                          <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES}><EditSuperAdmin /></ProtectedRoute>
                         } />
                         <Route path="/super/system-users" element={
                           <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES}><SystemUsers /></ProtectedRoute>

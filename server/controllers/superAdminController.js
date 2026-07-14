@@ -244,18 +244,19 @@ exports.deleteAdminPhoto = async (req, res) => {
 /* ================= DELETE SYSTEM ADMIN ========================================== */
 exports.deleteUser = async (req, res) => {
   try {
-    // Delete photo from Cloudinary before deleting the admin
+    const targetId = req.params.id;
+
     const [rows] = await db.query(
-      "SELECT photo FROM super_admins WHERE id = ?", [req.user.id]
+      "SELECT photo FROM super_admins WHERE id = ?", [targetId]
     );
     if (rows.length === 0) {
-      return res.status(404).json({message: "System Admin does not exist"});
+      return res.status(404).json({ message: "System Admin does not exist" });
     }
-    if (rows.length && rows[0].photo) {
+    if (rows[0].photo) {
       await deleteFromCloudinary(extractPublicId(rows[0].photo));
     }
 
-    await db.query("DELETE FROM super_admins WHERE id = ?", [req.user?.id]);
+    await db.query("DELETE FROM super_admins WHERE id = ?", [targetId]);
     res.json({ message: "System Admin deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -357,7 +358,7 @@ exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     const [rows] = await db.execute(
-      "SELECT id FROM admins WHERE email = ?", [email]
+      "SELECT id FROM super_admins WHERE email = ?", [email]
     );
     if (!rows.length)
       return res.status(404).json({ message: "We couldn't find an account associated with that email." });
@@ -367,12 +368,12 @@ exports.forgotPassword = async (req, res) => {
     const expiry     = new Date(Date.now() + 15 * 60 * 1000);
 
     await db.execute(
-      "UPDATE admins SET reset_token = ?, reset_token_expiry = ?, reset_request_time = NOW() WHERE id = ? AND email = ?",
+      "UPDATE super_admins SET reset_token = ?, reset_token_expiry = ?, reset_request_time = NOW() WHERE id = ? AND email = ?",
       [resetToken, expiry, user.id, email]
     );
 
     const [findOne] = await db.execute(
-      "SELECT lastName FROM admins WHERE id = ? AND email = ?", [user.id, email]
+      "SELECT lastName FROM super_admins WHERE id = ? AND email = ?", [user.id, email]
     );
     const lastName = findOne[0].lastName;
 
@@ -521,13 +522,14 @@ exports.getAllTurfAdmins = async (req, res) => {
 };
 
 /* ================= GET ALL TURF MANAGERS ======================================== */
-exports.getTurf = async (req, res) =>{
-try {
-  const [turfs] = await db.query("SELECT id, name, created_at FROM turfs WHERE status = 'inactive' ORDER BY created_at DESC ");
-  res.json(turfs);
-} catch (error) {
-  console.log("[Get Turf Error] ", error);
-}
+exports.getTurf = async (req, res) => {
+  try {
+    const [turfs] = await db.query("SELECT id, name, created_at FROM turfs WHERE status = 'inactive' ORDER BY created_at DESC");
+    res.json(turfs);
+  } catch (error) {
+    console.error("[Get Turf Error]", error);
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
 /* ================= REGISTER TURF MANAGER ======================================== */

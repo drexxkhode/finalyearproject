@@ -8,7 +8,7 @@ const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-GB", { day:"numeri
 const fmtAmt  = (a) => `₵${parseFloat(a??0).toFixed(2)}`
 
 const StatusBadge = ({ s }) => {
-  const m = { confirmed:["#198754","Confirmed"], cancelled:["#dc3545","Cancelled"], pending:["#e6a817","Pending"] }
+  const m = { confirmed:["#198754","Confirmed"], cancelled:["#dc3545","Cancelled"], pending:["#e6a817","Pending"], rejected:["#6c3fa0","Rejected"] }
   const [col, label] = m[s] || ["#6c757d", s]
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
@@ -18,7 +18,7 @@ const PayBadge = ({ s }) => {
   return <span style={{padding:"2px 10px",borderRadius:4,fontSize:11,background:col+"20",color:col,border:`1px solid ${col}50`,fontWeight:600}}>{label}</span>
 }
 
-const getColumns = (deleteBookings) => [
+const getColumns = (deleteBookings, openReject) => [
   { name:"#", width:"55px", cell:(_,i) => i+1 },
 
   {
@@ -43,18 +43,20 @@ const getColumns = (deleteBookings) => [
   { name:"Amount", selector: r => r.amount, cell: r => <strong>{fmtAmt(r.amount)}</strong>, sortable:true },
   { name:"Status", cell: r => <StatusBadge s={r.status} /> },
   { name:"Payment", cell: r => <PayBadge s={r.payment_status} /> },
-
-  {
+{
     name:"Action",
     cell: r => (
-      <button
-        className="btn btn-danger btn-sm"
-        onClick={() => deleteBookings(r.id)}
-      >
-        <i className="bi bi-trash" />
-      </button>
-      
-    ) 
+      <div className="d-flex gap-1">
+        {r.status === 'confirmed' && (
+          <button className="btn btn-outline-danger btn-sm" onClick={() => openReject(r)} title="Reject booking">
+            <i className="bi bi-x-circle" />
+          </button>
+        )}
+        <button className="btn btn-danger btn-sm" onClick={() => deleteBookings(r.id)} title="Delete record">
+          <i className="bi bi-trash" />
+        </button>
+      </div>
+    )
   }
 ];
 
@@ -102,6 +104,27 @@ const Bookings = () => {
   }
 };
 
+const [rejectTarget, setRejectTarget] = useState(null)
+const [rejecting, setRejecting] = useState(false)
+
+const handleReject = async (reason) => {
+  setRejecting(true)
+  try {
+    const res = await axios.post(
+      `${API}/api/admin/reject-booking/${rejectTarget.id}`,
+      { reason },
+      { headers }
+    )
+    setBookings(prev => prev.map(b => b.id === rejectTarget.id ? { ...b, status: 'rejected' } : b))
+    toast.success(res.data.message)
+    setRejectTarget(null)
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Failed to reject booking")
+  } finally {
+    setRejecting(false)
+  }
+}
+
   const filtered = useMemo(() => bookings.filter(r => {
     const q = search.toLowerCase()
     return (
@@ -111,8 +134,52 @@ const Bookings = () => {
     )
   }), [bookings, search, status, payment]);
 
-const columns = useMemo(() => getColumns(deleteBookings), [deleteBookings]);
-
+const columns = useMemo(() => getColumns(deleteBookings, setRejectTarget), [deleteBookings]);
+function RejectModal({ booking, onConfirm, onClose, loading }) {
+  const [reason, setReason] = useState("");
+  return (
+    <div className="modal fade show d-block" tabIndex="-1"
+      style={{background:"rgba(0,0,0,0.5)"}} onClick={onClose}>
+      <div className="modal-dialog" onClick={e => e.stopPropagation()}>
+        <div className="modal-content">
+          <div className="modal-header">
+            <h5 className="modal-title">Reject Booking</h5>
+            <button className="btn-close" onClick={onClose} disabled={loading} />
+          </div>
+          <div className="modal-body">
+            <p className="text-muted small mb-2">
+              {booking.name} · {booking.slot_label} · {fmtDate(booking.booking_date)}
+            </p>
+            <label className="form-label small fw-bold">Reason for rejection</label>
+            <textarea
+              className="form-control"
+              rows={4}
+              placeholder="e.g. Turf under maintenance, double booking conflict…"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+            />
+            {booking.payment_status === 'paid' && (
+              <div className="alert alert-warning py-2 small mt-3 mb-0">
+                <i className="bi bi-exclamation-triangle me-1"></i>
+                A full refund of {fmtAmt(booking.amount)} will be issued automatically.
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-secondary btn-sm" onClick={onClose} disabled={loading}>Cancel</button>
+            <button
+              className="btn btn-danger btn-sm"
+              onClick={() => onConfirm(reason)}
+              disabled={loading || !reason.trim()}
+            >
+              {loading ? <><span className="spinner-border spinner-border-sm me-1"/>Rejecting…</> : "Reject Booking"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+};
   return (
     <div className="col-xxl-12">
       <div className="card mb-3">
@@ -130,6 +197,7 @@ const columns = useMemo(() => getColumns(deleteBookings), [deleteBookings]);
             <option value="confirmed">Confirmed</option>
             <option value="cancelled">Cancelled</option>
             <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
           </select>
 
           <select className="form-select form-select-sm" style={{width:140}} value={payment} onChange={e => setPayment(e.target.value)}>
@@ -170,6 +238,14 @@ const columns = useMemo(() => getColumns(deleteBookings), [deleteBookings]);
             }
 
           />
+          {rejectTarget && (
+  <RejectModal
+    booking={rejectTarget}
+    onConfirm={handleReject}
+    onClose={() => setRejectTarget(null)}
+    loading={rejecting}
+  />
+)}
         </div>
       </div>
       <ToastContainer/>

@@ -27,6 +27,7 @@ function Hero() {
   { path: '/super/system-reviews', name: 'System Reviews' },
   { path: '/super/register', name: 'Register New System Administrator' },
   { path: '/super/register-turfowner', name: 'Register New Turf Owner' },
+  { path: '/super/edit/:id', name: 'Edit Details' },
 ];
   const currentRoute = routes.find(route =>
     matchPath({ path: route.path, end: true }, location.pathname)

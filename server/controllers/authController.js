@@ -320,18 +320,19 @@ exports.deleteAdminPhoto = async (req, res) => {
 /* ================= DELETE ADMIN ========================================== */
 exports.deleteUser = async (req, res) => {
   try {
-    // Delete photo from Cloudinary before deleting the admin
+    const targetId = req.params.id;
+
     const [rows] = await db.query(
-      "SELECT photo FROM admins WHERE id = ?", [req.user.id]
+      "SELECT photo FROM admins WHERE id = ?", [targetId]
     );
     if (rows.length === 0) {
-      return res.status(404).json({message: "User does not exist"});
+      return res.status(404).json({ message: "User does not exist" });
     }
-    if (rows.length && rows[0].photo) {
+    if (rows[0].photo) {
       await deleteFromCloudinary(extractPublicId(rows[0].photo));
     }
 
-    await db.query("DELETE FROM admins WHERE id = ?", [req.user.id]);
+    await db.query("DELETE FROM admins WHERE id = ?", [targetId]);
     res.json({ message: "User deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });

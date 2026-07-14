@@ -509,7 +509,7 @@ const RegisterSuperAdmin = () => {
                                 onChange={handleChange}
                               >
                                 <option value="">-- Select Role --</option>
-                                <option value="Super_admin">Super Admin</option>
+                                <option value="Super_admin">System Admin</option>
                               </select>
                               {errors.role && (
                                 <div className="invalid-feedback">

@@ -505,20 +505,20 @@ await sendEmail(userEmail, `Booking Confirmed — ${turfName}`, `<!DOCTYPE html>
 
       // Update cancelled booking rows for this ref that are still refund_pending
       await db.query(
-        `UPDATE bookings
-         SET payment_status = 'refunded'
-         WHERE paystack_ref = ? AND status = 'cancelled' AND payment_status = 'refund_pending'`,
-        [ref]
-      );
+  `UPDATE bookings
+   SET payment_status = 'refunded'
+   WHERE paystack_ref = ? AND status IN ('cancelled','rejected') AND payment_status = 'refund_pending'`,
+  [ref]
+);
 
       // Check if ALL booking rows for this ref are now settled
       const [remaining] = await db.query(
-        `SELECT
-           SUM(CASE WHEN status = 'cancelled' AND payment_status = 'refund_pending' THEN 1 ELSE 0 END) AS still_pending,
-           SUM(CASE WHEN status = 'confirmed' AND payment_status = 'paid' THEN 1 ELSE 0 END) AS still_active
-         FROM bookings WHERE paystack_ref = ?`,
-        [ref]
-      );
+  `SELECT
+     SUM(CASE WHEN status IN ('cancelled','rejected') AND payment_status = 'refund_pending' THEN 1 ELSE 0 END) AS still_pending,
+     SUM(CASE WHEN status = 'confirmed' AND payment_status = 'paid' THEN 1 ELSE 0 END) AS still_active
+   FROM bookings WHERE paystack_ref = ?`,
+  [ref]
+);
 
       const stillPending = parseInt(remaining[0]?.still_pending ?? 0);
       const stillActive  = parseInt(remaining[0]?.still_active  ?? 0);
@@ -683,6 +683,169 @@ const cancelBooking = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+// ── POST /api/admin/reject-booking/:id ─────────────────────────────────────
+const rejectBooking = async (req, res) => {
+  try {
+    const turf_id    = req.user?.turf_id;
+    const booking_id = parseInt(req.params.id);
+    const { reason }  = req.body;
+
+    if (!turf_id) return res.status(403).json({ message: 'Admin access required' });
+    if (!reason?.trim()) return res.status(400).json({ message: 'A reason is required' });
+
+    const [rows] = await db.query(
+      `SELECT b.*, t.name AS turf_name, u.name AS user_name, u.email AS user_email
+       FROM bookings b
+       JOIN turfs t ON t.id = b.turf_id
+       LEFT JOIN users u ON u.id = b.user_id
+       WHERE b.id = ? AND b.turf_id = ? LIMIT 1`,
+      [booking_id, turf_id]
+    );
+    if (!rows.length) return res.status(404).json({ message: 'Booking not found' });
+
+    const booking = rows[0];
+
+    if (['cancelled', 'rejected', 'completed'].includes(booking.status))
+      return res.status(400).json({ message: `Booking is already ${booking.status}` });
+
+    // ── Not paid yet — just reject, no refund needed ───────────────────────
+    if (booking.payment_status !== 'paid') {
+      await db.query(
+        `UPDATE bookings
+         SET status = 'rejected', cancelled_at = NOW(), rejection_reason = ?
+         WHERE id = ?`,
+        [reason.trim(), booking_id]
+      );
+
+      if (booking.user_email) {
+        sendRejectionEmail(booking, reason.trim(), 0).catch(err =>
+          console.error('rejectBooking email error:', err)
+        );
+      }
+
+      await redis.del(redis.KEYS.dashboard(turf_id));
+      return res.json({ message: 'Booking rejected', refund_amount: 0 });
+    }
+
+    // ── Paid — full refund via Paystack FIRST, then update DB ──────────────
+    const refundAmount = parseFloat(booking.amount);
+    try {
+      const refRes = await axios.post(
+        'https://api.paystack.co/refund',
+        {
+          transaction: booking.paystack_ref,
+          amount:      Math.round(refundAmount * 100),
+        },
+        {
+          headers: {
+            Authorization:  `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!refRes.data?.status) {
+        const msg = refRes.data?.message ?? 'Paystack refund request failed';
+        console.error(`[reject] Paystack rejected refund for booking ${booking_id}: ${msg}`);
+        return res.status(502).json({ message: `Refund could not be initiated: ${msg}` });
+      }
+    } catch (refErr) {
+      const msg = refErr.response?.data?.message ?? refErr.message;
+      console.error(`[reject] Paystack refund error for booking ${booking_id}:`, msg);
+      return res.status(502).json({
+        message: `Could not initiate refund: ${msg}. Booking has NOT been rejected. Please try again.`,
+      });
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET status = 'rejected', cancelled_at = NOW(),
+           refund_amount = ?, payment_status = 'refund_pending', rejection_reason = ?
+       WHERE id = ?`,
+      [refundAmount, reason.trim(), booking_id]
+    );
+
+    if (booking.user_email) {
+      sendRejectionEmail(booking, reason.trim(), refundAmount).catch(err =>
+        console.error('rejectBooking email error:', err)
+      );
+    }
+
+    await redis.del(redis.KEYS.dashboard(turf_id));
+    console.log(`[reject] Booking ${booking_id} rejected — refund_pending ₵${refundAmount}`);
+
+    return res.json({ message: 'Booking rejected. Refund is being processed.', refund_amount: refundAmount });
+
+  } catch (err) {
+    console.error('rejectBooking error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ── Email helper ─────────────────────────────────────────────────────────
+ // adjust path to match your project
+
+async function sendRejectionEmail(booking, reason, refundAmount) {
+  const refundLine = refundAmount > 0
+    ? `<p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 16px 0;">
+         A full refund of <strong>₵${refundAmount.toFixed(2)}</strong> has been initiated and will reflect in your account within 5–10 business days.
+       </p>`
+    : '';
+
+  await sendEmail(
+    booking.user_email,
+    'Your Booking Has Been Rejected',
+    `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1.0" /></head>
+<body style="margin:0;padding:0;background-color:#e8edf2;font-family:Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#e8edf2;padding:20px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="max-width:520px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #d0d7e2;">
+        <tr>
+          <td style="background-color:#dc3545;padding:16px 24px 0 24px;text-align:center;">
+            <img src="https://res.cloudinary.com/daionfxml/image/upload/v1773645071/turfArena_transparent_kqf2ru.png"
+                 alt="TurfArena" width="90" style="display:block;margin:0 auto;" />
+            <h2 style="color:#ffffff;margin:8px 0 14px 0;font-size:17px;font-weight:600;">
+              Booking Rejected
+            </h2>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 24px 16px 24px;">
+            <p style="font-size:14px;color:#222;margin:0 0 10px 0;">
+              Hello, <strong style="color:#1565c0;">${booking.user_name ?? 'there'}!</strong>
+            </p>
+            <p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 10px 0;">
+              Unfortunately your booking for <strong>${booking.turf_name}</strong> on
+              <strong>${String(booking.booking_date).slice(0,10)}</strong> (${booking.slot_label})
+              has been rejected by the venue.
+            </p>
+            <div style="background:#f8f9fa;border-left:3px solid #dc3545;padding:10px 14px;margin:0 0 16px 0;">
+              <p style="font-size:13px;color:#555;margin:0;"><strong>Reason:</strong> ${reason}</p>
+            </div>
+            ${refundLine}
+          </td>
+        </tr>
+        <tr>
+          <td style="border-top:1px solid #eaecf0;padding:12px 24px;text-align:center;background:#ffffff;">
+            <p style="font-size:12px;color:#aaa;margin:0;">
+              &copy; ${new Date().getFullYear()}
+              <span style="color:#15803d;font-weight:bold;">Turf</span><span style="color:#1565c0;font-weight:bold;">Arena</span>.
+              All rights reserved.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    booking.turf_id
+  );
+}
 
 
 // ── GET /api/bookings ─────────────────────────────────────────────────────
@@ -866,4 +1029,4 @@ const deleteBookingByAdmin = async (req, res) => {
   }
 };
 
-module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings, deleteBooking, deleteBookingByAdmin, getBookingsForAdmin };
+module.exports = { getBookedSlots, initiateBooking, paystackWebhook, cancelBooking, getMyBookings, getBookings, deleteBooking, deleteBookingByAdmin, getBookingsForAdmin,rejectBooking };
