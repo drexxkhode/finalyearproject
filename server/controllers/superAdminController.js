@@ -297,7 +297,7 @@ exports.getAllAdmins = async (req, res) => {
 /* ================= GET ME SUPER ADMIN ================================================ */
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.params.id;
+    const userId = req.user?.id;
 
     const [rows] = await db.query(
       `SELECT id, firstName, middleName, lastName,

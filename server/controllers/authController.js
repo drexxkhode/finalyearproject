@@ -378,7 +378,7 @@ exports.getMe = async (req, res) => {
       `SELECT id, turf_id, firstName, middleName, lastName,
               email, role, photo, contact, created_at
        FROM admins WHERE id = ?`,
-      [req.params.id]
+      [req.user.id]
     );
     if (!rows.length)
       return res.status(404).json({ message: "Admin not found" });
