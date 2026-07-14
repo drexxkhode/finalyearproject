@@ -25,7 +25,7 @@ export default function TurfCard({ turf, onOpen }) {
               )}
             </span>
           )}
-          <span className="tf-badge tf-badge-blue">{turf.capacity `-a-side`}</span>
+          <span className="tf-badge tf-badge-blue">{`${turf.capacity}-a-side`}</span>
           </div>
         <div className="tf-card-avail-tag">{avail} open</div>
       </div>

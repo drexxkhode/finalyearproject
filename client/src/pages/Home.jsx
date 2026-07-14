@@ -385,7 +385,7 @@ const rec = [...turfs].sort((a, b) => recommendationScore(b) - recommendationSco
                 <div className="d-flex flex-wrap gap-2 mb-3">
                   {featured.capacity && (
                     <span className="tf-badge tf-badge-blue">
-                      {featured.capacity `-a-side` }
+                      {`${featured.capacity}-a-side` }
                     </span>
                   )}
                   {(Array.isArray(featured.amenities) ? featured.amenities : [])

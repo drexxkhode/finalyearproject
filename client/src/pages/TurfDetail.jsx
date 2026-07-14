@@ -122,7 +122,7 @@ const distanceKm = userCoords
             </p>
             <div className="d-flex flex-wrap gap-2 mb-3">
               <span className="tf-badge tf-badge-blue">
-                {turf.capacity ?? "N/A"}
+                {`${turf.capacity}-a-side` ?? "N/A"}
               </span>
               {turf.rating !== null && turf.rating !== undefined ? (
                 <span className="tf-badge tf-badge-yellow">
