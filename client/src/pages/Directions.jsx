@@ -7,7 +7,8 @@ import axios from 'axios'
 import { useParams, useNavigate } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 
-const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
+//const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
+const GH_API_KEY = import.meta.env.VITE_GRAPHHOPPER_API_KEY;
 const API = import.meta.env.VITE_API_URL;
   
 /* ── Icons ─────────────────────────────────────────────────────────── */
@@ -131,49 +132,137 @@ export default function Directions({ onBack, notify }) {
       window.speechSynthesis.speak(utt)
     }
   }, [cancelled])
-
+  /*
+const lastFetchTimeRef = useRef(0)
+const inFlightRef      = useRef(false)
   // ── Fetch route ────────────────────────────────────────────────────
   const fetchRoute = useCallback(async (lat, lng) => {
-    if (cancelled || !selectedTurf?.latitude || !selectedTurf?.longitude) return
-    try {
-      const res = await axios.post(
-        'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
-        {
-          coordinates: [
-            [lng, lat],
-            [parseFloat(selectedTurf.longitude), parseFloat(selectedTurf.latitude)],
-          ],
-        },
-        {
-          headers: { Authorization: ORS_API_KEY, 'Content-Type': 'application/json' },
-        }
-      )
-      if (cancelled) return
-      const feature = res.data.features[0]
-      const latlngs = feature.geometry.coordinates.map(c => [c[1], c[0]])
-      setRoute(latlngs)
-      lastRouteRef.current = latlngs
+  if (cancelled || !selectedTurf?.latitude || !selectedTurf?.longitude || inFlightRef.current) return;
+  inFlightRef.current =true;
+  try {
+    console.log('[route] user:', lat, lng, '→ turf:', selectedTurf.latitude, selectedTurf.longitude)
+    const res = await axios.post(
+      'https://api.openrouteservice.org/v2/directions/driving-car/geojson',
+      {
+        coordinates: [
+          [lng, lat],
+          [parseFloat(selectedTurf.longitude), parseFloat(selectedTurf.latitude)],
+        ],
+      },
+      {
+        headers: { Authorization: ORS_API_KEY, 'Content-Type': 'application/json' },
+        timeout: 10000, // fail fast instead of hanging indefinitely
+      }
+    )
+    if (cancelled) return
+    const feature = res.data.features[0]
+    const latlngs = feature.geometry.coordinates.map(c => [c[1], c[0]])
+    setRoute(latlngs)
+    lastRouteRef.current = latlngs
 
-      const summary = feature.properties.summary
-      setEta(Math.round(summary.duration / 60))
-      setDistance((summary.distance / 1000).toFixed(2))
+    const summary = feature.properties.summary
+    setEta(Math.round(summary.duration / 60))
+    setDistance((summary.distance / 1000).toFixed(2))
 
-      const stps = feature.properties.segments[0].steps
-      setSteps(stps)
-      speak(stps[0]?.instruction)
-    } catch (err) {
-      console.error('Route error', err)
+    const stps = feature.properties.segments[0].steps
+    setSteps(stps)
+    speak(stps[0]?.instruction)
+  } catch (err) {
+    console.error('Route error', err.response?.status, err.response?.data ?? err.message)
+    if (err.response?.status === 504 || err.code === 'ECONNABORTED') {
+      notify?.('Routing service is slow to respond — retrying shortly…', 'e')
+    } else {
+      notify?.('Could not calculate directions right now.', 'e')
     }
-  }, [cancelled, selectedTurf, speak])
+  }  finally {
+    inFlightRef.current = false
+  }
+}, [cancelled, selectedTurf, speak, notify])
 
   // ── Reroute check ──────────────────────────────────────────────────
-  const checkReroute = useCallback((lat, lng) => {
+
+
+const checkReroute = useCallback((lat, lng) => {
+  if (cancelled || inFlightRef.current) return
+  if (!lastRouteRef.current.length) { fetchRoute(lat, lng); return }
+  const [rlat, rlng] = lastRouteRef.current[0]
+  const dist = Math.sqrt((lat - rlat) ** 2 + (lng - rlng) ** 2) * 111
+  const now = Date.now()
+  if (dist > 0.1 && now - lastFetchTimeRef.current > 15000) {
+    lastFetchTimeRef.current = now
+    fetchRoute(lat, lng)
+  }
+}, [cancelled, fetchRoute])  */
+
+const lastFetchTimeRef = useRef(0)
+const inFlightRef      = useRef(false)
+
+const fetchRoute = useCallback(async (lat, lng) => {
+  if (cancelled || !selectedTurf?.latitude || !selectedTurf?.longitude || inFlightRef.current) return
+  inFlightRef.current = true
+  try {
+    const res = await axios.get('https://graphhopper.com/api/1/route', {
+      params: {
+        point: [
+          `${lat},${lng}`,
+          `${selectedTurf.latitude},${selectedTurf.longitude}`,
+        ],
+        vehicle:         'car',
+        instructions:    true,
+        points_encoded:  false,
+        key:             GH_API_KEY,
+      },
+      paramsSerializer: params => {
+        // axios doesn't repeat array params as `point=...&point=...` by default —
+        // GraphHopper needs the same key twice, once per waypoint
+        const parts = []
+        for (const [k, v] of Object.entries(params)) {
+          if (Array.isArray(v)) v.forEach(item => parts.push(`${k}=${encodeURIComponent(item)}`))
+          else parts.push(`${k}=${encodeURIComponent(v)}`)
+        }
+        return parts.join('&')
+      },
+      timeout: 10000,
+    })
+
     if (cancelled) return
-    if (!lastRouteRef.current.length) { fetchRoute(lat, lng); return }
-    const [rlat, rlng] = lastRouteRef.current[0]
-    const dist = Math.sqrt((lat - rlat) ** 2 + (lng - rlng) ** 2) * 111
-    if (dist > 0.1) fetchRoute(lat, lng)
-  }, [cancelled, fetchRoute])
+    const path = res.data.paths?.[0]
+    if (!path) throw new Error('No route found')
+
+    const latlngs = path.points.coordinates.map(c => [c[1], c[0]])
+    setRoute(latlngs)
+    lastRouteRef.current = latlngs
+
+    setEta(Math.round(path.time / 60000))          // ms → minutes
+    setDistance((path.distance / 1000).toFixed(2))  // m → km
+
+    const stps = path.instructions ?? []
+    setSteps(stps)
+    speak(stps[0]?.text)
+
+  } catch (err) {
+    console.error('Route error', err.response?.status, err.response?.data ?? err.message)
+    if (err.code === 'ECONNABORTED') {
+      notify?.('Routing service is slow to respond. Please try again.', 'e')
+    } else {
+      notify?.('Could not calculate directions right now.', 'e')
+    }
+  } finally {
+    inFlightRef.current = false
+  }
+}, [cancelled, selectedTurf, speak, notify])
+
+const checkReroute = useCallback((lat, lng) => {
+  if (cancelled || inFlightRef.current) return
+  if (!lastRouteRef.current.length) { fetchRoute(lat, lng); return }
+  const [rlat, rlng] = lastRouteRef.current[0]
+  const dist = Math.sqrt((lat - rlat) ** 2 + (lng - rlng) ** 2) * 111
+  const now = Date.now()
+  if (dist > 0.1 && now - lastFetchTimeRef.current > 15000) {
+    lastFetchTimeRef.current = now
+    fetchRoute(lat, lng)
+  }
+}, [cancelled, fetchRoute])
 
   // ── GPS watch ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -321,7 +410,7 @@ export default function Directions({ onBack, notify }) {
                   if (window.speechSynthesis.speaking) {
                     window.speechSynthesis.cancel()
                   } else {
-                    speak(steps[0]?.instruction ?? 'Navigation active')
+                    speak(steps[0]?.text ?? 'Navigation active')
                   }
                 }}
                 style={{
@@ -374,7 +463,7 @@ export default function Directions({ onBack, notify }) {
                       {i + 1}
                     </span>
                     <span style={{ color: '#c8ddef', fontSize: 13, fontFamily: 'sans-serif', lineHeight: 1.4 }}>
-                      {s.instruction}
+                      {s.text}
                     </span>
                   </div>
                 ))}
