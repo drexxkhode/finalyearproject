@@ -30,17 +30,18 @@ const PAYMENT_META = {
 
 // Penalty preview — mirrors server logic
 function penaltyInfo(booking) {
-  const bookingDate = booking.date ?? booking.booking_date
-  if (!bookingDate || !booking.slot_label) return null
-  const dateOnly  = String(bookingDate).slice(0, 10)
+  if (!booking.booking_date || !booking.slot_label) return null
+  // Strip any time/timezone component from booking_date — DB may return full ISO string
+  const dateOnly  = String(booking.booking_date).slice(0, 10)
+  // slot_label is "08:00 – 09:00" — take first 5 chars for start time
   const timeOnly  = booking.slot_label.slice(0, 5)
   const slotDateTime = new Date(`${dateOnly}T${timeOnly}:00`)
-  if (isNaN(slotDateTime)) return null
+  if (isNaN(slotDateTime)) return null   // guard against malformed data
   const hrs = (slotDateTime - Date.now()) / (1000 * 60 * 60)
-  if (hrs < 0)       return { pct: 100, label: 'Slot already passed — no refund' }
-  if (hrs < 6)       return { pct: 100, label: 'Less than 6 hrs — no refund' }
-  if (hrs < 24)      return { pct: 50,  label: '50% penalty applies' }
-  return               { pct: 0,   label: 'Full refund eligible' }
+  if (hrs < 0)       return { pct: 100, refund: 0,   label: 'Slot already passed — no refund' }
+  if (hrs < 6)       return { pct: 100, refund: 0,   label: 'Less than 6 hrs — no refund' }
+  if (hrs < 24)      return { pct: 50,  refund: 0.5, label: '50% penalty applies' }
+  return               { pct: 0,   refund: 1,   label: 'Full refund eligible' }
 }
 
 function StatusBadge({ status }) {

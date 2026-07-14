@@ -385,7 +385,7 @@ const rec = [...turfs].sort((a, b) => recommendationScore(b) - recommendationSco
                 <div className="d-flex flex-wrap gap-2 mb-3">
                   {featured.capacity && (
                     <span className="tf-badge tf-badge-blue">
-                      {featured.capacity}
+                      {featured.capacity `-a-side` }
                     </span>
                   )}
                   {(Array.isArray(featured.amenities) ? featured.amenities : [])
@@ -504,7 +504,7 @@ const rec = [...turfs].sort((a, b) => recommendationScore(b) - recommendationSco
                         {t.rating !== null && t.rating !== undefined
                           ? `⭐ ${t.rating}`
                           : "No ratings yet"}
-                        {t.distance !== null && `. ${t.distance} km`}
+                        {t.distance !== null && ` ${t.distance} km`}
                       </div>
                       <div
                         className="text-primary fw-bold"
