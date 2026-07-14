@@ -81,7 +81,7 @@ function Sidebar() {
               <li className={location.pathname === "/super/admins" ? "active current-page" : ""}>
                 <NavLink to="/super/admins">
                   <i className="bi bi-person-fill-lock text-info"></i>
-                  <span className="menu-text">Super Admins</span>
+                  <span className="menu-text">System Admins</span>
                 </NavLink>
               </li>
               <li className={location.pathname === "/super/system-users" ? "active current-page" : ""}>

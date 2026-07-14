@@ -374,34 +374,18 @@ exports.getAllAdmins = async (req, res) => {
 /* ================= GET ME ================================================ */
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const role   = req.user.role;
-
-    if (role === 'Super_admin') {
-      const [rows] = await db.query(
-        `SELECT id, firstName, middleName, lastName,
-                email, role, photo, contact, created_at
-         FROM super_admins WHERE id = ?`,
-        [userId]
-      );
-      if (!rows.length)
-        return res.status(404).json({ message: "User not found" });
-      return res.json(rows[0]);
-    }
-
     const [rows] = await db.query(
       `SELECT id, turf_id, firstName, middleName, lastName,
               email, role, photo, contact, created_at
        FROM admins WHERE id = ?`,
-      [userId]
+      [req.params.id]
     );
     if (!rows.length)
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Admin not found" });
 
     res.json(rows[0]);
   } catch (err) {
-    console.error("GET /me error:", err);
-    res.status(500).json({ message: "Failed to load user" });
+    res.status(500).json({ error: err.message });
   }
 };
 /* ================= CHANGE PASSWORD ======================================= */

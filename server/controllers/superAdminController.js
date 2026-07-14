@@ -4,6 +4,7 @@ const crypto       = require("crypto");
 const generateToken = require("../config/jwt");
 const sendEmail    = require("../utils/sendMail");
 const { uploadToCloudinary, deleteFromCloudinary } = require("../middleware/upload");
+const { assert } = require("console");
 
 const URL = process.env.REACT_APP_URL;
 /* ================= PASSWORD VALIDATION ================= */
@@ -23,7 +24,7 @@ const extractPublicId = (url) => {
   }
 };
 
-/* ================= REGISTER ================= */
+/* ================= REGISTER SYSTEM ================= */
 // Route must use: upload.single('photo') middleware before this handler
 exports.register = async (req, res) => {
   try {
@@ -76,7 +77,7 @@ const userId = req.user?.id
       ]
     );
 
-    res.status(201).json({ message: "Registration successful" });
+    res.status(201).json({ message: "System Admin Registration successful" });
   } catch (err) {
     console.error("sysadmin register error:", err);
     res.status(500).json({ error: err.message });
@@ -84,7 +85,7 @@ const userId = req.user?.id
 };
 
 
-/* ================= UPDATE ADMIN ============================================
+/* ================= UPDATE SYSTEM ADMIN ============================================
    Handles text fields + optional photo in one FormData request.
    Route: PUT /api/auth/update/:id  (upload.single('photo') middleware)       */
 exports.updateUser = async (req, res) => {
@@ -155,7 +156,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-/* ================= UPLOAD ADMIN PHOTO =====================================
+/* ================= UPLOAD SYSTEM ADMIN PHOTO =====================================
    PUT /api/auth/admins/:id/photo
    Expects: upload.single('photo') middleware on the route               */
 exports.uploadAdminPhoto = async (req, res) => {
@@ -169,7 +170,7 @@ exports.uploadAdminPhoto = async (req, res) => {
       "SELECT photo FROM super_admins WHERE id = ? LIMIT 1", [userId]
     );
     if (!rows.length)
-      return res.status(404).json({ message: "Admin not found" });
+      return res.status(404).json({ message: "System Admin not found" });
 
     const oldPublicId = extractPublicId(rows[0].photo);
 
@@ -182,7 +183,7 @@ exports.uploadAdminPhoto = async (req, res) => {
 
     // Save new URL
     await db.query(
-      "UPDATE admins SET photo = ? WHERE id = ?",
+      "UPDATE super_admins SET photo = ? WHERE id = ?",
       [result.secure_url, userId]
     );
 
@@ -191,13 +192,13 @@ exports.uploadAdminPhoto = async (req, res) => {
 
     // Return updated admin
     const [updated] = await db.query(
-      `SELECT id, turf_id, firstName, middleName, lastName,
+      `SELECT id, firstName, middleName, lastName,
               email, role, photo, contact
-       FROM admins WHERE id = ? LIMIT 1`,
+       FROM super_admins WHERE id = ? LIMIT 1`,
       [userId]
     );
 
-    console.log(`[admin-photo] uploaded admin=${userId} public_id=${result.public_id}`);
+    console.log(`[admin-photo] uploaded system admin=${userId} public_id=${result.public_id}`);
     res.json({ message: "Photo updated", admin: updated[0] });
   } catch (err) {
     console.error("uploadAdminPhoto error:", err);
@@ -215,7 +216,7 @@ exports.deleteAdminPhoto = async (req, res) => {
       "SELECT photo FROM super_admins WHERE id = ? LIMIT 1", [userId]
     );
     if (!rows.length)
-      return res.status(404).json({ message: "Admin not found" });
+      return res.status(404).json({ message: "System Admin not found" });
 
     const publicId = extractPublicId(rows[0].photo);
 
@@ -228,7 +229,7 @@ exports.deleteAdminPhoto = async (req, res) => {
     const [updated] = await db.query(
       `SELECT id, firstName, middleName, lastName,
               email, role, photo, contact
-       FROM admins WHERE id = ? LIMIT 1`,
+       FROM super_admins WHERE id = ? LIMIT 1`,
       [userId]
     );
 
@@ -240,38 +241,38 @@ exports.deleteAdminPhoto = async (req, res) => {
   }
 };
 
-/* ================= DELETE ADMIN ========================================== */
+/* ================= DELETE SYSTEM ADMIN ========================================== */
 exports.deleteUser = async (req, res) => {
   try {
     // Delete photo from Cloudinary before deleting the admin
     const [rows] = await db.query(
-      "SELECT photo FROM admins WHERE id = ?", [req.user.id]
+      "SELECT photo FROM super_admins WHERE id = ?", [req.user.id]
     );
     if (rows.length === 0) {
-      return res.status(404).json({message: "User does not exist"});
+      return res.status(404).json({message: "System Admin does not exist"});
     }
     if (rows.length && rows[0].photo) {
       await deleteFromCloudinary(extractPublicId(rows[0].photo));
     }
 
-    await db.query("DELETE FROM admins WHERE id = ?", [req.user.id]);
-    res.json({ message: "User deleted successfully" });
+    await db.query("DELETE FROM super_admins WHERE id = ?", [req.user?.id]);
+    res.json({ message: "System Admin deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-/* ================= GET ADMIN BY ID ======================================= */
+/* ================= GET SYSTEM ADMIN BY ID ======================================= */
 exports.getAdminDetails = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT id, turf_id, firstName, middleName, lastName,
+      `SELECT id, firstName, middleName, lastName,
               email, role, photo, contact, created_at
-       FROM admins WHERE id = ?`,
+       FROM super_admins WHERE id = ?`,
       [req.params.id]
     );
     if (!rows.length)
-      return res.status(404).json({ message: "Turf Manager not found" });
+      return res.status(404).json({ message: "System Admin not found" });
 
     res.json(rows[0]); // photo is already a Cloudinary URL or null
   } catch (err) {
@@ -279,7 +280,7 @@ exports.getAdminDetails = async (req, res) => {
   }
 };
 
-/* ================= GET ALL ADMINS ======================================== */
+/* ================= GET ALL SYSTEM ADMINS ======================================== */
 exports.getAllAdmins = async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -296,7 +297,7 @@ exports.getAllAdmins = async (req, res) => {
 /* ================= GET ME SUPER ADMIN ================================================ */
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.params.id;
 
     const [rows] = await db.query(
       `SELECT id, firstName, middleName, lastName,
@@ -504,3 +505,73 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+/* ================= GET ALL TURF MANAGERS ADMINS ======================================== */
+
+exports.getAllTurfAdmins = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, firstName, middleName, lastName,
+              email, role, photo, contact, created_at
+       FROM admins`
+    );
+    res.json(rows); // photos are already Cloudinary URLs or null
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* ================= GET ALL TURF MANAGERS ======================================== */
+exports.getTurf = async (req, res) =>{
+try {
+  const [turfs] = await db.query("SELECT id, name, created_at FROM turfs WHERE status = 'inactive' ORDER BY created_at DESC ");
+  res.json(turfs);
+} catch (error) {
+  console.log("[Get Turf Error] ", error);
+}
+};
+
+/* ================= REGISTER TURF MANAGER ======================================== */
+exports.registerOwner = async (req, res) => {
+  try {
+
+    if (req.user?.role !== "Super_admin")
+      return res.status(403).json({ message: "Not authorized" });
+
+    const {
+      firstName, middleName, lastName, 
+      contact, email, role, password,
+       turfId
+    } = req.body;
+    const [exists] = await db.query(
+      "SELECT id FROM admins WHERE email = ?", [email]
+    );
+    if (exists.length)
+      return res.status(400).json({ message: "Email already exists" });
+
+
+    if (!firstName || !lastName || !contact || 
+     !email ||  !role || !password)
+      return res.status(400).json({ message: "Some fields are missing" });
+
+    const hashed = await bcrypt.hash(password, 10);
+
+
+    await db.query(
+      `INSERT INTO admins
+       (turf_id, firstName, middleName, lastName, 
+        contact, email,
+         role, password)
+       VALUES (?,?,?,?,?,?,?,?)`,
+      [
+        turfId, firstName, middleName, lastName, 
+        contact, 
+        email,  role, hashed
+      ]
+    );
+
+    res.status(201).json({ message: "Turf Owner Registration successful" });
+  } catch (err) {
+    console.error("register error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};

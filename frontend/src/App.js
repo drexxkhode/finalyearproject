@@ -5,7 +5,7 @@ import Hero from './partials/Hero';
 import Dashboard from './pages/Dashboard';
 import Administrators from './pages/Layout/TurfManager/Administrators';
 import Footer from './partials/Footer';
-import Profile from './pages/Layout/TurfManager/Profile';
+import ProfileRouter from './pages/Profile';
 import Enquiries from './pages/Layout/TurfManager/Enquires';
 import Bookings from './pages/Layout/TurfManager/Bookings';
 import BookingHistory from './pages/Layout/TurfManager/BookingHistory';
@@ -31,6 +31,7 @@ import SystemUsers from './pages/Layout/SuperAdmin/SystemUsers';
 import SystemReviews from './pages/Layout/SuperAdmin/SystemReviews';
 import RegisterTurf from './pages/Layout/SuperAdmin/RegisterTurf';
 import RegisterSuperAdmin from './pages/Layout/SuperAdmin/RegisterSuperAdmin';
+import RegisterTurfOwner from './pages/Layout/SuperAdmin/RegisterTurfOwner';
 
 const MANAGER_ROLES     = ['Manager', 'Staff'];
 const SUPER_ADMIN_ROLES = ['Super_admin'];
@@ -62,8 +63,8 @@ function App() {
                       <Routes>
                         {/* Shared — self-route by role internally */}
                         <Route path="/" element={<Dashboard />} />
-                        <Route path="/profile/:id" element={<Profile />} />
-                        <Route path="/profile" element={<Profile />} />
+                       <Route path="/profile/:id" element={<ProfileRouter />} />
+                     <Route path="/profile" element={<ProfileRouter />} />
 
                         {/* ── Manager / Staff only ── */}
                         <Route path="/enquiries" element={
@@ -109,6 +110,9 @@ function App() {
                         } />
                         <Route path="/super/register-turf" element={
                           <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES}><RegisterTurf /></ProtectedRoute>
+                        } />
+                        <Route path="/super/register-turfowner" element={
+                          <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES}><RegisterTurfOwner /></ProtectedRoute>
                         } />
                         <Route path="/super/turf-owners" element={
                           <ProtectedRoute allowedRoles={SUPER_ADMIN_ROLES}><TurfOwners /></ProtectedRoute>

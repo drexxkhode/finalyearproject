@@ -22,7 +22,7 @@ const TurfManagers = () => {
 
   const fetchAdmins = () => {
     setLoading(true)
-    axios.get(`${API}/api/auth/admins`, { headers })
+    axios.get(`${API}/api/super/turf-mag`, { headers })
       .then(res => setAdmins(Array.isArray(res.data) ? res.data : []))
       .catch(() => setAdmins([]))
       .finally(() => setLoading(false))
@@ -103,7 +103,7 @@ const TurfManagers = () => {
             <i className="bi bi-arrow-clockwise"></i>
           </button>
 
-          <Link className="btn btn-primary btn-sm" to="/register">
+          <Link className="btn btn-primary btn-sm" to="/super/register-turfowner">
             <i className="bi bi-plus"></i> Add New
           </Link>
         </div>

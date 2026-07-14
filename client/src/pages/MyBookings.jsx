@@ -59,9 +59,10 @@ function StatusBadge({ status }) {
 }
 
 function CancelModal({ booking, onConfirm, onClose, loading }) {
-  const info       = penaltyInfo(booking)
-  const refundAmt  = info ? (parseFloat(booking.amount) * info.refund).toFixed(2) : '0.00'
-  const penaltyAmt = info ? (parseFloat(booking.amount) * (info.pct / 100)).toFixed(2) : booking.amount
+ const info       = penaltyInfo(booking)
+  const paidAmount = parseFloat(booking.amount)
+  const penaltyAmt = info ? (paidAmount * (info.pct / 100)).toFixed(2) : paidAmount.toFixed(2)
+  const refundAmt  = info ? (paidAmount - parseFloat(penaltyAmt)).toFixed(2) : '0.00'
 
   useEffect(() => {
     const prev = document.body.style.overflow

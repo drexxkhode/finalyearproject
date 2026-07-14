@@ -58,11 +58,26 @@ const SystemUsers = () => {
       )
     },
     { name:"Contact",   selector: r => r.contact, cell: r => r.contact||"—" },
-    { name:"Account Verified",      selector: r => r.email_verified,    cell: r => (
-      <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal" style={{fontSize:11}}>
-        {r.email_verified}
+    {
+  name: "Account Verified",
+  selector: (r) => r.email_verified,
+  cell: (r) => {
+    const active = r.email_verified === 1;
+
+    return (
+      <span
+        className={`badge ${
+          active
+            ? "bg-success bg-opacity-10 text-success border border-success border-opacity-25"
+            : "bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"
+        } fw-normal`}
+        style={{ fontSize: 11 }}
+      >
+        {active ? "Verified" : "Not Verified"}
       </span>
-    )},
+    );
+  },
+},
     { name:"Actions",   width:"160px", cell: r => (
       <div className="d-flex gap-1">
         <button className="btn btn-sm btn-danger" onClick={() => handleDelete(r.id)}>
