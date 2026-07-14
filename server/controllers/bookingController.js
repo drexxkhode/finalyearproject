@@ -564,7 +564,7 @@ const cancelBooking = async (req, res) => {
     const booking = rows[0];
 
     // ── Guard: already cancelled ───────────────────────────────────────────
-    if (booking.status === 'cancelled')
+    if (booking.status === 'cancelled' || booking.status==='rejected')
       return res.status(400).json({ message: 'Booking is already cancelled' });
 
     // ── Guard: only paid bookings can be cancelled ─────────────────────────
