@@ -596,7 +596,9 @@ exports.getDashboardDetails = async (req, res) => {
   `SELECT 
     (SELECT COALESCE(SUM(amount), 0) FROM payments) AS total_payments,
     (SELECT COUNT(*) FROM bookings ) AS total_bookings,
-    (SELECT COUNT(*) FROM super_admins  ) AS total_admins,
+    (SELECT COUNT(*) FROM users ) AS total_users,
+    (SELECT COUNT(*) FROM admins ) AS total_admins,
+    (SELECT COUNT(*) FROM super_admins  ) AS total_superadmins,
     (SELECT COUNT(*) FROM turfs ) AS total_turfs`
 );
 
@@ -610,5 +612,35 @@ exports.getDashboardDetails = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+/* ================= ANALYTICS: BOOKINGS BY STATUS ========================= */
+exports.getBookingsByStatus = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT status, COUNT(*) AS count
+       FROM bookings
+       WHERE is_deleted = 0
+       GROUP BY status`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('getBookingsByStatus error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/* ================= ANALYTICS: PAYMENTS BY STATUS ========================= */
+exports.getPaymentsByStatus = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT payment_status, COALESCE(SUM(amount), 0) AS total_amount
+       FROM payments
+       GROUP BY payment_status`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('getPaymentsByStatus error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 };

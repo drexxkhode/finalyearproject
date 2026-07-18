@@ -14,7 +14,9 @@ const {
   getAllTurfAdmins,
   getTurf,
   registerOwner,
-  getDashboardDetails
+  getDashboardDetails,
+  getBookingsByStatus,
+  getPaymentsByStatus
 } = require("../../controllers/superAdminController");
 const {
   getAllSystemReviews,
@@ -49,5 +51,7 @@ router.get("/get-reviews", protect,   getAllSystemReviews);
 router.delete("/del-review/:id", protect,   deleteSystemReview);
 router.get("/get-turf", protect, getTurf);
 router.get("/dashboard", protect, getDashboardDetails);
+router.get("/analytics/bookings-by-status", protect, getBookingsByStatus);
+router.get("/analytics/payments-by-status", protect, getPaymentsByStatus);
 
 module.exports = router;

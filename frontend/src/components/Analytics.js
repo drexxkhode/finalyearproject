@@ -8,11 +8,15 @@ const API = process.env.REACT_APP_URL ?? "http://localhost:5000";
 const Analytics = () => {
   const [status, setStatus] = useState("");
   const [categories, setCategories] = useState([]);
-  const [series, setSeries] = useState([
-    { name: "Accepted",  type: "column", data: [] },
-    { name: "Cancelled", type: "column", data: [] },
-    { name: "Payments",  type: "line",   data: [] },
-    { name: "Refunds",   type: "line",   data: [] },
+  const [statusSeries, setStatusSeries] = useState([
+    { name: "Confirmed", data: [] },
+    { name: "Completed", data: [] },
+    { name: "Cancelled", data: [] },
+    { name: "Rejected",  data: [] },
+  ]);
+  const [moneySeries, setMoneySeries] = useState([
+    { name: "Payments", data: [] },
+    { name: "Refunds",  data: [] },
   ]);
 
   useEffect(() => {
@@ -21,110 +25,76 @@ const Analytics = () => {
     });
 
     socket.on("booking-analytics-monthly", (data) => {
-     if (!Array.isArray(data)) return;
+      if (!Array.isArray(data)) return;
 
       if (data.length === 0) {
-        // Server connected and responded — just no bookings yet
         setStatus('empty');
         return;
       }
+
       setCategories(data.map((d) => d.month));
-      setSeries([
-        { name: "Accepted",  type: "column", data: data.map((d) => d.accepted)  },
-        { name: "Cancelled", type: "column", data: data.map((d) => d.cancelled) },
-        { name: "Payments",  type: "line",   data: data.map((d) => d.payments)  },
-        { name: "Refunds",   type: "line",   data: data.map((d) => d.refunds)   },
+      setStatusSeries([
+        { name: "Confirmed", data: data.map((d) => d.confirmed) },
+        { name: "Completed", data: data.map((d) => d.completed) },
+        { name: "Cancelled", data: data.map((d) => d.cancelled) },
+        { name: "Rejected",  data: data.map((d) => d.rejected)  },
+      ]);
+      setMoneySeries([
+        { name: "Payments", data: data.map((d) => d.payments) },
+        { name: "Refunds",  data: data.map((d) => d.refunds)  },
       ]);
     });
 
     return () => socket.disconnect();
   }, []);
 
-  // Y-axis safe maximums
-  const acceptedMax  = series[0].data.length ? Math.max(...series[0].data) : 10;
-  const cancelledMax = series[1].data.length ? Math.max(...series[1].data) : 10;
-  // Use a generous ceiling so short bars are still clearly visible
-  const bookingMax   = Math.max(acceptedMax, cancelledMax, 5) * 2;
-  const paymentsMax  = series[2].data.length ? Math.max(...series[2].data) : 1000;
-  const refundsMax   = series[3].data.length ? Math.max(...series[3].data) : 1000;
-  const moneyMax     = Math.max(paymentsMax, refundsMax, 1);
-
-  // Narrow columns when few months, wider when many months accumulate
-  const monthCount    = categories.length;
-  const columnWidth   = monthCount <= 3 ? "30%" : monthCount <= 6 ? "50%" : "65%";
+  const monthCount  = categories.length;
+  const columnWidth = monthCount <= 3 ? "30%" : monthCount <= 6 ? "50%" : "65%";
 
   const moneyFormatter = (val) => {
     if (val >= 1000) return `₵${(val / 1000).toFixed(1)}k`;
     return `₵${Number(val).toFixed(2)}`;
   };
 
-  const options = {
-    chart: {
-      type: "line",
-      stacked: false,
-      toolbar: { show: false },
-      zoom:    { enabled: false },
-    },
-
+  const statusOptions = {
+    chart: { type: "bar", stacked: true, toolbar: { show: true }, zoom: { enabled: true } },
     plotOptions: {
-      bar: { columnWidth, borderRadius: 4 },
-    },
-
-    // 4 series: 2 columns (no stroke) + 2 lines (stroke width 3)
-    stroke: { width: [0, 0, 3, 3] },
-
-    // Always show markers so a single data point is visible as a dot with a label
-    markers: {
-      size: [0, 0, 5, 5],
-      hover: { size: 7 },
-    },
-
-    dataLabels: { enabled: false },
-
-    xaxis: { categories },
-
-    yaxis: [
-      {
-        // series[0] Accepted + series[1] Cancelled
-        min: 0,
-        max: bookingMax,
-        tickAmount: Math.min(bookingMax, 10),
-        title: { text: "Bookings" },
-        labels: { formatter: (val) => Math.round(val) },
-      },
-      {
-        // series[2] Payments
-        opposite: true,
-        min: 0,
-        max: moneyMax * 1.2,
-        title: { text: "Amount (₵)" },
-        labels: { formatter: moneyFormatter },
-      },
-      {
-        // series[3] Refunds — same scale as Payments, axis hidden to avoid duplicate
-        opposite: true,
-        show: false,
-        min: 0,
-        max: moneyMax * 1.2,
-      },
-    ],
-
-    tooltip: {
-      shared: true,
-      intersect: false,
-      y: {
-        formatter: (val, { seriesIndex }) => {
-          if (seriesIndex === 0 || seriesIndex === 1) return `${val} bookings`;
-          return moneyFormatter(val);
+      bar: {
+        horizontal: false,
+        columnWidth,
+        borderRadius: 10,
+        borderRadiusApplication: 'end',
+        borderRadiusWhenStacked: 'last',
+        dataLabels: {
+          total: {
+            enabled: true,
+            style: { fontSize: '13px', fontWeight: 900 },
+          },
         },
       },
     },
-
-    colors: ["#00E396", "#FF4560", "#008FFB", "#FEB019"],
-
-    legend: { position: "bottom" },
+    responsive: [
+      { breakpoint: 480, options: { legend: { position: 'bottom', offsetX: -10, offsetY: 0 } } },
+    ],
+    xaxis: { categories },
+    legend: { position: 'right', offsetY: 40 },
+    fill: { opacity: 1 },
+    colors: ["#0d6efd", "#00E396", "#FF4560", "#6f42c1"],
+    dataLabels: { enabled: false },
   };
-   // No bookings yet — server responded but data is empty
+
+  const moneyOptions = {
+    chart: { type: "line", toolbar: { show: false }, zoom: { enabled: false } },
+    stroke: { width: 3 },
+    markers: { size: 5, hover: { size: 7 } },
+    xaxis: { categories },
+    yaxis: { labels: { formatter: moneyFormatter } },
+    tooltip: { y: { formatter: moneyFormatter } },
+    colors: ["#008FFB", "#FEB019"],
+    legend: { position: "bottom" },
+    dataLabels: { enabled: false },
+  };
+
   if (status === 'empty') return (
     <div className="text-center py-5 text-muted">
       <i className="bi bi-bar-chart fs-1 d-block mb-2 opacity-25"></i>
@@ -141,12 +111,13 @@ const Analytics = () => {
     );
 
   return (
-    <Chart
-      options={options}
-      series={series}
-      type="line"
-      height={350}
-    />
+    <>
+      <Chart options={statusOptions} series={statusSeries} type="bar" height={350} />
+      <div className="mt-4">
+        <h6 className="text-center mb-2 text-muted">Payments vs Refunds</h6>
+        <Chart options={moneyOptions} series={moneySeries} type="line" height={220} />
+      </div>
+    </>
   );
 };
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Analytics from '../../../components/Analytics';
+import SystemUsageCharts from '../../../components/SystemUsageCharts';
 const  API = process.env.REACT_APP_URL;
 const SuperAdminDashboard = () => {
 const [total, setTotal] = useState({});
@@ -60,7 +61,9 @@ getTotal();
               </div>
               <div className="d-flex align-items-center justify-content-between">
                 <h5 className="m-0 text-secondary fw-normal">System Users</h5>
-                <h3 className="m-0 text-primary">{total.total_admins}</h3>
+                <h3 className="m-0 text-primary">
+  {(total.total_admins ?? 0) + (total.total_users ?? 0) + (total.total_superadmins ?? 0)}
+</h3>
               </div>
             </div>
           </div>
@@ -93,7 +96,7 @@ getTotal();
               <div className="row gx-3 mb-3">
                 <div className="col-lg-12 col-sm-12 mb-3">
                   <h6 className="text-center mb-3">Overview</h6>
-                <Analytics />
+                <SystemUsageCharts  userTotals={total}/>
                 </div>
               </div>
             </div>

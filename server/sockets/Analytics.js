@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 
 function setupAnalyticsSocket(io) {
 
-  // Global auth middleware
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth.token;
@@ -20,7 +19,7 @@ function setupAnalyticsSocket(io) {
     console.log('Client connected:', socket.id, '| role:', socket.user?.role ?? 'user');
 
     const turfId = socket.user?.turf_id;
-    if (!turfId) return; // regular booking users — skip analytics
+    if (!turfId) return;
 
     emitMonthlyAnalytics(socket, turfId);
 
@@ -40,20 +39,24 @@ async function emitMonthlyAnalytics(socket, turfId) {
     const [rows] = await db.query(`
       SELECT
         DATE_FORMAT(b.booking_date, '%Y-%m') AS month,
-        SUM(CASE WHEN b.status IN ('confirmed','completed') THEN 1 ELSE 0 END) AS accepted,
+        SUM(CASE WHEN b.status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed,
+        SUM(CASE WHEN b.status = 'completed' THEN 1 ELSE 0 END) AS completed,
         SUM(CASE WHEN b.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+        SUM(CASE WHEN b.status = 'rejected'  THEN 1 ELSE 0 END) AS rejected,
         SUM(CASE WHEN b.payment_status IN ('paid', 'no_refund') THEN b.amount ELSE 0 END) AS payments,
         SUM(CASE WHEN b.payment_status IN ('refunded', 'refund_pending') THEN b.refund_amount ELSE 0 END) AS refunds
       FROM bookings b
-      WHERE b.turf_id = ?
+      WHERE b.turf_id = ? AND b.is_deleted = 0
       GROUP BY month
       ORDER BY month
     `, [turfId]);
 
     socket.emit('booking-analytics-monthly', rows.map(row => ({
       month:     row.month,
-      accepted:  Number(row.accepted),
+      confirmed: Number(row.confirmed),
+      completed: Number(row.completed),
       cancelled: Number(row.cancelled),
+      rejected:  Number(row.rejected),
       payments:  Number(row.payments),
       refunds:   Number(row.refunds),
     })));
