@@ -4,9 +4,9 @@ const crypto       = require("crypto");
 const generateToken = require("../config/jwt");
 const sendEmail    = require("../utils/sendMail");
 const { uploadToCloudinary, deleteFromCloudinary } = require("../middleware/upload");
-const { assert } = require("console");
-
+const redis = require("../config/RedisClient");
 const URL = process.env.REACT_APP_URL;
+
 /* ================= PASSWORD VALIDATION ================= */
 const validatePassword = (password) =>
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
@@ -575,5 +575,40 @@ exports.registerOwner = async (req, res) => {
   } catch (err) {
     console.error("register error:", err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// ──Super Admin: dashboard stats ─────────────────────────────────────────────────
+exports.getDashboardDetails = async (req, res) => {
+  try {
+    const superId = req.user?.id;
+    if (!superId) return res.status(403).json({ message: 'Admin access required' });
+    const cacheKey = redis.KEYS.dashboardAll;
+
+    // ── Cache check ───────────────────────────────────────────────────────
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log(`[cache] HIT dashboard:super_admin`);
+      return res.json(cached);
+    }
+
+    const [rows] = await db.execute(
+  `SELECT 
+    (SELECT COALESCE(SUM(amount), 0) FROM payments) AS total_payments,
+    (SELECT COUNT(*) FROM bookings ) AS total_bookings,
+    (SELECT COUNT(*) FROM super_admins  ) AS total_admins,
+    (SELECT COUNT(*) FROM turfs ) AS total_turfs`
+);
+
+    const payload = rows[0];
+
+    // ── Cache store ───────────────────────────────────────────────────────
+    await redis.set(cacheKey, payload, redis.TTL.dashboardAll);
+    console.log(`[cache] MISS dashboard:super_admin — cached`);
+
+    res.json(payload);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
 };

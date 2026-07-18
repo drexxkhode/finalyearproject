@@ -13,7 +13,8 @@ const {
   resetPassword,
   getAllTurfAdmins,
   getTurf,
-  registerOwner
+  registerOwner,
+  getDashboardDetails
 } = require("../../controllers/superAdminController");
 const {
   getAllSystemReviews,
@@ -47,5 +48,6 @@ router.delete('/:id/photo', protect,                         deleteAdminPhoto);
 router.get("/get-reviews", protect,   getAllSystemReviews);
 router.delete("/del-review/:id", protect,   deleteSystemReview);
 router.get("/get-turf", protect, getTurf);
+router.get("/dashboard", protect, getDashboardDetails);
 
 module.exports = router;

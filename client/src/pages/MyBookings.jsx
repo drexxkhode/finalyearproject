@@ -15,7 +15,7 @@ const STATUS_META = {
   confirmed:      { bg: 'rgba(25,135,84,.1)',   color: '#198754', border: 'rgba(25,135,84,.25)',  icon: 'bi-check-circle-fill',  label: 'Confirmed'      },
   completed:      { bg: 'rgba(13,110,253,.1)',  color: '#0d6efd', border: 'rgba(13,110,253,.25)', icon: 'bi-flag-fill',           label: 'Completed'      },
   cancelled:      { bg: 'rgba(220,53,69,.1)',   color: '#dc3545', border: 'rgba(220,53,69,.25)',  icon: 'bi-x-circle-fill',       label: 'Cancelled'      },
-  rejected:      { bg: 'rgba(220,53,69,.1)',   color: '#dc35b8', border: 'rgba(250, 246, 7, 0.87)',  icon: 'bi-x-circle-fill',       label: 'Rejected'      },
+  rejected:      { bg: 'rgba(220,53,69,.1)',   color: '#dc35b8', border: 'rgba(153, 7, 250, 0.87)',  icon: 'bi-x-circle-fill',       label: 'Rejected'      },
 }
 
 // Separate map for payment_status display — shown as a secondary badge

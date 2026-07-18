@@ -107,6 +107,7 @@ const KEYS = {
   allTurfs:    'turfs:all',
   turf:        (id) => `turfs:${id}`,
   dashboard:   (turfId) => `dashboard:${turfId}`,
+  dashboardAll:   'dashboard:super_admin',
 };
 
 // TTLs in seconds
@@ -114,6 +115,7 @@ const TTL = {
   allTurfs:  5  * 60,   // 5 minutes
   turf:      5  * 60,   // 5 minutes
   dashboard: 2  * 60,   // 2 minutes
+  dashboardAll: 2  * 60,   // 2 minutes
 };
 
 module.exports = { connect, get, set, setNX, del, delPattern, KEYS, TTL };

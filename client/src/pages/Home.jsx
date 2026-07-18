@@ -125,7 +125,8 @@ export default function Home({
         (fCap === "All" || t.capacity?.includes(fCap)) &&
         (!search ||
           t.name?.toLowerCase().includes(search.toLowerCase()) ||
-          t.location?.toLowerCase().includes(search.toLowerCase())),
+          t.location?.toLowerCase().includes(search.toLowerCase()) ||
+          t.address?.toLowerCase().includes(search.toLowerCase())),
     )
     .sort((a, b) =>
       sort === "price"

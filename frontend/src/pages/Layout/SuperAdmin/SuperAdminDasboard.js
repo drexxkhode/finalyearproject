@@ -7,7 +7,7 @@ const [total, setTotal] = useState({});
 
 const getTotal = async () =>{
   try {
-  const res = await axios.get(`${API}/api/admin/total`,{
+  const res = await axios.get(`${API}/api/super/dashboard`,{
 headers: {
   Authorization: `Bearer ${localStorage.getItem("token")}`,
   "Content-Type": 'application/json'
@@ -59,7 +59,7 @@ getTotal();
                 <i className="bi bi-people fs-1 text-primary lh-1"></i>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Users</h5>
+                <h5 className="m-0 text-secondary fw-normal">System Users</h5>
                 <h3 className="m-0 text-primary">{total.total_admins}</h3>
               </div>
             </div>
@@ -69,11 +69,11 @@ getTotal();
           <div className="card mb-3">
             <div className="card-body">
               <div className="mb-2">
-                <i className="bi bi-chat fs-1 text-success lh-1"></i>
+                <p className='fs-1 text-success lh-1' >🏟️</p>
               </div>
               <div className="d-flex align-items-center justify-content-between">
-                <h5 className="m-0 text-secondary fw-normal">Enquiries</h5>
-                <h3 className="m-0 text-primary">{total.total_enquiries}</h3>
+                <h5 className="m-0 text-secondary fw-normal">Turfs</h5>
+                <h3 className="m-0 text-primary">{total.total_turfs}</h3>
               </div>
             </div>
           </div>
