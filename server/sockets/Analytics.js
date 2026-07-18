@@ -46,7 +46,7 @@ async function emitMonthlyAnalytics(socket, turfId) {
         SUM(CASE WHEN b.payment_status IN ('paid', 'no_refund') THEN b.amount ELSE 0 END) AS payments,
         SUM(CASE WHEN b.payment_status IN ('refunded', 'refund_pending') THEN b.refund_amount ELSE 0 END) AS refunds
       FROM bookings b
-      WHERE b.turf_id = ? AND b.is_deleted = 0
+      WHERE b.turf_id = ? 
       GROUP BY month
       ORDER BY month
     `, [turfId]);

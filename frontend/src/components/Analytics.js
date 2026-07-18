@@ -19,6 +19,7 @@ const Analytics = () => {
     { name: "Refunds",  data: [] },
   ]);
 
+
   useEffect(() => {
     const socket = io(API, {
       auth: { token: localStorage.getItem("token") },
@@ -57,7 +58,7 @@ const Analytics = () => {
   };
 
   const statusOptions = {
-    chart: { type: "bar", stacked: true, toolbar: { show: true }, zoom: { enabled: true } },
+    chart: { type: "bar", stacked: true, toolbar: { show: false }, zoom: { enabled: true } },
     plotOptions: {
       bar: {
         horizontal: false,
@@ -110,15 +111,19 @@ const Analytics = () => {
       </div>
     );
 
-  return (
-    <>
-      <Chart options={statusOptions} series={statusSeries} type="bar" height={350} />
-      <div className="mt-4">
-        <h6 className="text-center mb-2 text-muted">Payments vs Refunds</h6>
-        <Chart options={moneyOptions} series={moneySeries} type="line" height={220} />
-      </div>
-    </>
-  );
+ return (
+  <div className="row g-3">
+    <div className="col-lg-8">
+      
+        <Chart options={statusOptions} series={statusSeries} type="bar" height={350} />
+      
+    </div>
+    <div className="col-lg-4">
+      <h6 className="text-center mb-2 text-muted">Payments vs Refunds</h6>
+      <Chart options={moneyOptions} series={moneySeries} type="line" height={320} />
+    </div>
+  </div>
+);
 };
 
 export default Analytics;
