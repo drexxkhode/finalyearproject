@@ -15,9 +15,8 @@ const STATUS_META = {
   confirmed:      { bg: 'rgba(25,135,84,.1)',   color: '#198754', border: 'rgba(25,135,84,.25)',  icon: 'bi-check-circle-fill',  label: 'Confirmed'      },
   completed:      { bg: 'rgba(13,110,253,.1)',  color: '#0d6efd', border: 'rgba(13,110,253,.25)', icon: 'bi-flag-fill',           label: 'Completed'      },
   cancelled:      { bg: 'rgba(220,53,69,.1)',   color: '#dc3545', border: 'rgba(220,53,69,.25)',  icon: 'bi-x-circle-fill',       label: 'Cancelled'      },
-  rejected:      { bg: 'rgba(220,53,69,.1)',   color: '#dc35b8', border: 'rgba(153, 7, 250, 0.87)',  icon: 'bi-x-circle-fill',       label: 'Rejected'      },
+  rejected:       { bg: 'rgba(111,66,193,.1)',  color: '#6f42c1', border: 'rgba(111,66,193,.25)', icon: 'bi-slash-circle-fill',  label: 'Rejected'  }
 }
-
 // Separate map for payment_status display — shown as a secondary badge
 const PAYMENT_META = {
   paid:           { color: '#198754', icon: 'bi-check-circle',      label: null              },  // no badge needed
@@ -203,8 +202,8 @@ function BookingCard({ b, index, onCancel, onDelete }) {
   const canCancel = status === 'confirmed' && b.payment_status === 'paid' && !slotPast
   // Can delete if booking is no longer active (cancelled or completed)
   // and not mid-refund
-  const canDelete = (status === 'cancelled' || status === 'completed' || status==='rejected')
-    && b.payment_status !== 'refund_pending'
+  const canDelete = (status === 'cancelled' || status === 'completed' || status === 'rejected')
+  && b.payment_status !== 'refund_pending'
 
   return (
     <div className="card border-0 shadow-sm rounded-4 overflow-hidden h-100">
