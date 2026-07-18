@@ -620,7 +620,6 @@ exports.getBookingsByStatus = async (req, res) => {
     const [rows] = await db.query(
       `SELECT status, COUNT(*) AS count
        FROM bookings
-       WHERE is_deleted = 0
        GROUP BY status`
     );
     res.json(rows);
