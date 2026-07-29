@@ -19,7 +19,7 @@ function recommendationScore(t) {
   const distance = t.distance ?? null;
 
   const RATING_WEIGHT   = 1;
-  const DISTANCE_WEIGHT = 0.1; // tune this — higher = distance matters more
+  const DISTANCE_WEIGHT = 0.2; // tune this — higher = distance matters more
 
   const distancePenalty = distance !== null ? distance * DISTANCE_WEIGHT : 0;
   return (rating * RATING_WEIGHT) - distancePenalty;
@@ -125,7 +125,8 @@ export default function Home({
         (fCap === "All" || t.capacity?.includes(fCap)) &&
         (!search ||
           t.name?.toLowerCase().includes(search.toLowerCase()) ||
-          t.location?.toLowerCase().includes(search.toLowerCase())),
+          t.location?.toLowerCase().includes(search.toLowerCase()) ||
+          t.address?.toLowerCase().includes(search.toLowerCase())),
     )
     .sort((a, b) =>
       sort === "price"

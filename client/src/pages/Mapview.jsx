@@ -68,115 +68,154 @@ function ClusteredMarkers({ turfs, onOpenTurf, clusterReady }) {
   const prevTurfs  = useRef([])
 
   useEffect(() => {
-    if (!clusterReady || !L.markerClusterGroup) return
+  if (document.getElementById('tf-turf-label-style')) return
+  const style = document.createElement('style')
+  style.id = 'tf-turf-label-style'
+  style.textContent = `
+    .tf-turf-label {
+      background: rgba(13, 110, 253, 0.95);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .tf-turf-label::before {
+      border-top-color: rgba(13, 110, 253, 0.95);
+    }
+  `
+  document.head.appendChild(style)
+}, [])
 
-    // Remove previous cluster layer
+  useEffect(() => {
+  if (!clusterReady || !L.markerClusterGroup) return
+
+  // Remove previous cluster layer
+  if (mcgRef.current) {
+    map.removeLayer(mcgRef.current)
+    mcgRef.current = null
+  }
+
+  const validTurfs = turfs.filter(t => {
+    const lat = parseFloat(t.latitude  ?? t.lat)
+    const lng = parseFloat(t.longitude ?? t.lng)
+    return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
+  })
+
+  if (validTurfs.length === 0) return
+
+  // Custom cluster bubble
+  const mcg = L.markerClusterGroup({
+    maxClusterRadius: 60,
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: true,
+    animate: true,
+    iconCreateFunction: (cluster) => {
+      const count = cluster.getChildCount()
+      const size  = count > 20 ? 54 : count > 10 ? 46 : 38
+      return L.divIcon({
+        html: `<div style="
+          width:${size}px;height:${size}px;
+          background:linear-gradient(135deg,#0d6efd,#0a58ca);
+          border-radius:50%;
+          display:flex;align-items:center;justify-content:center;
+          color:#fff;font-weight:900;font-size:${count > 9 ? 13 : 15}px;
+          box-shadow:0 4px 16px rgba(13,110,253,.5);
+          border:3px solid #fff;
+        ">${count}</div>`,
+        className: '',
+        iconSize:   [size, size],
+        iconAnchor: [size / 2, size / 2],
+      })
+    },
+  })
+
+  // Turf pin
+  const turfIcon = L.divIcon({
+  className: '',
+  html: `<div style="
+    width:36px;height:36px;
+    background:#0d6efd;
+    border-radius:50% 50% 50% 0;
+    transform:rotate(-45deg);
+    box-shadow:0 3px 12px rgba(13,110,253,.5);
+    display:flex;align-items:center;justify-content:center;
+    border:2.5px solid #fff;
+  ">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="18" height="18"
+         style="transform:rotate(45deg);display:block;margin:auto;">
+      <rect x="8" y="10" width="48" height="44" rx="4" fill="none" stroke="white" stroke-width="4"/>
+      <circle cx="32" cy="32" r="8" fill="none" stroke="white" stroke-width="3"/>
+      <line x1="8" y1="32" x2="56" y2="32" stroke="white" stroke-width="3"/>
+    </svg>
+  </div>`,
+  iconSize:   [36, 36],
+  iconAnchor: [18, 36],
+  popupAnchor:[0, -40],
+})
+
+  // ── Single loop: build marker, add tooltip, add popup, add to cluster ──
+  validTurfs.forEach(turf => {
+    const lat = parseFloat(turf.latitude  ?? turf.lat)
+    const lng = parseFloat(turf.longitude ?? turf.lng)
+
+    const marker = L.marker([lat, lng], { icon: turfIcon })
+
+    // Persistent name label — visible without clicking
+    marker.bindTooltip(turf.name, {
+      permanent: true,
+      direction: 'top',
+      offset: [0, -38],
+      className: 'tf-turf-label',
+    })
+
+    marker.bindPopup(`
+      <div style="font-family:sans-serif;min-width:170px;padding:4px 0;">
+        <div style="font-weight:800;font-size:14px;color:#1a1a2e;margin-bottom:6px;line-height:1.3;">
+          ${turf.name}
+        </div>
+        <div style="color:#6c757d;font-size:12px;margin-bottom:10px;line-height:1.6;">
+          📍 ${turf.address} . ${turf.location ?? ''}<br/>
+          ${turf.rating !== null && turf.rating !== undefined ? `⭐ ${turf.rating}` : 'No ratings yet'} &nbsp;·&nbsp; ₵${turf.pricePerHour}/hr
+        </div>
+        <button
+          onclick="window.__mapOpenTurf(${turf.id})"
+          style="
+            width:100%;padding:8px;border:none;border-radius:8px;
+            background:#0d6efd;color:#fff;font-weight:700;
+            font-size:13px;cursor:pointer;
+          "
+        >View & Book</button>
+      </div>
+    `, { maxWidth: 220 })
+
+    mcg.addLayer(marker)
+  })
+
+  map.addLayer(mcg)
+  mcgRef.current = mcg
+
+  // Fit map to markers
+  try {
+    map.fitBounds(mcg.getBounds(), { padding: [40, 40], maxZoom: 14 })
+  } catch {}
+
+  prevTurfs.current = turfs
+
+  return () => {
     if (mcgRef.current) {
       map.removeLayer(mcgRef.current)
       mcgRef.current = null
     }
-
-    const validTurfs = turfs.filter(t => {
-      const lat = parseFloat(t.latitude  ?? t.lat)
-      const lng = parseFloat(t.longitude ?? t.lng)
-      return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
-    })
-
-    if (validTurfs.length === 0) return
-
-    // Custom cluster bubble
-    const mcg = L.markerClusterGroup({
-      maxClusterRadius: 60,
-      showCoverageOnHover: false,
-      spiderfyOnMaxZoom: true,
-      animate: true,
-      iconCreateFunction: (cluster) => {
-        const count = cluster.getChildCount()
-        const size  = count > 20 ? 54 : count > 10 ? 46 : 38
-        return L.divIcon({
-          html: `<div style="
-            width:${size}px;height:${size}px;
-            background:linear-gradient(135deg,#0d6efd,#0a58ca);
-            border-radius:50%;
-            display:flex;align-items:center;justify-content:center;
-            color:#fff;font-weight:900;font-size:${count > 9 ? 13 : 15}px;
-            box-shadow:0 4px 16px rgba(13,110,253,.5);
-            border:3px solid #fff;
-          ">${count}</div>`,
-          className: '',
-          iconSize:   [size, size],
-          iconAnchor: [size / 2, size / 2],
-        })
-      },
-    })
-
-    // Turf pin
-    const turfIcon = L.divIcon({
-      className: '',
-      html: `<div style="
-        width:36px;height:36px;
-        background:#0d6efd;
-        border-radius:50% 50% 50% 0;
-        transform:rotate(-45deg);
-        box-shadow:0 3px 12px rgba(13,110,253,.5);
-        display:flex;align-items:center;justify-content:center;
-        border:2.5px solid #fff;
-      ">
-        <span style="transform:rotate(45deg);font-size:16px;line-height:36px;">⚽</span>
-      </div>`,
-      iconSize:   [36, 36],
-      iconAnchor: [18, 36],
-      popupAnchor:[0, -40],
-    })
-
-    validTurfs.forEach(turf => {
-      const lat = parseFloat(turf.latitude  ?? turf.lat)
-      const lng = parseFloat(turf.longitude ?? turf.lng)
-
-      const marker = L.marker([lat, lng], { icon: turfIcon })
-
-     marker.bindPopup(`
-  <div style="font-family:sans-serif;min-width:170px;padding:4px 0;">
-    <div style="font-weight:800;font-size:14px;color:#1a1a2e;margin-bottom:6px;line-height:1.3;">
-      ${turf.name}
-    </div>
-    <div style="color:#6c757d;font-size:12px;margin-bottom:10px;line-height:1.6;">
-      📍 ${turf.address } . ${ turf.location ?? ''}<br/>
-      ${turf.rating !== null && turf.rating !== undefined ? `⭐ ${turf.rating}` : 'No ratings yet'} &nbsp;·&nbsp; ₵${turf.pricePerHour}/hr
-    </div>
-    <button
-      onclick="window.__mapOpenTurf(${turf.id})"
-      style="
-        width:100%;padding:8px;border:none;border-radius:8px;
-        background:#0d6efd;color:#fff;font-weight:700;
-        font-size:13px;cursor:pointer;
-      "
-    >View & Book</button>
-  </div>
-`, { maxWidth: 220 })
-      mcg.addLayer(marker)
-    })
-
-    map.addLayer(mcg)
-    mcgRef.current = mcg
-
-    // Fit map to markers
-    try {
-      map.fitBounds(mcg.getBounds(), { padding: [40, 40], maxZoom: 14 })
-    } catch {}
-
-    prevTurfs.current = turfs
-
-    return () => {
-      if (mcgRef.current) {
-        map.removeLayer(mcgRef.current)
-        mcgRef.current = null
-      }
-    }
-  }, [turfs, clusterReady, map])
+  }
+}, [turfs, clusterReady, map])
 
   return null
 }
+
 
 // ── Main export ───────────────────────────────────────────────────────────
 export default function MapView({ turfs, onOpenTurf }) {
