@@ -27,6 +27,8 @@ const registerSlotLockSocket = require('./sockets/slotLockSocket');
 const registerAdminNotificationSocket = require('./sockets/notificationSocket');
 
 //Cron-Jobs with Node-cron
+const healthRoute = require("./routes/healthRoute"); // fixed typo
+const startHealthCheckCron = require('./service/cronJob');
 
 const { startReviewPromptCron } = require('./utils/reviewPrompts');
 
@@ -83,6 +85,7 @@ app.use('/api/enquiries', enquiriesRoute);
 app.use('/api/reviews', reviewRoute);
 app.use('/api/payments', paymentsRoute);
 app.use('/api/super', superAdminRoute);
+app.use('/api', healthRoute);
 
 app.get("/", (req, res) => {
   res.send("Astro Turf API running");
@@ -93,6 +96,7 @@ setupAnalyticsSocket(io);
 registerSlotLockSocket(io);
 registerAdminNotificationSocket(io);
 startReviewPromptCron();
+startHealthCheckCron();
 // Connect Redis (non-blocking — server starts even if Redis is unavailable)
 const redis = require('./config/RedisClient');
 redis.connect();
