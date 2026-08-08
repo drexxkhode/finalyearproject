@@ -2,7 +2,7 @@
 const axios = require("axios");
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const ALERT_EMAIL_TO = process.env.ALERT_EMAIL_TO;   // your email
+const ALERT_EMAIL_TO = process.env.ALERT_EMAIL_TO;     // your email
 const ALERT_EMAIL_FROM = process.env.ALERT_EMAIL_FROM; // verified sender in Brevo
 
 // Prevent spamming your inbox every 10 min while something stays down.
@@ -23,17 +23,39 @@ async function sendHealthAlert(result) {
   }
 
   const failedParts = [];
-  if (result.database !== "connected") failedParts.push(`Database: ${result.database}`);
-  if (result.redis !== "connected" && result.redis !== "disabled") failedParts.push(`Redis: ${result.redis}`);
+  if (result.database !== "connected") {
+    failedParts.push({
+      label: "Database",
+      status: result.database,
+      error: result.errors?.database || "No error message captured",
+    });
+  }
+  if (result.redis !== "connected" && result.redis !== "disabled") {
+    failedParts.push({
+      label: "Redis",
+      status: result.redis,
+      error: result.errors?.redis || "No error message captured",
+    });
+  }
 
   const subject = `🚨 Health Check Alert — ${result.status.toUpperCase()}`;
   const htmlContent = `
-    <h2>North Industrial Area GIS Locator — Health Check Alert</h2>
+    <h2>Turf Arena — Health Check Alert</h2>
     <p><strong>Status:</strong> ${result.status}</p>
     <p><strong>Time:</strong> ${result.timestamp}</p>
-    <ul>
-      ${failedParts.map((p) => `<li>${p}</li>`).join("")}
-    </ul>
+    <hr />
+    ${failedParts
+      .map(
+        (p) => `
+      <div style="margin-bottom: 12px;">
+        <p><strong>${p.label}:</strong> ${p.status}</p>
+        <p style="background:#f5f5f5; padding:8px; border-left:3px solid #d33; font-family:monospace; font-size:13px;">
+          ${p.error}
+        </p>
+      </div>
+    `
+      )
+      .join("")}
     <p>Check your Render dashboard/logs for more details.</p>
   `;
 
@@ -41,7 +63,7 @@ async function sendHealthAlert(result) {
     await axios.post(
       "https://api.brevo.com/v3/smtp/email",
       {
-        sender: { email: ALERT_EMAIL_FROM, name: "TURFARENA MONITOR" },
+        sender: { email: ALERT_EMAIL_FROM, name: "Turf arena monitor" },
         to: [{ email: ALERT_EMAIL_TO }],
         subject,
         htmlContent,
@@ -61,7 +83,7 @@ async function sendHealthAlert(result) {
   }
 }
 
-module.exports = { sendHealthAlert }; 
+module.exports = { sendHealthAlert };
 
 
 // service/mailer.js
