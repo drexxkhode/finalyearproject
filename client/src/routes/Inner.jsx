@@ -123,7 +123,7 @@ export default function Inner() {
       // Small delay — give SocketContext time to connect with the new token
       setTimeout(() => {
         lockSlot(pending.turfId, pending.slotId, pending.slotLabel)
-        notify('🔒 Slot locked for 5 mins!')
+        notify('🔒 Slot locked for 5 mins for you!')
       }, 600)
     }
   }, [setUser, notify, lockSlot])

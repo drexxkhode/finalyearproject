@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import AppSpinner from './AppSpinner';
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 
@@ -269,7 +270,7 @@ export default function AuthScreen({ onSuccess, isModal = false, onClose, startO
             disabled={otpLoading || otp.join("").length !== 6}
           >
             {otpLoading
-              ? <><span className="spinner-border spinner-border-sm me-2" />Verifying…</>
+              ? <><AppSpinner small color="#fff" />Verifying…</>
               : "Verify Code →"
             }
           </button>
@@ -307,7 +308,7 @@ export default function AuthScreen({ onSuccess, isModal = false, onClose, startO
               <img src="/assets/img/logo/logo.png" alt="logo" />
             </div>
             <div className="tf-brand-title font-condensed fs-2">TURFARENA</div>
-            <div className="tf-brand-sub">Accra Metropolitan Assembly</div>
+            <div className="tf-brand-sub">Dome Kwabenya & Ayawaso West</div>
           </div>
         )}
 
@@ -390,7 +391,7 @@ export default function AuthScreen({ onSuccess, isModal = false, onClose, startO
                   <button type="submit" className="btn btn-primary w-100 fw-bold mt-3 py-2"
                     disabled={loading}>
                     {loading
-                      ? <><span className="spinner-border spinner-border-sm me-2" />Signing in…</>
+                      ? <><AppSpinner small color="#fff" />Signing in…</>
                       : "Sign In →"
                     }
                   </button>
@@ -441,7 +442,7 @@ export default function AuthScreen({ onSuccess, isModal = false, onClose, startO
                   <button type="submit" className="btn btn-primary w-100 fw-bold mt-3 py-2"
                     disabled={loading}>
                     {loading
-                      ? <><span className="spinner-border spinner-border-sm me-2" />Registering…</>
+                      ? <><AppSpinner small color="#fff" />Registering…</>
                       : "Create Account →"
                     }
                   </button>

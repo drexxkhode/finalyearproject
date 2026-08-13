@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
+import AppSpinner from './AppSpinner';
 import StarRating from "./StarRating";
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'; // Change if your project uses Vite
@@ -159,7 +160,7 @@ export default function SystemReviewModal({
                 >
                     {loading ? (
                         <>
-                            <span className="spinner-border spinner-border-sm me-2" />
+                            <AppSpinner small color="#fff" />
                             Submitting...
                         </>
                     ) : (

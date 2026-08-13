@@ -20,7 +20,7 @@ logs
 # build
 dist/
 build/
-
+client/build/
 # OS
 .DS_Store
 Thumbs.db

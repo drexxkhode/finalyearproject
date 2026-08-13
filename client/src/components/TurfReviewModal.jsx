@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
+import AppSpinner from './AppSpinner';
 import StarRating from "./StarRating";
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
@@ -120,14 +121,14 @@ export default function TurfReviewModal({
             onClick={skip}
             disabled={loading || dismissing}
           >
-            {dismissing ? <><span className="spinner-border spinner-border-sm me-2" />Skipping…</> : "Skip"}
+            {dismissing ? <><AppSpinner small />Skipping…</> : "Skip"}
           </button>
           <button
             className="btn btn-primary fw-bold flex-grow-1"
             onClick={submit}
             disabled={loading || dismissing || rating === 0}
           >
-            {loading ? <><span className="spinner-border spinner-border-sm me-2" />Submitting…</> : "Submit"}
+            {loading ? <><AppSpinner small color="#fff" />Submitting…</> : "Submit"}
           </button>
         </div>
       </div>

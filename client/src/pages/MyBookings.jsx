@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import axios from 'axios'
+import AppSpinner from '../components/AppSpinner'
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
@@ -130,7 +131,7 @@ function CancelModal({ booking, onConfirm, onClose, loading }) {
             Keep Booking
           </button>
           <button className="btn btn-danger fw-bold flex-grow-1" onClick={onConfirm} disabled={loading}>
-            {loading ? <><span className="spinner-border spinner-border-sm me-2" />Cancelling…</> : 'Yes, Cancel'}
+            {loading ? <><AppSpinner small />Cancelling…</> : 'Yes, Cancel'}
           </button>
         </div>
       </div>
@@ -182,7 +183,7 @@ function DeleteModal({ booking, onConfirm, onClose, loading }) {
             Keep
           </button>
           <button className="btn btn-danger fw-bold flex-grow-1" onClick={onConfirm} disabled={loading}>
-            {loading ? <><span className="spinner-border spinner-border-sm me-2" />Deleting…</> : 'Yes, Delete'}
+            {loading ? <><AppSpinner small color="#fff" />Deleting…</> : 'Yes, Delete'}
           </button>
         </div>
       </div>
@@ -451,7 +452,7 @@ export default function MyBookings({ onBack, notify }) {
 
       {loading ? (
         <div className="text-center py-5">
-          <div className="spinner-border text-primary mb-3"></div>
+          <div className="text-primary mb-3"><AppSpinner /></div>
           <p className="text-muted">Loading your bookings…</p>
         </div>
       ) : filtered.length === 0 ? (

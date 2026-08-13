@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import SystemReviewModal from '../components/SystemReviewModal';
+import AppSpinner from '../components/AppSpinner';
 
 const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ?? ''
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
@@ -65,9 +66,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const [psReady,    setPsReady]    = useState(!!window.PaystackPop);
   const [showSystemReview, setShowSystemReview] = useState(false);
   const REVIEW_SHOWN = "system_review_shown";
-  console.log({
-  bookingRef,
-});
+  
   useEffect(() => {
     if (
         paid &&
@@ -166,7 +165,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
       if (date < today) {
         setPaying(false)
         payingRef.current = false
-        setErr('The selected date is in the past. Please go back and choose today or a future date.')
+        setErr('Selected date is in the past. Please choose today or a future date.')
         return
       }
 
@@ -187,8 +186,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
       )
 
       const { paystack_ref } = initRes.data
-      console.log('[pay] got ref from backend:', paystack_ref)
-
+     
       // Snapshot slots + amount NOW before any state changes
       const snapSlots  = lockedSlots.map(l => ({ slotId: l.slotId, label: l.label }))
       const snapAmount = totalAmount
@@ -220,7 +218,6 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
           ],
         },
         callback: (response) => {
-          console.log('[pay] Paystack callback:', response.reference)
           setBookingRef(response.reference)
           sessionStorage.setItem(SK_REF,  response.reference)
           sessionStorage.setItem(SK_PAID, '1')
@@ -319,7 +316,6 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   )
 
   // ── Booking flow ─────────────────────────────────────────────────────────
-  console.log("showSystemReview:", showSystemReview);
   return (
     <div className="tf-animate-in row justify-content-center">
       <div className="col-12 col-md-10 col-lg-8 col-xl-7">
@@ -507,20 +503,31 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
           <div className="row g-3">
             <div className="col-12 col-md-7">
               <div className="card border-0 shadow-sm rounded-4 p-4 text-center">
-                <div className="tf-paystack-badge mb-2">💳 PAYSTACK</div>
+                <div className="tf-paystack-badge mb-2">
+                  <img src="/assets/img/logo/PAYSTACK_LOGO.png" alt="Paystack logo" />
+                  <span>PAYSTACK</span>
+                </div>
                 <p className="text-muted small mb-3">
                   Tap "Pay Now" — a secure Paystack window will open.
-                  Pay by card, MTN MoMo, or Vodafone Cash.
+                  Pay by card, MTN MoMo, or Telecel Cash.
                 </p>
                 <div className="d-flex flex-wrap gap-2 justify-content-center mb-4">
-                  {['Visa', 'Mastercard', 'MTN MoMo', 'Vodafone Cash'].map(m => (
-                    <span key={m} className="tf-badge tf-badge-cyan">{m}</span>
+                  {[
+                    { name: 'Visa', logo: '/assets/img/logo/VISA-Logo-2006.png', className: 'tf-payment-badge-visa' },
+                    { name: 'Mastercard', logo: '/assets/img/logo/MasterCard_Logo.svg.webp', className: 'tf-payment-badge-mastercard' },
+                    { name: 'MTN MoMo', logo: '/assets/img/logo/MTN_MOMO.webp', className: 'tf-payment-badge-momo' },
+                    { name: 'Telecel Cash', logo: '/assets/img/logo/VODAFONE.jpg', className: 'tf-payment-badge-vodafone' },
+                  ].map(({ name, logo, className }) => (
+                    <span key={name} className={`tf-payment-badge ${className}`}>
+                      <img src={logo} alt={`${name} logo`} />
+                      <span>{name}</span>
+                    </span>
                   ))}
                 </div>
 
                 {!psReady && (
                   <div className="alert alert-info py-2 small mb-3">
-                    <span className="spinner-border spinner-border-sm me-2" />
+                    <AppSpinner small />
                     Loading payment system…
                   </div>
                 )}
@@ -531,9 +538,9 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
                   disabled={paying || !psReady}
                 >
                   {paying
-                    ? <><span className="spinner-border spinner-border-sm me-2" role="status" />Processing…</>
+                    ? <><AppSpinner small color="#fff" />Processing…</>
                     : !psReady
-                      ? <><span className="spinner-border spinner-border-sm me-2" role="status" />Loading…</>
+                      ? <><AppSpinner small color="#fff" />Loading…</>
                       : `Pay ₵${totalAmount}.00 Now`
                   }
                 </button>

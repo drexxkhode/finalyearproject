@@ -1,6 +1,5 @@
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import ClipLoader from "react-spinners/ClipLoader";
 import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5000";

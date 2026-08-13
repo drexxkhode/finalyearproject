@@ -6,6 +6,7 @@ import L from 'leaflet'
 import axios from 'axios'
 import { useParams, useNavigate } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
+import AppSpinner from '../components/AppSpinner'
 
 //const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
 const GH_API_KEY = import.meta.env.VITE_GRAPHHOPPER_API_KEY;
@@ -300,6 +301,7 @@ const checkReroute = useCallback((lat, lng) => {
       background: '#0f1923', color: '#fff', fontFamily: 'sans-serif',
       gap: 16,
     }}>
+      <div style={{ fontSize: 18 }}><AppSpinner color="#fff" /></div>
       <div style={{ fontSize: 18 }}>📍 Getting your location...</div>
       <button
         onClick={handleCancel}

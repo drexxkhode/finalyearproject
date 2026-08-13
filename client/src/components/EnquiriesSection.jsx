@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import AppSpinner from './AppSpinner'
 import { useSocket } from '../context/SocketContext'
 import StarRating from "../components/StarRating";
 
@@ -127,7 +128,7 @@ const [rating, setRating] = useState(0);
           disabled={!user || !msg.trim() || loading}
         >
           {loading
-            ? <><span className="spinner-border spinner-border-sm me-2" />Sending...</>
+            ? <><AppSpinner small color="#fff" />Sending...</>
             : 'Send Enquiry →'
           }
         </button>

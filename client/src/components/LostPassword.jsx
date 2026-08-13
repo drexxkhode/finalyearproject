@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import ClipLoader from "react-spinners/ClipLoader";
+import AppSpinner from './AppSpinner';
 import axios from 'axios';
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
@@ -87,7 +87,7 @@ export default function LostPassword() {
         />
 
         <button className="btn btn-primary w-100">
-           {send && <ClipLoader color="#fff" size={18} />}
+           {send && <AppSpinner small color="#fff" />}
           {send ? "Sending..." : "Send Reset Link"}
         </button>
         </form>

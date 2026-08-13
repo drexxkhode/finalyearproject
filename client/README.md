@@ -1,125 +1,190 @@
-# ⚽ TURFFIELD
-### Geo-Based Astro Turf Booking & Management System
-**A Case Study of the Accra Metropolitan Assembly (AMA)**
+# TurfArena Client
 
----
+TurfArena is a geo-based astro-turf booking and management system for facilities in the Dome-Kwabenya and Ayawaso West constituencies.
 
-## 🗂️ Project Structure
+This directory contains the React client application. Users can browse available turfs, view locations and directions, reserve time slots, make payments, manage bookings, and submit reviews or enquiries.
 
+## Features
+
+- User registration, login, OTP verification, logout, and password reset
+- Turf browsing with search, filtering, sorting, recommendations, and availability information
+- Turf detail pages with image galleries, ratings, reviews, enquiries, and available time slots
+- Live slot locking with five-minute countdowns through Socket.IO
+- Multi-step booking flow with Paystack payment integration
+- Booking history and booking cancellation
+- User profile management and email-verification support
+- Interactive Leaflet maps and GPS-based turf directions
+- Google Maps, Waze, and GraphHopper direction support
+- Responsive desktop and mobile layouts
+- Toast notifications and mobile bottom navigation
+
+## Technology Stack
+
+- React 18.3
+- Vite 7.3
+- React Router DOM 7
+- Axios
+- Socket.IO Client
+- React Leaflet and Leaflet Routing Machine
+- Bootstrap 5 and Bootstrap Icons
+- React Icons
+- Paystack Checkout
+
+## Project Structure
+
+```text
+client/
+├── public/
+│   ├── assets/                 # Turf and application images
+│   ├── manifest.json
+│   └── robots.txt
+├── src/
+│   ├── api/
+│   │   └── authApi.jsx         # Authentication API requests
+│   ├── components/             # Reusable UI components
+│   ├── context/
+│   │   ├── AuthContext.jsx     # Authentication state
+│   │   └── SocketContext.jsx   # Socket.IO connection state
+│   ├── data/
+│   │   └── turfs.js            # Turf data and local supporting data
+│   ├── hooks/
+│   │   ├── useNotification.js  # Toast notification helper
+│   │   ├── useSlots.js          # Slot loading, locking, and countdown logic
+│   │   └── useUserLocation.js   # Browser location helper
+│   ├── pages/
+│   │   ├── Booking.jsx
+│   │   ├── Directions.jsx
+│   │   ├── Home.jsx
+│   │   ├── Mapview.jsx
+│   │   ├── MyBookings.jsx
+│   │   ├── Profile.jsx
+│   │   └── TurfDetail.jsx
+│   ├── partials/               # Shared navigation components
+│   ├── routes/
+│   │   └── Inner.jsx            # Application routes and protected routes
+│   ├── utils/
+│   │   └── haversine.js         # Distance calculations
+│   ├── App.jsx                  # Application providers and root layout
+│   ├── index.css                # Global styles and design tokens
+│   └── main.jsx                 # React entry point
+├── .env.development             # Development environment configuration
+├── .env.production              # Production environment configuration
+├── index.html
+├── package.json
+├── vite.config.js
+└── README.md
 ```
-turffield/
-├── index.html                  # Vite HTML entry point
-├── vite.config.js              # Vite configuration
-├── package.json                # Dependencies & scripts
-├── README.md
-│
-└── src/
-    ├── main.jsx                # React DOM entry point
-    ├── App.jsx                 # Root component + layout (web & mobile)
-    ├── index.css               # Global CSS reset & design tokens
-    │
-    ├── context/
-    │   └── AuthContext.jsx     # Global auth state (login, register, logout)
-    │
-    ├── hooks/
-    │   ├── useSlots.js         # Live slot management + countdown lock
-    │   └── useNotification.js  # Toast notification helper
-    │
-    ├── data/
-    │   └── turfs.js            # Turf records, photos, seed enquiries, slot generator
-    │
-    ├── components/
-    │   ├── AuthScreen.jsx      # Login / Register screen
-    │   ├── TurfCard.jsx        # Turf listing card (used in grid)
-    │   ├── Gallery.jsx         # Photo gallery with thumbnails + arrows
-    │   ├── EnquiriesSection.jsx# Per-turf Q&A section
-    │   └── Notification.jsx    # Toast notification component
-    │
-    └── pages/
-        ├── Home.jsx            # Browse turfs / Map / Recommendations
-        ├── TurfDetail.jsx      # Single turf view with slots + enquiries
-        ├── Booking.jsx         # 3-step booking flow + Paystack UI
-        ├── Directions.jsx      # GPS directions (Google Maps / Waze)
-        └── MyBookings.jsx      # User's booking history
-```
 
----
+## Requirements
 
-## 🚀 Getting Started
+- Node.js 22 or later
+- npm
+- A running TurfArena backend API
+- Valid third-party service credentials where required
 
-### Prerequisites
-- Node.js v18+ (download from https://nodejs.org)
-- npm v9+
+The required Node.js version is also specified in `.nvmrc` and `package.json`.
 
-### Installation
+## Installation
+
+From this directory, install the dependencies:
 
 ```bash
-# 1. Clone or download the project
-cd turffield
-
-# 2. Install dependencies
 npm install
-
-# 3. Start development server
-npm run dev
-# Opens at http://localhost:3000
 ```
 
-### Build for Production
+## Environment Variables
+
+Create or update the appropriate environment file before starting the client.
+
+```env
+VITE_API_URL=http://localhost:5000
+VITE_SOCKET_API_URL=http://localhost:5000
+VITE_IMAGE_API_URL=
+VITE_PAYSTACK_PUBLIC_KEY=
+VITE_ORS_API_KEY=
+VITE_GRAPHHOPPER_API_KEY=
+```
+
+Variable purposes:
+
+| Variable | Purpose |
+|---|---|
+| `VITE_API_URL` | Base URL for REST API requests |
+| `VITE_SOCKET_API_URL` | Socket.IO server URL for live slot updates |
+| `VITE_IMAGE_API_URL` | Image service or image API URL |
+| `VITE_PAYSTACK_PUBLIC_KEY` | Public Paystack checkout key |
+| `VITE_ORS_API_KEY` | Optional OpenRouteService directions key |
+| `VITE_GRAPHHOPPER_API_KEY` | GraphHopper routing API key |
+
+Do not commit private credentials or secret backend keys. Vite exposes variables prefixed with `VITE_` to the browser, so only public client-side values should be placed there.
+
+## Development
+
+Start the Vite development server:
+
+```bash
+npm run dev
+```
+
+Vite will display the local development URL in the terminal, normally:
+
+```text
+http://localhost:5173
+```
+
+## Production Build
+
+Create an optimized production build:
 
 ```bash
 npm run build
-# Output goes to /dist folder — deploy to Vercel, Netlify, or any static host
 ```
 
-### Preview Production Build
+The generated files are placed in `dist/` and can be deployed to a static hosting provider such as Vercel, Netlify, or an equivalent service.
+
+Preview the production build locally:
 
 ```bash
 npm run preview
 ```
 
----
+## Application Flow
 
-## ✨ Features
+1. Visitors browse turf listings and view turf details without signing in.
+2. A user selects a date and available time slot.
+3. The selected slot is temporarily locked through Socket.IO.
+4. Authenticated users continue through the booking details and payment steps.
+5. Paystack processes the payment using the configured public key.
+6. The backend confirms the booking and the booking appears in the user's booking history.
 
-| Feature | Description |
+The client stores temporary navigation and booking state in browser storage where necessary, while authentication, booking, payment, reviews, and live availability are handled through the backend services.
+
+## Available Scripts
+
+| Command | Description |
 |---|---|
-| 🔐 Auth | Register & login with localStorage persistence |
-| 🏟️ Browse Turfs | Search, filter by size, sort by distance / rating / price |
-| 📸 Photo Gallery | 4 photos per turf with thumbnails and arrow navigation |
-| 🔒 Live Slot Locking | 5-minute countdown lock prevents double-bookings |
-| 💬 Enquiries | Per-turf Q&A section with simulated staff replies |
-| 💳 Paystack | Full 3-step booking flow with Paystack payment UI |
-| 🧭 GPS Directions | Deep-links to Google Maps & Waze with turf coordinates |
-| 🎯 Recommendations | Ranked turf suggestions with availability heatmap |
-| 📱 Responsive | Mobile app UI (< 900px) + full web layout (≥ 900px) |
+| `npm run dev` | Start the development server |
+| `npm run build` | Build the client for production |
+| `npm run preview` | Preview the production build |
 
----
+## Backend Integration
 
-## 🔧 Tech Stack
+The client expects the backend to provide authentication, turf, booking, review, enquiry, payment, and Socket.IO endpoints. Ensure that:
 
-- **React 18** — functional components, hooks
-- **Vite 5** — fast dev server & build tool
-- **React Router DOM 6** — client-side routing (ready to use)
-- **CSS Variables** — design token system
-- **localStorage** — auth persistence (replace with real API in production)
+- The API URL is reachable from the browser.
+- CORS allows the client origin.
+- The Socket.IO server allows the client origin and supports the slot events used by `useSlots.js`.
+- Paystack callbacks and payment verification are configured on the backend.
+- Map and routing API keys are valid for the deployed domain.
 
----
+## Notes
 
-## 🗺️ Future Enhancements (for real deployment)
+- Map marker and marker-cluster resources are loaded through Leaflet and external map resources.
+- The application uses client-side routing, so the production host must serve `index.html` for unknown application routes.
+- The production bundle may be large because the application includes mapping, routing, payment, and UI libraries. Code splitting can be introduced later if initial load performance becomes a concern.
 
-- Replace localStorage auth with **JWT + backend API** (Node.js / Django)
-- Use **Firebase Realtime Database** or **Supabase** for live slot sync
-- Integrate real **Paystack Checkout.js SDK**
-- Replace mock map with **Google Maps JavaScript API** or **Mapbox**
-- Add **admin dashboard** for AMA turf managers
-- Push notifications for booking reminders
+## Project Information
 
----
-
-## 👨‍🎓 Final Year Project Info
-
-- **Institution:** [Your University]
-- **Student:** [Your Name]
-- **Supervisor:** [Supervisor Name]
-- **Year:** 2024/2025
+- Project: TurfArena Geo-Based Astro Turf Booking and Management System
+- Case study: Dome-Kwabenya and Ayawaso West constituencies
+- Project type: Final-year project

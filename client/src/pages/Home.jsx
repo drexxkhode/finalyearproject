@@ -3,11 +3,11 @@ import TurfCard from "../components/TurfCard";
 import TurfReviewModal from "../components/TurfReviewModal";
 import MapView from "./Mapview";
 import axios from "axios";
+import AppSpinner from '../components/AppSpinner';
 import useUserLocation from '../hooks/useUserLocation';
 import { haversineDistance } from '../utils/haversine';
 const PAGE_SIZE = 12;
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
-
 
 // Higher score = better recommendation.
 // Unrated turfs get a neutral rating (2.5) instead of 0, so a single
@@ -155,7 +155,9 @@ const rec = [...turfs].sort((a, b) => recommendationScore(b) - recommendationSco
   if (loading)
     return (
       <div className="text-center py-5">
-        <div className="spinner-border text-primary"></div>
+        <div className=" text-primary">
+          <AppSpinner />
+        </div>
         <p className="mt-3 text-muted">Loading turfs...</p>
       </div>
     );

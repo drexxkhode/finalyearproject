@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import AppSpinner from '../components/AppSpinner';
 import EnquiriesSection from "../components/EnquiriesSection";
 import Gallery from "../components/Gallery";
 import useUserLocation from '../hooks/useUserLocation';
@@ -216,10 +217,7 @@ const distanceKm = userCoords
             <div className="tf-slot-grid">
               {!isLoaded ? (
                 <div className="text-center text-muted py-3 w-100">
-                  <div
-                    className="spinner-border spinner-border-sm me-2"
-                    role="status"
-                  />
+                  <AppSpinner small />
                   Loading slots…
                 </div>
               ) : turfSlots.length === 0 ? (

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
+import AppSpinner from '../components/AppSpinner'
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
@@ -242,7 +243,7 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
                   }}
                 >
                   {uploadingPic
-                    ? <span className="spinner-border spinner-border-sm text-white" style={{ width: 14, height: 14 }} />
+                    ? <AppSpinner small color="#fff" />
                     : <i className="bi bi-camera-fill text-white" style={{ fontSize: 12 }}></i>
                   }
                 </button>
@@ -388,7 +389,7 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
                     <button className="btn btn-primary fw-bold py-2 mt-1"
                       onClick={saveInfo} disabled={saving}>
                       {saving
-                        ? <><span className="spinner-border spinner-border-sm me-2" />Saving…</>
+                        ? <><AppSpinner small color="#fff" />Saving…</>
                         : <><i className="bi bi-check-lg me-2"></i>Save Changes</>
                       }
                     </button>
@@ -449,7 +450,7 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
                     <button className="btn btn-primary fw-bold py-2 mt-1"
                       onClick={changePassword} disabled={saving}>
                       {saving
-                        ? <><span className="spinner-border spinner-border-sm me-2" />Updating…</>
+                        ? <><AppSpinner small color="#fff" />Updating…</>
                         : <><i className="bi bi-shield-lock me-2"></i>Update Password</>
                       }
                     </button>
@@ -496,7 +497,7 @@ export default function Profile({ user, onBack, notify, onUserUpdate }) {
                 disabled={uploadingPic}
               >
                 {uploadingPic
-                  ? <><span className="spinner-border spinner-border-sm me-2" />Removing…</>
+                  ? <><AppSpinner small color="#fff" />Removing…</>
                   : <><i className="bi bi-trash me-2"></i>Yes, Remove</>
                 }
               </button>
