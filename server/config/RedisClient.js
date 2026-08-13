@@ -39,6 +39,22 @@ async function connect() {
   }
 }
 
+// Add near the top with other state
+function isReady() {
+  return ready;
+}
+
+async function ping() {
+  if (!ready || !client) return false;
+  try {
+    const pong = await client.ping();
+    return pong === 'PONG';
+  } catch (err) {
+    console.warn('[redis] ping error:', err.message);
+    return false;
+  }
+}
+
 // ── Safe wrappers — all return null / false on error ─────────────────────────
 async function get(key) {
   if (!ready || !client) return null;
@@ -118,4 +134,4 @@ const TTL = {
   dashboardAll: 2  * 60,   // 2 minutes
 };
 
-module.exports = { connect, get, set, setNX, del, delPattern, KEYS, TTL };
+module.exports = { connect, get, set, setNX, del, delPattern, KEYS, TTL , isReady, ping };

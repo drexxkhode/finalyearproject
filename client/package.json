@@ -1,8 +1,8 @@
 {
-  "name": "turffield",
+  "name": "turfarena",
   "version": "1.0.0",
   "private": true,
-  "description": "Geo-Based Astro Turf Booking & Management System — Accra Metropolitan Assembly",
+  "description": "Geo-Based Astro Turf Booking & Management System —   Dome-Kwabenya & Ayawaso West Constituencies",
   "author": "Your Name <you@email.com>",
   "license": "MIT",
   "engines": {
