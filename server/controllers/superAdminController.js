@@ -266,6 +266,21 @@ exports.deleteUser = async (req, res) => {
 /* ================= GET SYSTEM ADMIN BY ID ======================================= */
 exports.getAdminDetails = async (req, res) => {
   try {
+    // A Super Admin can open either a system-admin profile or a turf-manager
+    // profile from the same frontend viewer. Resolve turf managers first so
+    // their associated turf name is included in the response.
+    const [managerRows] = await db.query(
+      `SELECT a.id, a.turf_id, a.firstName, a.middleName, a.lastName,
+              a.email, a.role, a.photo, a.contact, a.created_at,
+              t.name AS turfName
+       FROM admins AS a
+       LEFT JOIN turfs AS t ON a.turf_id = t.id
+       WHERE a.id = ?`,
+      [req.params.id]
+    );
+
+    if (managerRows.length) return res.json(managerRows[0]);
+
     const [rows] = await db.query(
       `SELECT id, firstName, middleName, lastName,
               email, role, photo, contact, created_at
@@ -510,18 +525,34 @@ exports.resetPassword = async (req, res) => {
 
 exports.getAllTurfAdmins = async (req, res) => {
   try {
-    const [rows] = await db.query(
-      `SELECT id, firstName, middleName, lastName,
-              email, role, photo, contact, created_at
-       FROM admins`
-    );
-    res.json(rows); // photos are already Cloudinary URLs or null
+    const [rows] = await db.query(`
+      SELECT
+        a.id,
+        a.turf_id,
+        a.firstName,
+        a.middleName,
+        a.lastName,
+        a.email,
+        a.role,
+        a.photo,
+        a.contact,
+        a.created_at,
+        t.name AS turfName
+      FROM admins AS a
+      INNER JOIN turfs AS t
+        ON a.turf_id = t.id
+    `);
+
+    res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching turf admins:", err);
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
 
-/* ================= GET ALL TURF MANAGERS ======================================== */
+/* ================= GET ALL TURFS ======================================== */
 exports.getTurf = async (req, res) => {
   try {
     const [turfs] = await db.query("SELECT id, name, created_at FROM turfs WHERE status = 'inactive' ORDER BY created_at DESC");

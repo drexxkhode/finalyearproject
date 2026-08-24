@@ -1,4 +1,4 @@
-import SuperAdminDashboard from "./Layout/SuperAdmin/SuperAdminDasboard";
+import SuperAdminDashboard from "./Layout/SuperAdmin/SuperAdminDashboard";
 import ManagerDashboard from "./Layout/TurfManager/ManagerDashboard";
 
 const Dashboard = () => {

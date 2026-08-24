@@ -340,20 +340,42 @@ exports.deleteUser = async (req, res) => {
 };
 
 /* ================= GET ADMIN BY ID ======================================= */
+
 exports.getAdminDetails = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT id, turf_id, firstName, middleName, lastName,
-              email, role, photo, contact, created_at
-       FROM admins WHERE id = ?`,
+      `SELECT 
+          a.id,
+          a.turf_id,
+          a.firstName,
+          a.middleName,
+          a.lastName,
+          a.email,
+          a.role,
+          a.photo,
+          a.contact,
+          a.created_at,
+          t.name AS turfName
+       FROM admins AS a
+       LEFT JOIN turfs AS t 
+          ON a.turf_id = t.id
+       WHERE a.id = ?`,
       [req.params.id]
     );
-    if (!rows.length)
-      return res.status(404).json({ message: "Admin not found" });
 
-    res.json(rows[0]); // photo is already a Cloudinary URL or null
+    if (!rows.length) {
+      return res.status(404).json({
+        message: "Admin not found"
+      });
+    }
+
+    res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error fetching turf admin:", err);
+
+    res.status(500).json({
+      message: "Server error"
+    });
   }
 };
 

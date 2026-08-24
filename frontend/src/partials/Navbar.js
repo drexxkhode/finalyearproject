@@ -4,6 +4,15 @@ import { io } from "socket.io-client";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
+ function formatRoles(role) {
+  const roleLabels = {
+    Super_admin: "Super Administrator",
+    Staff: "Turf Staff",
+    Manager: "Turf Manager"
+  };
+  return roleLabels[role] || role;
+}
+
 // ── Notification sound (uses Web Audio API — no file needed) ──────────────
 function playNotifSound(type = 'enquiry') {
   try {
@@ -125,6 +134,9 @@ function Navbar() {
   const fullName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}` : "Guest"
 
+    const role = user?.role;
+
+
   return (
     <div className="app-header d-flex align-items-center">
       <div className="d-flex">
@@ -142,6 +154,7 @@ function Navbar() {
         </Link>
       </div>
 
+        <h5 className="d-flex gap-2 justify-content-end px-3" > Welcome, {fullName}</h5>
       <div className="header-actions col">
         <div className="d-lg-flex d-none">
 
@@ -246,7 +259,7 @@ function Navbar() {
           >
             <img src={photoSrc} alt="Admin" className="rounded-2 img-3x"
               onError={e => { e.target.src = "/assets/images/admin/avatar.webp" }} />
-            <span className="ms-2 text-truncate d-lg-block d-none">{fullName}</span>
+            <span className="ms-2 text-truncate d-sm-block d-none">{formatRoles(role)  || "Guest"}</span>
           </a>
           <div className="dropdown-menu dropdown-menu-end shadow-lg">
             <div className="header-action-links mx-3 gap-2">

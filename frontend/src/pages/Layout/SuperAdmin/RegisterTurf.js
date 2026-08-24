@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import ClipLoader from "react-spinners/ClipLoader";
+import { SingleLocationMap } from "../../../components/MapView";
+import { useCurrentLocation } from "../../../services/GetLocation";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
@@ -10,6 +12,23 @@ const RegisterTurf = () => {
   const [activeTab, setActiveTab] = useState("oneA");
   const [save, setSave] = useState(false);
   const [errors, setErrors] = useState({});
+  // top of Settings component, alongside your other useState calls
+  const {
+    location: currentLocation,
+    getCurrentLocation,
+    loading: locating,
+  } = useCurrentLocation();
+
+  // sync fetched location into formData whenever it changes
+  useEffect(() => {
+    if (currentLocation) {
+      setFormData((prev) => ({
+        ...prev,
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+      }));
+    }
+  }, [currentLocation]);
 
   const initialForm = {
     turfName: "",
@@ -44,7 +63,8 @@ const RegisterTurf = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.turfName.trim()) newErrors.turfName = "Turf name is required.";
+    if (!formData.turfName.trim())
+      newErrors.turfName = "Turf name is required.";
 
     if (!formData.email.trim()) newErrors.email = "Email is required.";
 
@@ -166,7 +186,6 @@ const RegisterTurf = () => {
                                 </div>
                               )}
                             </div>
-
                             <div className="col-md-6">
                               <label htmlFor="email" className="form-label">
                                 Email
@@ -184,7 +203,6 @@ const RegisterTurf = () => {
                                 </div>
                               )}
                             </div>
-
                             <div className="col-md-6 mt-3">
                               <label htmlFor="contact" className="form-label">
                                 Contact
@@ -234,104 +252,124 @@ const RegisterTurf = () => {
                       </div>
                     </div>
 
-                    {/* ===== SECURITY & PHOTO ===== */}
+                    {/* ===== LOCATION ===== */}
                     <div
                       className={`tab-pane ${activeTab === "threeA" ? "show active" : "d-none"}`}
                     >
-                      <div className="card mb-3">
-                        <div className="card-header">
-                          <h5 className="card-title"> Location</h5>
-                        </div>
-                        <div className="card-body">
-                          <div className="row gx-3">
-                            <div className="col-6">
-                              <label htmlFor="district" className="form-label">
-                                Municipal
-                              </label>
-                              <select
-                                id="district"
-                                className={`form-control ${errors.district ? "is-invalid" : ""}`}
-                                value={formData.district}
-                                onChange={handleChange}
-                              >
-                                <option value="">-- Select Municipal --</option>
-                                <option value="Ayawaso West">
-                                  Ayawaso West
-                                </option>
-                                <option value="Dome Kwabenya">
-                                  Dome Kwabenya
-                                </option>
-                              </select>
-                              {errors.district && (
-                                <div className="invalid-feedback">
-                                  {errors.district}
-                                </div>
-                              )}
+                      <div className="row gx-3 justify-content-between">
+                        <div className="col-sm-6 col-12">
+                          <div className="card mb-3">
+                            <div className="card-header">
+                              <h5 className="card-title"> Other Information</h5>
                             </div>
-                            <div className="col-md-6">
-                              <label htmlFor="longitude" className="form-label">
-                                Longitude
-                              </label>
-                              <input
-                                type="text"
-                                id="longitude"
-                                className={`form-control ${errors.longitude ? "is-invalid" : ""}`}
-                                value={formData.longitude}
-                                onChange={handleChange}
-                              />
-                              {errors.longitude && (
-                                <div className="invalid-feedback">
-                                  {errors.longitude}
+                            <div className="card-body">
+                              <div className="row gx-3">
+                                <div className="col-12">
+                                  <label
+                                    htmlFor="district"
+                                    className="form-label"
+                                  >
+                                    Municipal
+                                  </label>
+                                  <select
+                                    id="district"
+                                    className={`form-control ${errors.district ? "is-invalid" : ""}`}
+                                    value={formData.district}
+                                    onChange={handleChange}
+                                  >
+                                    <option value="">
+                                      -- Select Municipal --
+                                    </option>
+                                    <option value="Ayawaso West">
+                                      Ayawaso West
+                                    </option>
+                                    <option value="Dome Kwabenya">
+                                      Dome Kwabenya
+                                    </option>
+                                  </select>
+                                  {errors.district && (
+                                    <div className="invalid-feedback">
+                                      {errors.district}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            <div className="col-md-6">
-                              <label htmlFor="latitude" className="form-label">
-                                Latitude
-                              </label>
-                              <input
-                                type="text"
-                                id="latitude"
-                                className={`form-control ${errors.latitude ? "is-invalid" : ""}`}
-                                value={formData.latitude}
-                                onChange={handleChange}
-                              />
-                              {errors.latitude && (
-                                <div className="invalid-feedback">
-                                  {errors.latitude}
-                                </div>
-                              )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                        <div className="d-flex gap-2 justify-content-end p-3">
-                          <button
-                            type="button"
-                            className="btn btn-success"
-                            onClick={() => setActiveTab("oneA")}
-                          >
-                            <i className="bi bi-arrow-left-circle" /> Prev
-                          </button>
-                          {/* ← disabled is now correctly on the button element */}
-                          <button
-                            type="submit"
-                            className="btn btn-info"
-                            disabled={save}
-                          >
-                            {save ? (
-                              <>
-                                <ClipLoader color="#fff" size={18} /> Saving...
-                              </>
-                            ) : (
-                              <>
-                                <i className="bi bi-cloud-arrow-up" /> Save
-                              </>
-                            )}
-                          </button>
+
+                        {/* map section */}
+                        <div className="col-sm-6 col-12">
+                          <div className="card mb-3">
+                            <div className="card-header d-flex align-items-center justify-content-between">
+                              <h5 className="card-title mb-0">Turf Location</h5>
+                              <button
+                                type="button"
+                                className="btn btn-outline-primary btn-sm d-flex align-items-center"
+                                onClick={getCurrentLocation}
+                                disabled={locating}
+                              >
+                                {locating ? (
+                                  <>
+                                    <span
+                                      className="spinner-border spinner-border-sm me-1"
+                                      style={{ width: 12, height: 12 }}
+                                    />{" "}
+                                    Locating…
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="bi bi-crosshair me-1" /> Use
+                                    current location
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <div className="card-body">
+                              <SingleLocationMap
+                                latitude={formData.latitude}
+                                longitude={formData.longitude}
+                                height={150}
+                                onChange={(latitude, longitude) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    latitude,
+                                    longitude,
+                                  }))
+                                }
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                  {activeTab === "threeA" && (
+                    <div className="d-flex gap-2 justify-content-end p-3">
+                      <button
+                        type="button"
+                        className="btn btn-success"
+                        onClick={() => setActiveTab("oneA")}
+                      >
+                        <i className="bi bi-arrow-left-circle" /> Prev
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-info"
+                        disabled={save}
+                      >
+                        {save ? (
+                          <>
+                            <ClipLoader color="#fff" size={18} /> Saving...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-cloud-arrow-up" /> Save
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </form>
                 <ToastContainer />
               </div>

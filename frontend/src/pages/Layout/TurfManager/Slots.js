@@ -92,9 +92,7 @@ function SlotModal({ isOpen, onClose, onSave, onDelete, existing }) {
               <h5 className="mb-0 text-white fw-bold">
                 {isEditing ? 'Edit Time Slot' : 'Add Time Slot'}
               </h5>
-              <p className="mb-0 text-white opacity-75" style={{ fontSize: 13 }}>
-                Template slot — no date, reused every day
-              </p>
+
             </div>
 
             <div className="modal-body px-4 py-3">
@@ -204,9 +202,6 @@ function BulkModal({ isOpen, onClose, onGenerate }) {
             padding: '18px 24px'
           }}>
             <h5 className="mb-0 text-white fw-bold">Bulk Generate Slots</h5>
-            <p className="mb-0 text-white opacity-75" style={{ fontSize: 13 }}>
-              Auto-create evenly spaced slots
-            </p>
           </div>
 
           <div className="modal-body px-4 py-3">
@@ -397,10 +392,7 @@ export default function AdminSlots() {
         <div className="card mb-3">
           <div className="card-header d-flex flex-wrap align-items-center gap-2">
             <div>
-              <h5 className="card-title mb-0">Time Slot Templates</h5>
-              <small className="text-muted">
-                These slots repeat every day — no dates. Bookings store the date separately.
-              </small>
+              <h5 className="card-title mb-0">Time Slots</h5>
             </div>
             <div className="ms-auto d-flex gap-2 flex-wrap">
               {slots.length > 0 && (
@@ -451,9 +443,6 @@ export default function AdminSlots() {
                   </div>
                   <div className="text-muted small">
                     {fmt(slots[0]?.start_time)} → {fmt(slots[slots.length - 1]?.end_time)}
-                  </div>
-                  <div className="text-muted small ms-auto">
-                    Visible to users every day they book
                   </div>
                 </div>
 

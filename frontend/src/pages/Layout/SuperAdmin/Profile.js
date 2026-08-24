@@ -81,7 +81,7 @@ const SuperAdminProfile = () => {
           <div>
             <h2 className="fw-bold mb-1">{fullName}</h2>
             <p className="mb-2">
-              <i className="bi bi-person-badge"></i> Member ID: MEM20260001
+              <i className="bi bi-person-badge"></i> {admin.turfName || "N/A"}
             </p>
             <span className="badge bg-success rounded-pill px-3">Active</span>
           </div>

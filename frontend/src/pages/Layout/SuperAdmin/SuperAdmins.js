@@ -4,6 +4,12 @@ import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
+function formatRole(role){
+  const roleLabel = {
+    Super_admin: "Super Administrator"
+  }
+  return roleLabel[role] || role;
+};
 
 const customStyles = {
   headRow:   { style: { background:"#1a56db", borderRadius:"4px 4px 0 0" } },
@@ -60,7 +66,7 @@ const Users = () => {
     { name:"Contact",   selector: r => r.contact, cell: r => r.contact||"—" },
     { name:"Role",      selector: r => r.role,    cell: r => (
       <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 fw-normal" style={{fontSize:11}}>
-        {r.role}
+        {formatRole(r.role)}
       </span>
     )},
     { name:"Actions",   width:"160px", cell: r => (
