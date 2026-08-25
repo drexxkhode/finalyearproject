@@ -82,7 +82,7 @@ client/
 - A running TurfArena backend API
 - Valid third-party service credentials where required
 
-The required Node.js version is also specified in `.nvmrc` and `package.json`.
+The required Node.js version is specified in `package.json` (`>=22`).
 
 ## Installation
 
@@ -177,11 +177,18 @@ The client expects the backend to provide authentication, turf, booking, review,
 - Paystack callbacks and payment verification are configured on the backend.
 - Map and routing API keys are valid for the deployed domain.
 
-## Notes
+## Configuration Notes
 
-- Map marker and marker-cluster resources are loaded through Leaflet and external map resources.
+- Map tiles and routing services require browser access to their external providers.
 - The application uses client-side routing, so the production host must serve `index.html` for unknown application routes.
 - The production bundle may be large because the application includes mapping, routing, payment, and UI libraries. Code splitting can be introduced later if initial load performance becomes a concern.
+
+## Troubleshooting
+
+- If API requests fail, verify `VITE_API_URL` and that the server is running.
+- If live slot updates do not work, verify `VITE_SOCKET_API_URL`, CORS, and the Socket.IO server.
+- If payments or directions fail, check the corresponding public API key and browser-console errors.
+- After changing environment variables, restart the Vite development server.
 
 ## Project Information
 
