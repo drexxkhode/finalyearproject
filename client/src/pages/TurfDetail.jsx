@@ -291,7 +291,7 @@ const distanceKm = userCoords
                         className="fw-bolder small"
                         style={{ color: "#ebedf1", minWidth: 36 }}
                       >
-                        {fmtCountdown(lock.countdown ?? 300)}
+                        {fmtCountdown(lock.countdown ?? 0)}
                       </span>
                       <button
                         className="btn btn-outline-danger btn-sm py-0 px-2"

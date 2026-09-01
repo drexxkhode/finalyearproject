@@ -63,9 +63,11 @@ export function useSlots(onSlotExpired) {
 
   // ── Countdown ticker ──────────────────────────────────────────────────
   const startTicker = useCallback((slotId, expiresAt) => {
+    const expiryTime = typeof expiresAt === 'number' ? expiresAt : new Date(expiresAt).getTime()
+    if (!Number.isFinite(expiryTime)) return
     if (tickersRef.current[slotId]) clearInterval(tickersRef.current[slotId])
-    tickersRef.current[slotId] = setInterval(() => {
-      const remaining = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((expiryTime - Date.now()) / 1000))
       setLockedSlots(prev => {
         if (!prev[slotId]) { clearInterval(tickersRef.current[slotId]); return prev }
         return { ...prev, [slotId]: { ...prev[slotId], countdown: remaining } }
@@ -74,7 +76,9 @@ export function useSlots(onSlotExpired) {
         clearInterval(tickersRef.current[slotId])
         delete tickersRef.current[slotId]
       }
-    }, 1000)
+    }
+    tick()
+    if (expiryTime > Date.now()) tickersRef.current[slotId] = setInterval(tick, 1000)
   }, [])
 
   const stopTicker = useCallback((slotId) => {
@@ -181,7 +185,7 @@ export function useSlots(onSlotExpired) {
       myLocks.forEach(lock => {
         if (!lockedSlotsRef.current[lock.slotId]) {
           const expiresAt = new Date(lock.expiresAt).getTime()
-          const countdown = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+          const countdown = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000))
           if (countdown <= 0) return
 
           setSlots(prev => {
@@ -281,7 +285,13 @@ export function useSlots(onSlotExpired) {
         return
       }
       applyToTurf(aTurf, aSlot, { status: 'locked', lockedBy: 'you' })
-      const countdown = Math.max(0, Math.round((expiresAt - Date.now()) / 1000))
+      const expiryTime = new Date(expiresAt).getTime()
+      const countdown = Math.max(0, Math.ceil((expiryTime - Date.now()) / 1000))
+      if (!Number.isFinite(expiryTime) || countdown <= 0) {
+        applyToTurf(aTurf, aSlot, { status: 'free', lockedBy: null })
+        onSlotExpired?.(aSlot, 'expired')
+        return
+      }
       setLockedSlots(prev => ({
         ...prev,
         [aSlot]: {
@@ -289,11 +299,11 @@ export function useSlots(onSlotExpired) {
           slotId:   aSlot,
           label:    slotLabel,
           lockDate: aDate ?? lockDate,   // store which date this lock is for
-          expiresAt,
+          expiresAt: expiryTime,
           countdown,
         },
       }))
-      startTicker(aSlot, expiresAt)
+      startTicker(aSlot, expiryTime)
     })
   }, [socket, applyToTurf, startTicker, onSlotExpired])
 

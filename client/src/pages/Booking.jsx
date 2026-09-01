@@ -126,8 +126,8 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
 
   const totalAmount  = lockedSlots.length * (turf?.pricePerHour ?? 0)
   const minCountdown = lockedSlots.length > 0
-    ? Math.min(...lockedSlots.map(l => l.countdown ?? 300))
-    : 300
+    ? Math.min(...lockedSlots.map(l => l.countdown ?? 0))
+    : 0
 
   if (!turf) return (
     <div className="text-center py-5">
@@ -144,6 +144,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
   const pay = async () => {
     if (payingRef.current) return
     if (!psReady)    { setErr('Payment system still loading — please wait.'); return }
+    if (minCountdown <= 0) { setErr('Your slot reservation has expired. Please select your slots again.'); return }
     if (!info.email) { setErr('Email is required for payment.'); return }
 
     payingRef.current = true

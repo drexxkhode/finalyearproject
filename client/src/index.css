@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&family=Barlow+Condensed:wght@700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap');
 
 :root {
   --tf-blue:        #0d6efd;
@@ -10,8 +10,8 @@
   --tf-surface:     #f8f9ff;
   --tf-border:      #dee2e6;
 }
-body { font-family:'Barlow','Segoe UI',sans-serif; background:#fff; color:var(--tf-text); }
-.font-condensed { font-family:'Barlow Condensed',sans-serif; }
+body { font-family:'Manrope','Segoe UI',sans-serif; background:#fff; color:var(--tf-text); }
+.font-condensed { font-family:'Space Grotesk','Segoe UI',sans-serif; letter-spacing:-.035em; }
 
 /* GLOBAL LOADER */
 .tf-spinner { display:inline-flex; align-items:center; justify-content:center; height:20px; vertical-align:middle; }
