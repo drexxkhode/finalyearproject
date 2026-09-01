@@ -15,6 +15,7 @@ export default function SystemReviewModal({
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState(null);
 
   // Prevent background scrolling
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function SystemReviewModal({
 
   const submit = async () => {
     if (!rating) {
-      alert("Please select a rating.");
+      setNotice({ tone: 'danger', text: 'Please select a rating before submitting.' });
       return;
     }
 
@@ -50,11 +51,10 @@ export default function SystemReviewModal({
         }
       );
 
-      alert("Thank you for your feedback");
-      onClose();
+      setNotice({ tone: 'success', text: 'Thank you for your feedback!' });
     } catch (err) {
       console.log(err);
-      alert("Unable to submit review.");
+      setNotice({ tone: 'danger', text: 'Unable to submit review. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -127,6 +127,8 @@ export default function SystemReviewModal({
                     />
                 </div>
 
+                {notice && <div className={`alert alert-${notice.tone} py-2 small`} role="status">{notice.text}</div>}
+
                 <textarea
                     className="form-control"
                     rows={4}
@@ -155,8 +157,8 @@ export default function SystemReviewModal({
 
                 <button
                     className="btn btn-primary fw-bold flex-grow-1"
-                    onClick={submit}
-                    disabled={loading || rating === 0}
+                    onClick={notice?.tone === 'success' ? onClose : submit}
+                    disabled={notice?.tone === 'success' ? false : loading || rating === 0}
                 >
                     {loading ? (
                         <>

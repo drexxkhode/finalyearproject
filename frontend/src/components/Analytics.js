@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
-import ClipLoader from "react-spinners/ClipLoader";
+import AppSpinner from "./AppSpinner";
 import { io } from "socket.io-client";
 
 const API = process.env.REACT_APP_URL ?? "http://localhost:5000";
@@ -107,7 +107,7 @@ const Analytics = () => {
   if (!categories.length)
     return (
       <div className="text-center py-5">
-        <ClipLoader color="#3641d7" size={30} />
+        <AppSpinner label="LOADING" />
       </div>
     );
 

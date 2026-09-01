@@ -3,7 +3,6 @@ import axios from 'axios'
 import SystemReviewModal from '../components/SystemReviewModal';
 import AppSpinner from '../components/AppSpinner';
 
-const PAYSTACK_PUBLIC_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ?? ''
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 
 const SK_STEP        = 'tf_bk_step'
@@ -185,7 +184,8 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
-      const { paystack_ref } = initRes.data
+      const { paystack_ref, payment_public_key } = initRes.data
+      if (!payment_public_key) throw new Error('Paystack is not configured. Please contact support.')
      
       // Snapshot slots + amount NOW before any state changes
       const snapSlots  = lockedSlots.map(l => ({ slotId: l.slotId, label: l.label }))
@@ -203,7 +203,7 @@ export default function Booking({ turf, lockedSlots, user, fmtCountdown, onBack,
       // microtask which still counts as the same gesture on most browsers.
       // If that still fails on iOS, we fall back to a direct window.open.
       const handler = window.PaystackPop.setup({
-        key:      PAYSTACK_PUBLIC_KEY,
+        key:      payment_public_key,
         email:    info.email,
         amount:   Math.round(totalAmount * 100),   // pesewas, must be integer
         currency: 'GHS',

@@ -16,6 +16,7 @@ export default function TurfReviewModal({
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [dismissing, setDismissing] = useState(false);
+  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -25,7 +26,7 @@ export default function TurfReviewModal({
 
   const submit = async () => {
     if (!rating) {
-      alert("Please select a rating.");
+      setNotice({ tone: 'danger', text: 'Please select a rating before submitting.' });
       return;
     }
     try {
@@ -40,11 +41,10 @@ export default function TurfReviewModal({
         },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      alert("Thank you for your review!");
-      onClose();
+      setNotice({ tone: 'success', text: 'Thank you for sharing your review!' });
     } catch (err) {
       console.log(err);
-      alert(err.response?.data?.message || "Unable to submit review.");
+      setNotice({ tone: 'danger', text: err.response?.data?.message || 'Unable to submit review. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -106,6 +106,8 @@ export default function TurfReviewModal({
             <StarRating rating={rating} setRating={setRating} />
           </div>
 
+          {notice && <div className={`alert alert-${notice.tone} py-2 small`} role="status">{notice.text}</div>}
+
           <textarea
             className="form-control"
             rows={4}
@@ -125,8 +127,8 @@ export default function TurfReviewModal({
           </button>
           <button
             className="btn btn-primary fw-bold flex-grow-1"
-            onClick={submit}
-            disabled={loading || dismissing || rating === 0}
+            onClick={notice?.tone === 'success' ? onClose : submit}
+            disabled={notice?.tone === 'success' ? false : loading || dismissing || rating === 0}
           >
             {loading ? <><AppSpinner small color="#fff" />Submitting…</> : "Submit"}
           </button>

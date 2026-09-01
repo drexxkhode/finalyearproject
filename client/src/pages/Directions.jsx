@@ -1,5 +1,5 @@
 import {
-  MapContainer, TileLayer, Marker, Popup, Polyline, useMap,
+  Circle, MapContainer, TileLayer, Marker, Popup, Polyline, useMap,
 } from 'react-leaflet'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import L from 'leaflet'
@@ -9,7 +9,7 @@ import 'leaflet/dist/leaflet.css'
 import AppSpinner from '../components/AppSpinner'
 
 //const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
-const GH_API_KEY = import.meta.env.VITE_GRAPHHOPPER_API_KEY;
+// Routing key now belongs on the server.
 const API = import.meta.env.VITE_API_URL;
   
 /* ── Icons ─────────────────────────────────────────────────────────── */
@@ -38,11 +38,42 @@ const turfIcon = L.divIcon({
   iconAnchor: [22, 44],
   popupAnchor:[0, -46],
 })
+const REROUTE_COOLDOWN_MS = 20000
+const MAX_ACCURACY_METERS = 250
+
+// Lightweight adaptive Kalman filter: noisier GPS readings get less influence.
+function smoothPosition(previous, raw) {
+  if (!previous) return { ...raw, variance: Math.max(raw.accuracy ** 2, 25) }
+  const predictedVariance = previous.variance + 9
+  const measurementVariance = Math.max(raw.accuracy ** 2, 25)
+  const gain = predictedVariance / (predictedVariance + measurementVariance)
+  return { ...raw, lat: previous.lat + gain * (raw.lat - previous.lat), lng: previous.lng + gain * (raw.lng - previous.lng), variance: (1 - gain) * predictedVariance }
+}
+
+function nearestRouteMatch(point, route) {
+  if (route.length < 2) return { distance: Infinity, point }
+  const latScale = 111320
+  const lngScale = latScale * Math.cos(point[0] * Math.PI / 180)
+  let nearest = Infinity
+  let nearestPoint = point
+  for (let i = 0; i < route.length - 1; i += 1) {
+    const a = [(route[i][1] - point[1]) * lngScale, (route[i][0] - point[0]) * latScale]
+    const b = [(route[i + 1][1] - point[1]) * lngScale, (route[i + 1][0] - point[0]) * latScale]
+    const dx = b[0] - a[0]; const dy = b[1] - a[1]
+    const t = Math.max(0, Math.min(1, -(a[0] * dx + a[1] * dy) / ((dx * dx + dy * dy) || 1)))
+    const distance = Math.hypot(a[0] + t * dx, a[1] + t * dy)
+    if (distance < nearest) {
+      nearest = distance
+      nearestPoint = [point[0] + (a[1] + t * dy) / latScale, point[1] + (a[0] + t * dx) / lngScale]
+    }
+  }
+  return { distance: nearest, point: nearestPoint }
+}
 
 /* ── Map controller ─────────────────────────────────────────────────── */
-function MapController({ position, recenterSignal, onDrag }) {
+function MapController({ position, recenterSignal, onDrag, isFollowing }) {
   const map = useMap()
-  useEffect(() => { if (position) map.setView(position, 16) }, [])             // eslint-disable-line
+  useEffect(() => { if (position && isFollowing) map.panTo(position, { animate: true, duration: .45 }) }, [map, position, isFollowing])
   useEffect(() => { if (recenterSignal > 0 && position) map.setView(position, 16) }, [recenterSignal]) // eslint-disable-line
   useEffect(() => {
     map.on('dragstart', onDrag)
@@ -68,10 +99,16 @@ export default function Directions({ onBack, notify }) {
   const [isFollowing,   setIsFollowing]   = useState(true)
   const [recenterSignal,setRecenterSignal]= useState(0)
   const [cancelled,     setCancelled]     = useState(false)
+  const [voiceEnabled,  setVoiceEnabled]  = useState(false)
+  const [gpsAccuracy,   setGpsAccuracy]   = useState(null)
+  const [gpsMessage,    setGpsMessage]    = useState('Getting a precise location…')
+  const [turfError,     setTurfError]     = useState('')
 
   const lastRouteRef = useRef([])
   const watchIdRef   = useRef(null)
   const speakingRef  = useRef(false)
+  const filterRef = useRef(null)
+  const offRouteReadingsRef = useRef(0)
 
   // ── Stop everything: voice + GPS watch ────────────────────────────
   const stopAll = useCallback(() => {
@@ -115,6 +152,7 @@ export default function Directions({ onBack, notify }) {
         setSelectedTurf(res?.data?.data);
       } catch (err) {
         console.error('Error fetching turf', err)
+        setTurfError(err.response?.data?.message || 'Unable to load this turf location.')
       }
     }
     fetchTurf()
@@ -122,7 +160,7 @@ export default function Directions({ onBack, notify }) {
 
   // ── Voice ──────────────────────────────────────────────────────────
   const speak = useCallback((text) => {
-    if (cancelled || !text) return
+    if (cancelled || !voiceEnabled || !text) return
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel()
       const utt = new SpeechSynthesisUtterance(text)
@@ -132,7 +170,11 @@ export default function Directions({ onBack, notify }) {
       utt.onend = () => { speakingRef.current = false }
       window.speechSynthesis.speak(utt)
     }
-  }, [cancelled])
+  }, [cancelled, voiceEnabled])
+
+  useEffect(() => {
+    if (voiceEnabled && steps[0]?.text) speak(steps[0].text)
+  }, [voiceEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
   /*
 const lastFetchTimeRef = useRef(0)
 const inFlightRef      = useRef(false)
@@ -183,14 +225,17 @@ const inFlightRef      = useRef(false)
   // ── Reroute check ──────────────────────────────────────────────────
 
 
-const checkReroute = useCallback((lat, lng) => {
+const checkReroute = useCallback((lat, lng, accuracy) => {
   if (cancelled || inFlightRef.current) return
   if (!lastRouteRef.current.length) { fetchRoute(lat, lng); return }
-  const [rlat, rlng] = lastRouteRef.current[0]
-  const dist = Math.sqrt((lat - rlat) ** 2 + (lng - rlng) ** 2) * 111
+  const { distance: dist } = nearestRouteMatch([lat, lng], lastRouteRef.current)
+  const threshold = Math.max(35, Math.min(65, accuracy * 1.5))
   const now = Date.now()
-  if (dist > 0.1 && now - lastFetchTimeRef.current > 15000) {
+  offRouteReadingsRef.current = dist > threshold ? offRouteReadingsRef.current + 1 : 0
+  if (offRouteReadingsRef.current >= 3 && now - lastFetchTimeRef.current > REROUTE_COOLDOWN_MS) {
     lastFetchTimeRef.current = now
+    offRouteReadingsRef.current = 0
+    setGpsMessage('You are off route. Finding a better route…')
     fetchRoute(lat, lng)
   }
 }, [cancelled, fetchRoute])  */
@@ -202,7 +247,8 @@ const fetchRoute = useCallback(async (lat, lng) => {
   if (cancelled || !selectedTurf?.latitude || !selectedTurf?.longitude || inFlightRef.current) return
   inFlightRef.current = true
   try {
-    const res = await axios.get('https://graphhopper.com/api/1/route', {
+    const token = localStorage.getItem('token')
+    const res = await axios.get(`${API}/map/route/${id}`, {
       params: {
         point: [
           `${lat},${lng}`,
@@ -211,7 +257,7 @@ const fetchRoute = useCallback(async (lat, lng) => {
         vehicle:         'car',
         instructions:    true,
         points_encoded:  false,
-        key:             GH_API_KEY,
+        key:             undefined,
       },
       paramsSerializer: params => {
         // axios doesn't repeat array params as `point=...&point=...` by default —
@@ -224,13 +270,14 @@ const fetchRoute = useCallback(async (lat, lng) => {
         return parts.join('&')
       },
       timeout: 10000,
+      headers: { Authorization: `Bearer ${token}` },
     })
 
     if (cancelled) return
-    const path = res.data.paths?.[0]
+    const path = res.data.data
     if (!path) throw new Error('No route found')
 
-    const latlngs = path.points.coordinates.map(c => [c[1], c[0]])
+    const latlngs = path.points.map(c => [c[1], c[0]])
     setRoute(latlngs)
     lastRouteRef.current = latlngs
 
@@ -253,14 +300,17 @@ const fetchRoute = useCallback(async (lat, lng) => {
   }
 }, [cancelled, selectedTurf, speak, notify])
 
-const checkReroute = useCallback((lat, lng) => {
+const checkReroute = useCallback((lat, lng, accuracy) => {
   if (cancelled || inFlightRef.current) return
   if (!lastRouteRef.current.length) { fetchRoute(lat, lng); return }
-  const [rlat, rlng] = lastRouteRef.current[0]
-  const dist = Math.sqrt((lat - rlat) ** 2 + (lng - rlng) ** 2) * 111
+  const { distance: dist } = nearestRouteMatch([lat, lng], lastRouteRef.current)
+  const threshold = Math.max(35, Math.min(65, (accuracy || 35) * 1.5))
   const now = Date.now()
-  if (dist > 0.1 && now - lastFetchTimeRef.current > 15000) {
+  offRouteReadingsRef.current = dist > threshold ? offRouteReadingsRef.current + 1 : 0
+  if (offRouteReadingsRef.current >= 3 && now - lastFetchTimeRef.current > REROUTE_COOLDOWN_MS) {
     lastFetchTimeRef.current = now
+    offRouteReadingsRef.current = 0
+    setGpsMessage('You are off route. Finding a better route…')
     fetchRoute(lat, lng)
   }
 }, [cancelled, fetchRoute])
@@ -271,13 +321,20 @@ const checkReroute = useCallback((lat, lng) => {
     const id = navigator.geolocation.watchPosition(
       (pos) => {
         if (cancelled) return
-        const lat = pos.coords.latitude
-        const lng = pos.coords.longitude
-        setUserPos([lat, lng])
-        if (selectedTurf) checkReroute(lat, lng)
+        const { latitude, longitude, accuracy } = pos.coords
+        if (accuracy > MAX_ACCURACY_METERS) {
+          setGpsMessage(`Location accuracy is ±${Math.round(accuracy)} m. Move outdoors for better directions.`)
+          return
+        }
+        const filtered = smoothPosition(filterRef.current, { lat: latitude, lng: longitude, accuracy })
+        filterRef.current = filtered
+        setUserPos([filtered.lat, filtered.lng])
+        setGpsAccuracy(accuracy)
+        setGpsMessage(accuracy > 35 ? `Location accuracy ±${Math.round(accuracy)} m` : '')
+        if (selectedTurf) checkReroute(filtered.lat, filtered.lng, accuracy)
       },
-      err => console.error(err),
-      { enableHighAccuracy: true }
+      err => setGpsMessage(err.code === 1 ? 'Location permission is required for directions.' : 'Unable to get your location. Check GPS and try again.'),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
     )
     watchIdRef.current = id
     return () => {
@@ -301,8 +358,8 @@ const checkReroute = useCallback((lat, lng) => {
       background: '#0f1923', color: '#fff', fontFamily: 'sans-serif',
       gap: 16,
     }}>
-      <div style={{ fontSize: 18 }}><AppSpinner color="#fff" /></div>
-      <div style={{ fontSize: 18 }}>📍 Getting your location...</div>
+      <div style={{ fontSize: 18 }}><AppSpinner small size={42} color="#fff" /></div>
+      <div style={{ fontSize: 18 }}>{turfError || gpsMessage}</div>
       <button
         onClick={handleCancel}
         style={{
@@ -317,16 +374,18 @@ const checkReroute = useCallback((lat, lng) => {
   )
 
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+    <div style={{ position: 'relative', width: '100vw', height: '100dvh', overflow: 'hidden' }}>
+      <style>{`@keyframes tf-route-pulse{0%,100%{opacity:.72}50%{opacity:1}} .tf-route-line{animation:tf-route-pulse 1.8s ease-in-out infinite}`}</style>
 
       <MapContainer
         center={userPos} zoom={15}
-        style={{ height: '100vh', width: '100vw' }}
+        style={{ height: '100dvh', width: '100vw' }}
         zoomControl={false}
       >
-        <MapController position={userPos} recenterSignal={recenterSignal} onDrag={handleDrag} />
+        <MapController position={userPos} recenterSignal={recenterSignal} onDrag={handleDrag} isFollowing={isFollowing} />
         <TileLayer attribution="OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <Marker position={userPos} icon={userIcon}><Popup>You</Popup></Marker>
+        {gpsAccuracy && <Circle center={userPos} radius={gpsAccuracy} pathOptions={{ color: '#0d6efd', fillColor: '#0d6efd', fillOpacity: .08, weight: 1 }} />}
+        <Marker position={route.length > 1 ? nearestRouteMatch(userPos, route).point : userPos} icon={userIcon}><Popup>Your live location</Popup></Marker>
         {selectedTurf && (
           <Marker
             position={[parseFloat(selectedTurf.latitude), parseFloat(selectedTurf.longitude)]}
@@ -335,9 +394,10 @@ const checkReroute = useCallback((lat, lng) => {
             <Popup>{selectedTurf.name}</Popup>
           </Marker>
         )}
-        {route.length > 0 && (
-          <Polyline positions={route} pathOptions={{ color: '#0d6efd', weight: 6, opacity: 0.9 }} />
-        )}
+        {route.length > 0 && <>
+          <Polyline positions={route} pathOptions={{ color: '#fff', weight: 10, opacity: 0.85 }} />
+          <Polyline positions={route} className="tf-route-line" pathOptions={{ color: '#0d6efd', weight: 6, opacity: 1, lineCap: 'round' }} />
+        </>}
       </MapContainer>
 
       {/* ── Top-left: Back + Cancel ── */}
@@ -388,11 +448,11 @@ const checkReroute = useCallback((lat, lng) => {
       {(eta !== null || distance !== null) && (
         <div style={{
           ...overlay, bottom: 32, left: '50%', transform: 'translateX(-50%)',
-          width: 'min(420px,92vw)',
+          width: 'min(420px,92vw)', maxHeight: 'min(62dvh,520px)',
         }}>
           <div style={{
             background: 'rgba(15,25,40,.93)', borderRadius: 20,
-            boxShadow: '0 8px 32px rgba(0,0,0,.3)', overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(0,0,0,.3)', overflowY: 'auto',
             backdropFilter: 'blur(8px)',
           }}>
             {/* Turf name bar */}
@@ -408,19 +468,17 @@ const checkReroute = useCallback((lat, lng) => {
               </div>
               {/* Mute / unmute voice */}
               <button
-                onClick={() => {
-                  if (window.speechSynthesis.speaking) {
-                    window.speechSynthesis.cancel()
-                  } else {
-                    speak(steps[0]?.text ?? 'Navigation active')
-                  }
-                }}
+                onClick={() => setVoiceEnabled(value => {
+                  const next = !value
+                  if (!next) window.speechSynthesis?.cancel()
+                  return next
+                })}
                 style={{
                   background: 'rgba(255,255,255,.1)', border: 'none', borderRadius: 8,
                   color: '#cde', cursor: 'pointer', fontSize: 16, padding: '4px 8px',
                 }}
-                title="Toggle voice"
-              >🔊</button>
+                title={voiceEnabled ? 'Turn voice guidance off' : 'Speak directions'}
+              >{voiceEnabled ? '🔊' : '🔇'}</button>
             </div>
 
             {/* ETA / Distance / Steps toggle */}

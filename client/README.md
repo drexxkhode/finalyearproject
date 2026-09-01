@@ -100,9 +100,6 @@ Create or update the appropriate environment file before starting the client.
 VITE_API_URL=http://localhost:5000
 VITE_SOCKET_API_URL=http://localhost:5000
 VITE_IMAGE_API_URL=
-VITE_PAYSTACK_PUBLIC_KEY=
-VITE_ORS_API_KEY=
-VITE_GRAPHHOPPER_API_KEY=
 ```
 
 Variable purposes:
@@ -112,11 +109,8 @@ Variable purposes:
 | `VITE_API_URL` | Base URL for REST API requests |
 | `VITE_SOCKET_API_URL` | Socket.IO server URL for live slot updates |
 | `VITE_IMAGE_API_URL` | Image service or image API URL |
-| `VITE_PAYSTACK_PUBLIC_KEY` | Public Paystack checkout key |
-| `VITE_ORS_API_KEY` | Optional OpenRouteService directions key |
-| `VITE_GRAPHHOPPER_API_KEY` | GraphHopper routing API key |
 
-Do not commit private credentials or secret backend keys. Vite exposes variables prefixed with `VITE_` to the browser, so only public client-side values should be placed there.
+Do not commit private credentials or secret backend keys. Vite exposes variables prefixed with `VITE_` to the browser, so only public client-side values should be placed there. Paystack selects and returns the active public key from the server when a booking begins; put both Paystack key pairs on the server instead. Put `GRAPHHOPPER_API_KEY` in the server's `.env`; routing is proxied through the API so this key never reaches the browser.
 
 ## Development
 

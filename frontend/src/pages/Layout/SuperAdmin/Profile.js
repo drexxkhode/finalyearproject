@@ -1,14 +1,17 @@
 import { Link, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import AppSpinner from "../../../components/AppSpinner";
 
 const API = process.env.REACT_APP_URL || "http://localhost:5000";
 
 const SuperAdminProfile = () => {
   const { id } = useParams();
   const [admin, setAdmin] = useState({});
+  const [loading, setLoading] = useState(true);
 
   const fetchDetails = async (adminId) => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(`${API}/api/super/details/${adminId}`, {
@@ -17,6 +20,8 @@ const SuperAdminProfile = () => {
       setAdmin(data);
     } catch (err) {
       console.error("Failed to fetch admin:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,6 +42,7 @@ const SuperAdminProfile = () => {
       fetchDetails(id);
     } else {
       const getMe = async () => {
+        setLoading(true);
         try {
           const { data } = await axios.get(`${API}/api/super/me`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -44,11 +50,15 @@ const SuperAdminProfile = () => {
           setAdmin(data);
         } catch (err) {
           console.error("Failed to fetch logged user:", err);
+        } finally {
+          setLoading(false);
         }
       };
       getMe();
     }
   }, [id]);
+
+  if (loading) return <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '55vh' }}><AppSpinner label="LOADING PROFILE" /></div>;
 
   // trim + collapse double spaces when middleName is empty
   const fullName =
@@ -81,7 +91,7 @@ const SuperAdminProfile = () => {
           <div>
             <h2 className="fw-bold mb-1">{fullName}</h2>
             <p className="mb-2">
-              <i className="bi bi-person-badge"></i> {admin.turfName || "N/A"}
+              🏟️ {admin.turfName || "N/A"}
             </p>
             <span className="badge bg-success rounded-pill px-3">Active</span>
           </div>

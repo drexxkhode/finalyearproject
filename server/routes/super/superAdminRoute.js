@@ -29,6 +29,7 @@ const {
 } = require('../../controllers/turfController');
 
 const protect = require("../../middleware/auth");
+const { getPaymentMode, updatePaymentMode } = require('../../controllers/paymentSettingsController');
 const passwordResetRateLimit  = require("../../middleware/passwordResetRateLimit");
 const {upload} =require('../../middleware/upload');
 const router = express.Router();
@@ -53,5 +54,7 @@ router.get("/get-turf", protect, getTurf);
 router.get("/dashboard", protect, getDashboardDetails);
 router.get("/analytics/bookings-by-status", protect, getBookingsByStatus);
 router.get("/analytics/payments-by-status", protect, getPaymentsByStatus);
+router.get('/payment-mode', protect, getPaymentMode);
+router.put('/payment-mode', protect, updatePaymentMode);
 
 module.exports = router;

@@ -81,7 +81,7 @@ const distanceKm = userCoords
     }
 
     lockSlot(turf.id, s.id, s.label);
-    notify("🔒 Slot locked for 5 mins!");
+    notify("🔒 Slot reserved for 5 mins for you!");
   };
 
   // ── Slot CSS class ────────────────────────────────────────────────────────

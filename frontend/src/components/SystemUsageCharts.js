@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useState, useEffect } from 'react';
 import Chart from "react-apexcharts";
+import AppSpinner from './AppSpinner';
 
 const API = process.env.REACT_APP_URL;
 const COLORS = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997', '#fd7e14', '#0dcaf0'];
@@ -28,7 +29,7 @@ function PieCard({ title, labels, series, loading, formatValue }) {
         <div className="card-header"><h6 className="card-title mb-0">{title}</h6></div>
         <div className="card-body d-flex align-items-center justify-content-center" style={{ minHeight: 280 }}>
           {loading ? (
-            <div className="spinner-border text-primary" />
+            <AppSpinner label="LOADING" />
           ) : !hasData ? (
             <p className="text-muted small mb-0">No data yet</p>
           ) : (

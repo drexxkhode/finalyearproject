@@ -1,0 +1,7 @@
+:root { --admin-spinner-color: #3641d7; }
+.admin-spinner { display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--admin-spinner-ink); }
+.admin-spinner--small { vertical-align:middle; flex:0 0 auto; }
+.admin-spinner__ring { position:relative; display:inline-block; }
+.admin-spinner__dot { position:absolute; top:50%; left:50%; width:13%; height:27%; margin:-13.5% 0 0 -6.5%; border-radius:999px; background:currentColor; animation:admin-spinner-fade 1.2s linear infinite; }
+.admin-spinner__label { color:currentColor; font-size:10px; font-weight:700; letter-spacing:1.5px; }
+@keyframes admin-spinner-fade { 0%,39%,100% { opacity:.18; } 40% { opacity:1; } }

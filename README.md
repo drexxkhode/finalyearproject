@@ -162,7 +162,7 @@ The server requires configuration for:
 - JWT signing and expiry
 - Redis URL
 - Cloudinary credentials
-- Paystack secret key
+- Paystack test/live public and secret keys
 - Email provider credentials
 - Server port and allowed client origins
 
@@ -171,7 +171,6 @@ The public client commonly uses:
 ```env
 VITE_API_URL=http://localhost:5000
 VITE_SOCKET_API_URL=http://localhost:5000
-VITE_PAYSTACK_PUBLIC_KEY=your_public_key
 ```
 
 The administration frontend commonly uses:

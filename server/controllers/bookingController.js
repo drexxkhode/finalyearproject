@@ -1,5 +1,6 @@
 const db     = require('../config/db');
 const crypto = require('crypto');
+const { getPaymentModeValue, getPublicForMode, getWebhookSecrets, getSecretForMode } = require('./paymentSettingsController');
 const axios  = require('axios');
 const redis  = require('../config/RedisClient');
 const sendEmail = require('../utils/userMail');
@@ -116,21 +117,24 @@ const initiateBooking = async (req, res) => {
       });
 
     const paystack_ref = `TF-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const payment_mode = await getPaymentModeValue();
+    const payment_public_key = getPublicForMode(payment_mode);
+    if (!payment_public_key) return res.status(503).json({ message: `Paystack ${payment_mode} public key is not configured.` });
 
     await db.query(
       `INSERT INTO pending_payments
-         (paystack_ref, user_id, turf_id, slots_json, booking_date, total_amount)
-       VALUES (?, ?, ?, ?, ?, ?)
+         (paystack_ref, user_id, turf_id, slots_json, booking_date, total_amount, payment_mode)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          slots_json   = VALUES(slots_json),
          booking_date = VALUES(booking_date),
          total_amount = VALUES(total_amount),
          created_at   = NOW()`,
-      [paystack_ref, user_id, turf_id, JSON.stringify(slots), date, total_amount]
+      [paystack_ref, user_id, turf_id, JSON.stringify(slots), date, total_amount, payment_mode]
     );
 
     console.log(`[booking] Initiated ref=${paystack_ref} user=${user_id} turf=${turf_id} slots=${JSON.stringify(slotIds)}`);
-    return res.status(201).json({ message: 'Ready for payment', paystack_ref });
+    return res.status(201).json({ message: 'Ready for payment', paystack_ref, payment_mode, payment_public_key });
   } catch (err) {
     console.error('initiateBooking error:', err);
     return res.status(500).json({ message: 'Server error' });
@@ -143,9 +147,9 @@ const initiateBooking = async (req, res) => {
 // req.body will be a Buffer — we convert to string for HMAC + parse once
 const paystackWebhook = async (req, res) => {
   try {
-    const secret = process.env.PAYSTACK_SECRET_KEY;
-    if (!secret) {
-      console.error('[webhook] PAYSTACK_SECRET_KEY is not set');
+    const webhookSecrets = getWebhookSecrets();
+    if (!webhookSecrets.length) {
+      console.error('[webhook] No Paystack secret key is set');
       return res.sendStatus(500);
     }
 
@@ -153,7 +157,6 @@ const paystackWebhook = async (req, res) => {
     console.log('[webhook] body type:', typeof req.body, '| isBuffer:', Buffer.isBuffer(req.body));
     console.log('[webhook] content-type:', req.headers['content-type']);
     console.log('[webhook] x-paystack-signature present:', !!req.headers['x-paystack-signature']);
-    console.log('[webhook] PAYSTACK_SECRET_KEY prefix:', secret.slice(0, 8));
 
     // ── Get raw string body ───────────────────────────────────────────────
     let rawBody;
@@ -170,18 +173,9 @@ const paystackWebhook = async (req, res) => {
     }
 
     // ── Verify HMAC ───────────────────────────────────────────────────────
-    const expectedSig = crypto
-      .createHmac('sha512', secret)
-      .update(rawBody)
-      .digest('hex');
-
     const receivedSig = req.headers['x-paystack-signature'] ?? '';
-
-    console.log('[webhook] expected sig (32 chars):', expectedSig.slice(0, 32));
-    console.log('[webhook] received sig (32 chars):', receivedSig.slice(0, 32));
-    console.log('[webhook] signatures match:', expectedSig === receivedSig);
-
-    if (expectedSig !== receivedSig) {
+    const matchedKey = webhookSecrets.find(({ secret }) => crypto.createHmac('sha512', secret).update(rawBody).digest('hex') === receivedSig);
+    if (!matchedKey) {
       console.error('[webhook] Signature mismatch — rejected');
       return res.sendStatus(401);
     }
@@ -264,10 +258,10 @@ const paystackWebhook = async (req, res) => {
         const [result] = await db.query(
           `INSERT IGNORE INTO bookings
              (user_id, turf_id, time_slot_id, slot_label, booking_date,
-              amount, status, payment_status, paystack_ref)
-           VALUES (?, ?, ?, ?, ?, ?, 'confirmed', 'paid', ?)`,
+              amount, status, payment_status, paystack_ref, payment_mode)
+           VALUES (?, ?, ?, ?, ?, ?, 'confirmed', 'paid', ?, ?)`,
           [p.user_id, p.turf_id, s.time_slot_id, slotLabel,
-           p.booking_date, perSlotAmount, ref]
+           p.booking_date, perSlotAmount, ref, p.payment_mode]
         );
 
         if (result.insertId) {
@@ -280,9 +274,9 @@ const paystackWebhook = async (req, res) => {
       // Write payments row
       const [payResult] = await db.query(
         `INSERT IGNORE INTO payments
-           (turf_id, user_id, booking_ids, paystack_ref, amount, payment_status, paid_at)
-         VALUES (?, ?, ?, ?, ?, 'completed', NOW())`,
-        [p.turf_id, p.user_id, JSON.stringify(bookingIds), ref, amountGHS]
+           (turf_id, user_id, booking_ids, paystack_ref, amount, payment_status, payment_mode, paid_at)
+         VALUES (?, ?, ?, ?, ?, 'completed', ?, NOW())`,
+        [p.turf_id, p.user_id, JSON.stringify(bookingIds), ref, amountGHS, p.payment_mode]
       );
       console.log(`[webhook] Payment row insertId=${payResult.insertId} amount=₵${amountGHS}`);
 
@@ -486,7 +480,7 @@ await sendEmail(userEmail, `Booking Confirmed — ${turfName}`, `<!DOCTYPE html>
         // In TEST mode: refund.processed never fires automatically from Paystack.
         // So in test mode we treat refund.pending as the final confirmation
         // and update the DB immediately, mirroring what live mode will do.
-        const isTestMode = (process.env.PAYSTACK_SECRET_KEY ?? '').startsWith('sk_test_')
+        const isTestMode = matchedKey.mode === 'test'
 
         if (!isTestMode) {
           console.log(`[webhook] ↩️  Refund pending ref=${ref} ₵${refundGHS} — live mode, waiting for refund.processed`);
@@ -633,7 +627,7 @@ const cancelBooking = async (req, res) => {
         },
         {
           headers: {
-            Authorization:  `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            Authorization:  `Bearer ${getSecretForMode(booking.payment_mode) || process.env.PAYSTACK_SECRET_KEY}`,
             'Content-Type': 'application/json',
           },
         }
@@ -739,7 +733,7 @@ const rejectBooking = async (req, res) => {
         },
         {
           headers: {
-            Authorization:  `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            Authorization:  `Bearer ${getSecretForMode(booking.payment_mode) || process.env.PAYSTACK_SECRET_KEY}`,
             'Content-Type': 'application/json',
           },
         }
