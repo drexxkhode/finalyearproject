@@ -293,7 +293,7 @@ exports.login = async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: "Server Error ⚠️" });
   }
 };
 
@@ -332,7 +332,7 @@ exports.updateUser = async (req, res) => {
 
     res.json({ message: "Profile updated successfully", user: updated[0] });
   } catch (err) {
-    res.status(500).json({ error: "Server Error ⚠️" });
+    res.status(500).json({ message: "Server Error ⚠️" });
   }
 };
 

@@ -42,6 +42,10 @@ export default function TurfReviewModal({
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       setNotice({ tone: 'success', text: 'Thank you for sharing your review!' });
+      // Automatically close the modal after successful submission
+    setTimeout(() => {
+      onClose();
+    }, 1200);
     } catch (err) {
       console.log(err);
       setNotice({ tone: 'danger', text: err.response?.data?.message || 'Unable to submit review. Please try again.' });
@@ -127,7 +131,7 @@ export default function TurfReviewModal({
           </button>
           <button
             className="btn btn-primary fw-bold flex-grow-1"
-            onClick={notice?.tone === 'success' ? onClose : submit}
+            onClick={submit}
             disabled={notice?.tone === 'success' ? false : loading || dismissing || rating === 0}
           >
             {loading ? <><AppSpinner small color="#fff" />Submitting…</> : "Submit"}
