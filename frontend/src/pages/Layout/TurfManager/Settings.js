@@ -751,12 +751,17 @@ const Settings = () => {
                                   >
                                     Constituency
                                   </label>
-                                  <input
+                                  
+                                  <select
                                     id="district"
                                     className={`form-control ${errors.district ? "is-invalid" : ""}`}
                                     value={formData.district}
                                     onChange={handleChange}
-                                  />
+                                  >
+                                    <option value="">-- Select Constituency --</option>
+                                    <option value="Dome Kwabenya">Dome Kwabenya </option>
+                                    <option value="Ayawaso West">Ayawaso West</option>
+                                   </select>
                                   {errors.district && (
                                     <div className="invalid-feedback">
                                       {errors.district}
