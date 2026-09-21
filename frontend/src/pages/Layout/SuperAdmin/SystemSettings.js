@@ -528,7 +528,7 @@ setUpdating(false);
                             </div>
 
                             <div className="col-6 mt-3">
-                              <label htmlFor="district" className="form-label">Municipal</label>
+                              <label htmlFor="district" className="form-label">Constituency</label>
                               <input id="district"
                                 className={`form-control ${errors.district ? "is-invalid" : ""}`}
                                 value={formData.district} onChange={handleChange} />

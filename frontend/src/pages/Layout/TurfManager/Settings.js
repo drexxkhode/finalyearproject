@@ -749,7 +749,7 @@ const Settings = () => {
                                     htmlFor="district"
                                     className="form-label"
                                   >
-                                    Municipal
+                                    Constituency
                                   </label>
                                   <input
                                     id="district"
